@@ -230,7 +230,7 @@ appSetup () {
       do
 	    ARGS_SAMBA_TOOL+=("${LDOMAIN}")
 		ARGS_SAMBA_TOOL+=("DC")
-		ARGS_SAMBA_TOOL+=("-U${DOMAIN_NETBIOS}\${DOMAIN_USER}")
+		ARGS_SAMBA_TOOL+=("-U${DOMAIN_NETBIOS}\\${DOMAIN_USER}")
 		ARGS_SAMBA_TOOL+=("--password=${DOMAIN_PASS}")
         samba-tool domain join "${ARGS_SAMBA_TOOL[@]}" && s=0 && break || s=$? && sleep 60
       done; (exit $s)
@@ -259,7 +259,7 @@ appSetup () {
       ARGS_SAMBA_TOOL+=("--adminpass=${DOMAIN_PASS}")
       ARGS_SAMBA_TOOL+=("--realm=${UDOMAIN}")
       ARGS_SAMBA_TOOL+=("--domain=${DOMAIN_NETBIOS}")
-
+      ARGS_SAMBA_TOOL+=("--option=add machine script=/usr/sbin/useradd -n -g machines -c Machine -d /var/lib/nobody -s /bin/false %u")
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
 #
 #
@@ -367,7 +367,7 @@ appSetup () {
 
     #Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
     if [ ! -f "${FILE_SAMBA_USER_MAP}" ]; then
-      echo '!'"root = ${DOMAIN}\\${DOMAIN_USER}" > "${FILE_SAMBA_USER_MAP}"
+      echo '!'"root = ${URDOMAIN}\\${DOMAIN_USER}" > "${FILE_SAMBA_USER_MAP}"
       sed -i "/\[global\]/a \
         \\\tusername map = ${FILE_SAMBA_USER_MAP}\
       " "${FILE_SAMBA_CONF}"
