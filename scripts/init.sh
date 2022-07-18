@@ -260,16 +260,9 @@ appSetup () {
       ARGS_SAMBA_TOOL+=("--adminpass=${DOMAIN_PASS}")
       ARGS_SAMBA_TOOL+=("--realm=${UDOMAIN}")
       ARGS_SAMBA_TOOL+=("--domain=${DOMAIN_NETBIOS}")
-      ARGS_SAMBA_TOOL+=("--option=add machine script=/usr/sbin/useradd -n -g machines -c Machine -d /var/lib/nobody -s /bin/false %u")
+      ARGS_SAMBA_TOOL+=("--option=add machine script=/usr/sbin/useradd -M -d /dev/null -s /bin/false %u")
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
-#
-#
-#
-#
-#
-# if hostip is set use external network ip to calc reverse zone
-#add reverse zone & add site & add ip network to site
-      #echo 411.311.211.111 | awk -F. '{print $4"."$3"." $2"."$1}'
+
       if [[ "$RECYCLEBIN" = true ]]; then
         # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
         python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
@@ -519,7 +512,16 @@ appFirstStart () {
   if [ "${JOIN,,}" = false ];then
     # Better check if net rpc is rdy
     sleep 300s
+	# If HostIP is set fix DNS
+    if [[ "$HOSTIP" != "NONE" ]]; then
+#      samba_dnsupdate --current-ip="$HOSTIP"
+    # if hostip is set use external network ip to calc reverse zone
+    #add reverse zone & add site & add ip network to site
+    IP_REVERSE=$(echo $HOSTIP | awk -F. '{print $3"." $2"."$1}')
+	echo "${DOMAIN_PASS}" |  samba-tool dns zonecreate 127.0.0.1 $IP_REVERSE.in-addr.arpa -UAdministrator
     echo "Check NTP $(ntpq -c sysinfo)"
+    fi
+
     #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
 	ARGS_NET_RPC=()
 	ARGS_NET_RPC+=("$UDOMAIN\\Domain Admins")
