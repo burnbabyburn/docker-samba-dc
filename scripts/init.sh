@@ -24,11 +24,11 @@ config() {
 
   #DN for LDIF
   LDAP_SUFFIX=""
-  IFS='.'
+  local IFS='.'
   for dn in ${LDOMAIN}; do
     LDAP_SUFFIX="${LDAP_SUFFIX},DC=$dn"
   done
-  IFS=' '
+  local IFS=' '
   LDAP_DN=$HOSTNAME$LDAP_SUFFIX
 
   JOIN=${JOIN:-false}
@@ -77,6 +77,7 @@ config() {
 
   #file variables
   # DIR_SAMBA_CONF and DIR_SCRIPTS also need to be changed in the Dockerfile
+  DIR_NTP_SOCK=/var/lib/samba/ntp_signd
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba
   DIR_SAMBA_ETC=/etc/samba
   DIR_SAMBA_PRIVATE=$DIR_SAMBA_DATA_PREFIX/private
@@ -102,7 +103,7 @@ config() {
   FILE_SAMBA_SCHEMA_LAPS1=$DIR_LDIF/laps-1.ldif
   FILE_SAMBA_SCHEMA_LAPS2=$DIR_LDIF/laps-2.ldif
   FILE_SAMBA_SCHEMA_WINSREPL=$DIR_LDIF/wins.ldif
-  
+
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
   FILE_SUPERVISORD_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/supervisord.conf
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
@@ -112,6 +113,7 @@ config() {
   FILE_NSSWITCH=/etc/nsswitch.conf
   FILE_SAMLDB=$DIR_SAMBA_PRIVATE/sam.ldb
   FILE_NTP=/etc/ntp.conf
+  FILE_NTP_DRIFT=/var/lib/ntp/ntp.drift
   FILE_NTP_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/ntp.conf
 
   # exports for other scripts and TLS_PKI
@@ -123,36 +125,41 @@ config() {
 
 appSetup () {
   #NTP Settings - Instead of just touch the file write a float to the file to get rid of "format error frequency file /var/lib/ntp/ntp.drift" error message
-  if [[ ! -f /var/lib/ntp/ntp.drift ]]; then
-    echo 0.0 > /etc/ntp/drift
-	chown ntp:ntp /var/lib/ntp/ntp.drift
+  SAMBA_DEBUG_OPTION="-d $DEBUG_LEVEL"
+  SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d $DEBUG_LEVEL"
+  NTP_DEBUG_OPTION="-D $DEBUG_LEVEL"
+  sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:$SAMBADAEMON_DEBUG_OPTION:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -e "s:{{ NTP_DEBUG_OPTION }}:$NTP_DEBUG_OPTION:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+
+  sed -e "s:{{ UDOMAIN }}:$UDOMAIN:" \
+      -e "s:{{ LDOMAIN }}:$LDOMAIN:" \
+      -e "s:{{ HOSTNAME }}:$HOSTNAME:" \
+  -i "$FILE_KRB5"
+
+  if [[ ! -f "$FILE_NTP_DRIFT" ]]; then
+    echo 0.0 > "$FILE_NTP_DRIFT"
+    chown root:ntp "$FILE_NTP_DRIFT"
   fi
   if grep "{{ NTPSERVER }}" "$FILE_NTP"; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
     NTPSERVER=""
     NTPSERVERRESTRICT=""
-	IFS=$'\n'
+    local IFS=$'\n'
     for DC in $DCs
     do
       NTPSERVER="$NTPSERVER server ${DC}    iburst prefer\n"
       NTPSERVERRESTRICT="$NTPSERVERRESTRICT restrict ${DC} mask 255.255.255.255    nomodify notrap nopeer noquery\n"
     done
-
+    local IFS=' '
     sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" -i "$FILE_NTP"
     sed -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" -i "$FILE_NTP"
-    IFS=''
   fi
-  if [[ ! -f /var/lib/samba/ntp_signd/ ]]; then
+  if [[ ! -f "$DIR_NTP_SOCK" ]]; then
     # Own socket
-    mkdir -p /var/lib/samba/ntp_signd/
-    chown root:ntp /var/lib/samba/ntp_signd/
-    chmod 750 /var/lib/samba/ntp_signd/
+    mkdir -p "$DIR_NTP_SOCK"
+    chown root:ntp "$DIR_NTP_SOCK"
+    chmod 750 "$DIR_NTP_SOCK"
   fi
-
-  sed -e "s:{{ UDOMAIN }}:$UDOMAIN:" \
-    -e "s:{{ LDOMAIN }}:$LDOMAIN:" \
-    -e "s:{{ HOSTNAME }}:$HOSTNAME:" \
-    -i "$FILE_KRB5"
 
   if [[ ! -d /etc/samba/external/ ]]; then
     mkdir /etc/samba/external
@@ -193,14 +200,6 @@ appSetup () {
   if [[ ${ENABLE_BIND_INTERFACE,,} = true ]]; then
     OPTION_INT=--option="interfaces=${BIND_INTERFACES,,} lo"
     OPTION_BIND=--option="bind interfaces only = yes"
-  fi
-
-  if [[ ${ENABLE_DEBUG,,} = true ]]; then
-    SAMBA_DEBUG_OPTION="-d $DEBUG_LEVEL"
-    SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d $DEBUG_LEVEL"
-    NTP_DEBUG_OPTION="-D $DEBUG_LEVEL"
-    sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:$SAMBADAEMON_DEBUG_OPTION:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-    sed -e "s:{{ NTP_DEBUG_OPTION }}:$NTP_DEBUG_OPTION:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   fi
 
   if [[ "$ENABLE_DNSFORWARDER" != "NONE" ]]; then
@@ -357,13 +356,6 @@ appSetup () {
       " "${FILE_SAMBA_CONF}"
     fi
 
-#    if [[ ${ENABLE_DNSFORWARDER} != "NONE" ]]; then
-#      sed -i '/dns forwarder/d' "${FILE_SAMBA_CONF}"
-#      sed -i "/\[global\]/a \
-#        \\\tdns forwarder = ${ENABLE_DNSFORWARDER}\
-#      " "${FILE_SAMBA_CONF}"
-#    fi
-
     if [[ ${ENABLE_MSCHAPV2,,} = true ]]; then
       sed -i "/\[global\]/a \
         \\\tntlm auth = mschapv2-and-ntlmv2-only\
@@ -374,22 +366,22 @@ appSetup () {
       sed -i "/\[global\]/a \
         \\\tload printers = yes\\n\
         \\tprinting = cups\\n\
-	\\tprintcap name = cups\\n\
-	\\tshow add printer wizard = no\\n\
+        \\tprintcap name = cups\\n\
+        \\tshow add printer wizard = no\\n\
         \\tcups encrypt = no\\n\
         \\tcups options = \"raw media=a4\"\\n\
         \\t#cups server = ${CUPS_SERVER}:${CUPS_PORT}\
-      " "${FILE_SAMBA_CONF}"	
-	  {
-	    echo ""
-		echo "[printers]"
-		echo "comment = All Printers"
+      " "${FILE_SAMBA_CONF}"
+      {
+        echo ""
+        echo "[printers]"
+        echo "comment = All Printers"
         echo "path = /var/spool/samba"
         echo "printable = yes"
-		echo "use client driver = Yes"
-		echo "guest ok = Yes"
-		echo "browseable = No"
-	  } >> "${FILE_SAMBA_CONF}"
+        echo "use client driver = Yes"
+        echo "guest ok = Yes"
+        echo "browseable = No"
+      } >> "${FILE_SAMBA_CONF}"
     else
       sed -i "/\[global\]/a \
         \\\tload printers = no\\n\
@@ -434,14 +426,16 @@ appSetup () {
 
     # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
     cp -f "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF_EXTERNAL}"
-	cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_SUPERVISORD_CONF_EXTERNAL}"
+    cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_SUPERVISORD_CONF_EXTERNAL}"
     cp -f "${FILE_NTP}" "${FILE_NTP_CONF_EXTERNAL}"
-	cp -f "${FILE_KRB5}" "${FILE_KRB5_CONF_EXTERNAL}"
+    cp -f "${FILE_KRB5}" "${FILE_KRB5_CONF_EXTERNAL}"
+    cp -f "${FILE_NSSWITCH}" "${FILE_NSSWITCH_EXTERNAL}"
   else
     cp -f "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
-	cp -f "${FILE_SUPERVISORD_CONF_EXTERNAL}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
+    cp -f "${FILE_SUPERVISORD_CONF_EXTERNAL}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
     cp -f "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
-	cp -f "${FILE_KRB5_CONF_EXTERNAL}" "${FILE_KRB5}"
+    cp -f "${FILE_KRB5_CONF_EXTERNAL}" "${FILE_KRB5}"
+    cp -f "${FILE_NSSWITCH_EXTERNAL}" "${FILE_NSSWITCH}"
   fi
 
   # Stop VPN & write supervisor service
@@ -465,8 +459,8 @@ appSetup () {
     if [ ! -f tls/key.pem ] && [ ! -f tls/key.pem ] && [ ! -f tls/cert.pem ]; then
       echo "No custom CA found. Samba will autogenerate one"
     fi
-    if [ ! -f /var/lib/samba/private/tls/dh.key ]; then
-      openssl dhparam -out /var/lib/samba/private/tls/dh.key 2048
+    if [ ! -f "$FILE_PKI_DH" ]; then
+      openssl dhparam -out "$FILE_PKI_DH" 2048
     fi
     sed -i "/\[global\]/a \
       \\\ttls enabled  = yes\\n\
@@ -486,37 +480,16 @@ appSetup () {
     " "${FILE_SAMBA_CONF}"
   fi
 
-# Not needed on Samba 4.15 with ubuntu:devel
-#  if [[ ! -d /var/lib/samba/winbindd_privileged/ ]]; then
-#    mkdir /var/lib/samba/winbindd_privileged/
-#    chown root:winbindd_priv /var/lib/samba/winbindd_privileged/
-#    chmod 0750 /var/lib/samba/winbindd_privileged
-#  else
-#    chown root:winbindd_priv /var/lib/samba/winbindd_privileged/
-#    chmod 0750 /var/lib/samba/winbindd_privileged
-#  fi
-
   if [[ ${ENABLE_LOGS,,} = true ]]; then
     sed -i "/\[global\]/a \
       \\\tlog file = /var/log/samba/%m.log\\n\
       \\tmax log size = 10000\\n\
       \\tlog level = ${DEBUG_LEVEL}\
     " /etc/samba/smb.conf
-	sed -i '/FILE:/s/^#//g' "$FILE_KRB5"
-	sed -i '/FILE:/s/^#_//g' "$FILE_NTP"
+    sed -i '/FILE:/s/^#//g' "$FILE_KRB5"
+    sed -i '/FILE:/s/^#_//g' "$FILE_NTP"
   fi
 
-    #if [ "${ENABLE_BIND_INTERFACE,,}" = true ]; then
-      #    sed -i "/\[global\]/a \
-        #interfaces =${BIND_INTERFACES,,} lo\\n\
-        #bind interfaces only = yes\
-        #    " /etc/samba/smb.conf
-    #  printf >> "interface listen lo" "$FILE_NTP"
-    #  for INTERFACE in $BIND_INTERFACES
-    #  do
-    #    printf >> "interface listen $INTERFACE"
-    #  done
-    #fi
   appFirstStart
 }
 
@@ -528,14 +501,14 @@ appFirstStart () {
   if [ "${JOIN,,}" = false ];then
     # Better check if net rpc is rdy
     sleep 300s
-	echo "Check NTP"
-	ntpinfo=$(ntpq -c sysinfo)
+    echo "Check NTP"
+    ntpinfo=$(ntpq -c sysinfo)
     #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
     echo "${DOMAIN_PASS}" | net rpc rights grant "$UDOMAIN\\Domain Admins" 'SeDiskOperatorPrivilege' -U"$UDOMAIN\\${DOMAIN_USER,,}" ${DEBUG_OPTION}
   else
     if [ -f "$FILE_SAMBA_WINSLDB" ] && [ "${ENABLE_WINS}" = true ];then
       sed -e "s: {{DC_IP}}:$LDAP_SUFFIX:g" \
-	      -e "s: {{DC_DNS}}:$LDAP_SUFFIX:g" \
+          -e "s: {{DC_DNS}}:$LDAP_SUFFIX:g" \
           "${FILE_SAMBA_SCHEMA_WINSREPL}.j2" > "${FILE_SAMBA_SCHEMA_WINSREPL}"
     ldbadd -H "$FILE_SAMBA_WINSLDB" "$FILE_SAMBA_SCHEMA_WINSREPL"
     fi
@@ -590,6 +563,7 @@ if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
   cp -f "${FILE_SUPERVISORD_CONF_EXTERNAL}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
   cp -f "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
   cp -f "${FILE_KRB5_CONF_EXTERNAL}" "${FILE_KRB5}"
+  cp -f "${FILE_NSSWITCH_EXTERNAL}" "${FILE_NSSWITCH}"
   appStart
 else
   appSetup
