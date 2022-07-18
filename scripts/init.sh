@@ -124,8 +124,13 @@ config() {
 }
 
 appSetup () {
-  #NTP Settings - Instead of just touch the file write a float to the file to get rid of "format error frequency file /var/lib/ntp/ntp.drift" error message
-  SAMBA_DEBUG_OPTION="-d $DEBUG_LEVEL"
+  ARGS_SAMBA_TOOL=()
+  ARGS_SAMBA_TOOL+=("--dns-backend=SAMBA_INTERNAL")
+  if [[ $DEBUG_LEVEL -gt 0 ]]; then
+    SAMBA_DEBUG_OPTION="-d $DEBUG_LEVEL"
+    ARGS_SAMBA_TOOL+=("${SAMBA_DEBUG_OPTION}")
+  fi
+
   SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d $DEBUG_LEVEL"
   NTP_DEBUG_OPTION="-D $DEBUG_LEVEL"
   sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:$SAMBADAEMON_DEBUG_OPTION:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
@@ -136,6 +141,7 @@ appSetup () {
       -e "s:{{ HOSTNAME }}:$HOSTNAME:" \
   -i "$FILE_KRB5"
 
+  #NTP Settings - Instead of just touch the file write a float to the file to get rid of "format error frequency file /var/lib/ntp/ntp.drift" error message
   if [[ ! -f "$FILE_NTP_DRIFT" ]]; then
     echo 0.0 > "$FILE_NTP_DRIFT"
     chown root:ntp "$FILE_NTP_DRIFT"
@@ -187,27 +193,28 @@ appSetup () {
     else
       OPTION_RFC=--use-rfc2307
     fi
+    ARGS_SAMBA_TOOL+=("${OPTION_RFC}")
   fi
 
   if [[ "$HOSTIP" != "NONE" ]]; then
-    OPTION_HOSTIP=--host-ip="${HOSTIP}"
+	ARGS_SAMBA_TOOL+=("--host-ip=${HOSTIP}")
   fi
 
   if [[ "$JOIN_SITE" != "NONE" ]]; then
-    OPTION_JOIN=--site="${JOIN_SITE}"
+	ARGS_SAMBA_TOOL+=("--site=${JOIN_SITE}")
   fi
 
   if [[ ${ENABLE_BIND_INTERFACE,,} = true ]]; then
-    OPTION_INT=--option="interfaces=${BIND_INTERFACES,,} lo"
-    OPTION_BIND=--option="bind interfaces only = yes"
+    ARGS_SAMBA_TOOL+=("--option=interfaces=${BIND_INTERFACES,,} lo")
+    ARGS_SAMBA_TOOL+=("--option=bind interfaces only = yes")
   fi
 
   if [[ "$ENABLE_DNSFORWARDER" != "NONE" ]]; then
-    OPTION_DNS_FWD=--option="dns forwarder=${ENABLE_DNSFORWARDER}"
+    ARGS_SAMBA_TOOL+=("--option=dns forwarder=${ENABLE_DNSFORWARDER}")
   fi
 
   if [[ "$ENABLE_DYNAMIC_PORTRANGE" != "NONE" ]]; then
-    OPTION_RPC=--option="rpc server dynamic port range = ${ENABLE_DYNAMIC_PORTRANGE}"
+    ARGS_SAMBA_TOOL+=("--option=rpc server dynamic port range = ${ENABLE_DYNAMIC_PORTRANGE}")
   fi
 
   # If the finished file (external/smb.conf) doesn't exist, this is new container with empty volume, we're not just moving to a new container
@@ -221,7 +228,11 @@ appSetup () {
       s=1
       until [ $s = 0 ]
       do
-        samba-tool domain join "${LDOMAIN}" DC -U"${DOMAIN_NETBIOS}"\\"${DOMAIN_USER}" ${OPTION_RFC} --password="${DOMAIN_PASS}" "${OPTION_JOIN}" '--dns-backend=SAMBA_INTERNAL' ${SAMBA_DEBUG_OPTION} ${OPTION_INT} ${OPTION_BIND} ${OPTION_DNS_FWD} ${OPTION_RPC} && s=0 && break || s=$? && sleep 60
+	    ARGS_SAMBA_TOOL+=("${LDOMAIN}")
+		ARGS_SAMBA_TOOL+=("DC")
+		ARGS_SAMBA_TOOL+=("-U${DOMAIN_NETBIOS}\${DOMAIN_USER}")
+		ARGS_SAMBA_TOOL+=("--password=${DOMAIN_PASS}")
+        samba-tool domain join "${ARGS_SAMBA_TOOL[@]}" && s=0 && break || s=$? && sleep 60
       done; (exit $s)
 #      # Netlogon & sysvol readonly on secondary DC
 #      {
@@ -243,7 +254,13 @@ appSetup () {
       fi
 
     else
-      samba-tool domain provision --domain="${DOMAIN_NETBIOS}" --realm="${UDOMAIN}" "${OPTION_JOIN}" --adminpass="${DOMAIN_PASS}" --host-name="${HOSTNAME}" --server-role=dc --dns-backend=SAMBA_INTERNAL ${OPTION_INT} ${OPTION_BIND} ${OPTION_HOSTIP} ${OPTION_DNS_FWD} ${OPTION_RFC} ${SAMBA_DEBUG_OPTION} ${OPTION_RPC}
+      ARGS_SAMBA_TOOL+=("--server-role=dc")
+      ARGS_SAMBA_TOOL+=("--host-name=${HOSTNAME}")
+      ARGS_SAMBA_TOOL+=("--adminpass=${DOMAIN_PASS}")
+      ARGS_SAMBA_TOOL+=("--realm=${UDOMAIN}")
+      ARGS_SAMBA_TOOL+=("--domain=${DOMAIN_NETBIOS}")
+
+      samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
 #
 #
 #
@@ -501,10 +518,14 @@ appFirstStart () {
   if [ "${JOIN,,}" = false ];then
     # Better check if net rpc is rdy
     sleep 300s
-    echo "Check NTP"
-    ntpinfo=$(ntpq -c sysinfo)
+    echo "Check NTP $(ntpq -c sysinfo)"
     #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
-    echo "${DOMAIN_PASS}" | net rpc rights grant "$UDOMAIN\\Domain Admins" 'SeDiskOperatorPrivilege' -U"$UDOMAIN\\${DOMAIN_USER,,}" ${DEBUG_OPTION}
+	ARGS_NET_RPC=()
+	ARGS_NET_RPC+=("$UDOMAIN\\Domain Admins")
+	ARGS_NET_RPC+=("SeDiskOperatorPrivilege")
+	ARGS_NET_RPC+=("-U$UDOMAIN\\${DOMAIN_USER,,}")
+	ARGS_NET_RPC+=("-d $DEBUG_LEVEL")
+    echo "${DOMAIN_PASS}" | net rpc rights grant "${ARGS_NET_RPC[@]}"
   else
     if [ -f "$FILE_SAMBA_WINSLDB" ] && [ "${ENABLE_WINS}" = true ];then
       sed -e "s: {{DC_IP}}:$LDAP_SUFFIX:g" \
