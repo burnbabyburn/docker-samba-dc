@@ -188,7 +188,7 @@ appSetup () {
     sleep 30
   fi
   if [[ ${ENABLE_RFC2307,,} = true ]]; then
-    if [[ "$JOIN" = true ]];then
+    if [[ "$JOIN" = true ]]; then
       OPTION_RFC=--option='idmap_ldb:use rfc2307 = yes'
     else
       OPTION_RFC=--use-rfc2307
@@ -489,11 +489,12 @@ appFirstStart () {
   update-ca-certificates
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}" &
 
-  if [ "${JOIN,,}" = false ];then
+  if [ "${JOIN,,}" = false ]; then
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
-    if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ];then
-    samba-tool dns add `hostname -s` $LDOMAIN wpad A 127.0.0.1 -P
-    samba-tool dns add `hostname -s` $LDOMAIN isatap A 127.0.0.1 -P
+    if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ]; then
+      samba-tool dns add `hostname -s` $LDOMAIN wpad A 127.0.0.1 -P
+      samba-tool dns add `hostname -s` $LDOMAIN isatap A 127.0.0.1 -P
+	fi
     # Better check if net rpc is rdy
     sleep 300s
 	#Copy root cert as der to netlogon
