@@ -49,6 +49,8 @@ docker exec -it samba-ad-dc "net rpc rights grant "<URDOMAIN>\Domain Admins" SeD
 ## Leave domain on exit of samba member
 net ads leave -UAdministrator --password
 
+##Root Cert in der format (.crt) is avaible in NETLOGON share of DC
+
 ## Volumes for quick start
 
 * `/etc/localtime:/etc/localtime:ro` - Sets the timezone to match the host

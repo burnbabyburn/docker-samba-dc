@@ -151,16 +151,16 @@ services:
     privileged: true
 
 # git clone https://github.com/Netgear/wsdd2
-  wsdd2:
-    build:
-      context: ./wsdd2
-    container_name: wsdd2
-    environment:
-      - HOSTNAME=blabla
-      - WORKGROUP=WORKGROUP
-    network_mode: "host"
-    privileged: true
-    healthcheck:
-      interval: "30s"
-      timeout: "10s"
-      test: pgrep -x "/usr/sbin/wsdd2" || exit 1
+#  wsdd2:
+#    build:
+#      context: ./wsdd2
+#    container_name: wsdd2
+#    environment:
+#      - HOSTNAME=blabla
+#      - WORKGROUP=WORKGROUP
+#    network_mode: "host"
+#    privileged: true
+#    healthcheck:
+#      interval: "30s"
+#      timeout: "10s"
+#      test: pgrep -x "/usr/sbin/wsdd2" || exit 1
