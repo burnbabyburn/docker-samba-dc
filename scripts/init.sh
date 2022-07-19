@@ -41,17 +41,18 @@ config() {
 
   DISABLE_MD5=${DISABLE_MD5:-true}
   DISABLE_PW_COMPLEXITY=${DISABLE_PW_COMPLEXITY:-false}
+  DISABLE_DNS_WPAD_ISATAP=${DISABLE_PW_COMPLEXITY:-false}
 
   ENABLE_CUPS=${ENABLE_CUPS:-false}
   ENABLE_DNSFORWARDER=${ENABLE_DNSFORWARDER:-NONE}
   ENABLE_DYNAMIC_PORTRANGE=${ENABLE_DYNAMIC_PORTRANGE:-NONE}
+  ENABLE_INSECURE_DNSUPDATE=${ENABLE_INSECURE_DNSUPDATE:-false}
   ENABLE_INSECURE_LDAP=${ENABLE_INSECURE_LDAP:-false}
   ENABLE_LAPS_SCHEMA=${ENABLE_LAPS_SCHEMA:-true}
   ENABLE_LOGS=${ENABLE_LOGS:-false}
   ENABLE_MSCHAPV2=${ENABLE_MSCHAPV2:-false}
   ENABLE_RFC2307=${ENABLE_RFC2307:-true}
   ENABLE_WINS=${ENABLE_WINS:-true}
-  ENABLE_INSECURE_DNSUPDATE=${ENABLE_INSECURE_DNSUPDATE:-false}
 
   ENABLE_TLS=${ENABLE_TLS:-false}
   TLS_PKI=${TLS_PKI:-false}
@@ -179,7 +180,6 @@ appSetup () {
   if [[ $DOMAIN_NETBIOS == *"."* ]]; then
     echo "DOMAIN_NETBIOS contains forbiden char    .     => exiting" && exit 1
   fi
-
   # If multi-site, we need to connect to the VPN before joining the domain
   if [[ ${JOIN_SITE_VPN,,} = true ]]; then
     /usr/sbin/openvpn --config ${FILE_OPENVPNCONF} &
@@ -187,7 +187,6 @@ appSetup () {
     echo "Sleeping 30s to ensure VPN connects ($VPNPID)";
     sleep 30
   fi
-
   if [[ ${ENABLE_RFC2307,,} = true ]]; then
     if [[ "$JOIN" = true ]];then
       OPTION_RFC=--option='idmap_ldb:use rfc2307 = yes'
@@ -196,26 +195,38 @@ appSetup () {
     fi
     ARGS_SAMBA_TOOL+=("${OPTION_RFC}")
   fi
-
   if [[ "$HOSTIP" != "NONE" ]]; then
 	ARGS_SAMBA_TOOL+=("--host-ip=${HOSTIP}")
   fi
-
   if [[ "$JOIN_SITE" != "NONE" ]]; then
 	ARGS_SAMBA_TOOL+=("--site=${JOIN_SITE}")
   fi
-
   if [[ ${ENABLE_BIND_INTERFACE,,} = true ]]; then
     ARGS_SAMBA_TOOL+=("--option=interfaces=${BIND_INTERFACES,,} lo")
     ARGS_SAMBA_TOOL+=("--option=bind interfaces only = yes")
   fi
-
   if [[ "$ENABLE_DNSFORWARDER" != "NONE" ]]; then
     ARGS_SAMBA_TOOL+=("--option=dns forwarder=${ENABLE_DNSFORWARDER}")
   fi
-
   if [[ "$ENABLE_DYNAMIC_PORTRANGE" != "NONE" ]]; then
-    ARGS_SAMBA_TOOL+=("--option=rpc server dynamic port range = ${ENABLE_DYNAMIC_PORTRANGE}")
+    ARGS_SAMBA_TOOL+=("--option=rpc server dynamic port range=${ENABLE_DYNAMIC_PORTRANGE}")
+  fi
+  if [[ ${ENABLE_MSCHAPV2,,} = true ]]; then
+    ARGS_SAMBA_TOOL+=("--option=ntlm auth=mschapv2-and-ntlmv2-only")
+  fi
+  if [[ ${DISABLE_MD5,,} = true ]]; then
+    # Prevent downgrade attacks to md5
+	ARGS_SAMBA_TOOL+=("--option=reject md5 clients = yes")
+	ARGS_SAMBA_TOOL+=("--option=reject md5 servers = yes")
+  fi
+  if [[ ${ENABLE_INSECURE_LDAP,,} = true ]]; then
+	ARGS_SAMBA_TOOL+=("--option=ldap server require strong auth = no")
+  fi
+  if [[ ${ENABLE_WINS,,} = true ]]; then
+    ARGS_SAMBA_TOOL+=("--option=wins support = yes")
+  fi
+  if [ "${ENABLE_INSECURE_DNSUPDATE,,}" = true ]; then
+    ARGS_SAMBA_TOOL+=("--option=allow dns updates  = nonsecure")
   fi
 
   # If the finished file (external/smb.conf) doesn't exist, this is new container with empty volume, we're not just moving to a new container
@@ -260,7 +271,7 @@ appSetup () {
       ARGS_SAMBA_TOOL+=("--adminpass=${DOMAIN_PASS}")
       ARGS_SAMBA_TOOL+=("--realm=${UDOMAIN}")
       ARGS_SAMBA_TOOL+=("--domain=${DOMAIN_NETBIOS}")
-      ARGS_SAMBA_TOOL+=("--option=add machine script=/usr/sbin/useradd -M -d /dev/null -s /bin/false %u")
+      ARGS_SAMBA_TOOL+=("--option=add machine script=/usr/sbin/useradd -M -g machines -d /dev/null -s /bin/false %u")
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
 
       if [[ "$RECYCLEBIN" = true ]]; then
@@ -367,12 +378,6 @@ appSetup () {
       " "${FILE_SAMBA_CONF}"
     fi
 
-    if [[ ${ENABLE_MSCHAPV2,,} = true ]]; then
-      sed -i "/\[global\]/a \
-        \\\tntlm auth = mschapv2-and-ntlmv2-only\
-      " "${FILE_SAMBA_CONF}"
-    fi
-
     if [[ ${ENABLE_CUPS,,} = true ]]; then
       sed -i "/\[global\]/a \
         \\\tload printers = yes\\n\
@@ -402,25 +407,6 @@ appSetup () {
       " "${FILE_SAMBA_CONF}"
     fi
 
-    if [[ ${DISABLE_MD5,,} = true ]]; then
-      # Prevent downgrade attacks to md5
-      sed -i "/\[global\]/a \
-        \\\treject md5 clients = yes\\n\
-        \\treject md5 servers = yes\\n\
-      " "${FILE_SAMBA_CONF}"
-    fi
-
-    if [[ ${ENABLE_INSECURE_LDAP,,} = true ]]; then
-      sed -i "/\[global\]/a \
-        \\\tldap server require strong auth = no\
-      " "${FILE_SAMBA_CONF}"
-    fi
-
-    if [[ ${ENABLE_WINS,,} = true ]]; then
-      sed -i "/\[global\]/a \
-        \\\twins support = yes\\n\
-      " "${FILE_SAMBA_CONF}"
-    fi
     # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
     sed -i "/\[global\]/a \
       \\\tpassword hash userPassword schemes = CryptSHA256 CryptSHA512\\n\
@@ -485,12 +471,6 @@ appSetup () {
     " "${FILE_SAMBA_CONF}"
   fi
 
-  if [ "${ENABLE_INSECURE_DNSUPDATE,,}" = true ]; then
-    sed -i "/\[global\]/a \
-      \\\tallow dns updates  = nonsecure\
-    " "${FILE_SAMBA_CONF}"
-  fi
-
   if [[ ${ENABLE_LOGS,,} = true ]]; then
     sed -i "/\[global\]/a \
       \\\tlog file = /var/log/samba/%m.log\\n\
@@ -510,8 +490,14 @@ appFirstStart () {
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}" &
 
   if [ "${JOIN,,}" = false ];then
+    #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
+    if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ];then
+    samba-tool dns add `hostname -s` $LDOMAIN wpad A 127.0.0.1 -P
+    samba-tool dns add `hostname -s` $LDOMAIN isatap A 127.0.0.1 -P
     # Better check if net rpc is rdy
     sleep 300s
+	#Copy root cert as der to netlogon
+	openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
 	# If HostIP is set fix DNS
     if [[ "$HOSTIP" != "NONE" ]]; then
 #      samba_dnsupdate --current-ip="$HOSTIP"
@@ -530,6 +516,7 @@ appFirstStart () {
 	ARGS_NET_RPC+=("-d $DEBUG_LEVEL")
     echo "${DOMAIN_PASS}" | net rpc rights grant "${ARGS_NET_RPC[@]}"
   else
+  #ERROR?`{{DC_IP}}:$LDAP_SUFFIX:g {DC_DNS}}:$LDAP_SUFFIX:g
     if [ -f "$FILE_SAMBA_WINSLDB" ] && [ "${ENABLE_WINS}" = true ];then
       sed -e "s: {{DC_IP}}:$LDAP_SUFFIX:g" \
           -e "s: {{DC_DNS}}:$LDAP_SUFFIX:g" \

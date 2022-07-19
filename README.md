@@ -25,6 +25,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `CHANGE_KRB_TGT_PW`         | true                                          |   X   | Optional Service: Only activate on PDC! Change password of krbtgt user (Kerberos Ticket Granting Ticket) to prevent Golden Ticket attacks |
 | `DISABLE_MD5`               | true                                          |       | Disable MD5 Clients and Server  |
 | `DISABLE_PW_COMPLEXITY`     | false                                         |   X   | Disable Password requirements  |
+| `DISABLE_DNS_WPAD_ISATAP`   | true                                          |   X   | Create DNS records for WPAD and ISATAP pointing to localhost|
 | `ENABLE_CUPS`               | false                                         |       | Enable CUPS - cups is not installed but setup in smb.conf modify Dockerfile  |
 | `ENABLE_DNSFORWARDER`       | <IP-of-dns-server>                            |       | Ip of upstream dns server  |
 | `ENABLE_DYNAMIC_PORTRANGE`  | NONE                                          |       | If samba is behind a reverse proxy on some small systems the ports need to be limited  |
@@ -35,20 +36,18 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `ENABLE_MSCHAPV2`           | false                                         |       | Enable MSCHAP authentication  |
 | `ENABLE_RFC2307`            | true                                          |   X   | Enable RDC2307 LDAP Extension in AD |
 | `ENABLE_TLS`                | false                                         |       | Enable TLS. Samba will autogen a cert if not provided before first start  |
+| `ENABLE_WINS`               | true                                          |       | Enable WINS  |
 | `ENABLE_DEBUG`              | false                                         |       | Enables debug messages set DEBUG_LEVEL accordingly  |
 | `DEBUG_LEVEL`               | 0                                             |       | Level of debug messages |
 | `ENABLE_BIND_INTERFACE`     | false                                         |       | set to true to bind services to interfaces  |
 | `BIND_INTERFACES`           | eth0                                          |       | set interface name to bind services to  |
 
-## Add Reverse DNS Zone
+## Add Reverse DNS Zone - IF $HOSTIP is set, DNS-Reverse-Zone gets create on first run
 docker exec -it samba-ad-dc "samba-tool dns zonecreate <Your-AD-DNS-Server-IP-or-hostname> <NETADDR>.in-addr.arpa -U<URDOMAIN>\administrator --password=<DOMAINPASS>"
-## Add Share Privileges to DomAdmin Group
+## Add Share Privileges to DomAdmin Group - Set by default
 docker exec -it samba-ad-dc "net rpc rights grant "<URDOMAIN>\Domain Admins" SeDiskOperatorPrivilege -U<URDOMAIN>\administrator --password=<DOMAINPASS> "
 ## Leave domain on exit of samba member
 net ads leave -UAdministrator --password
-
-##Fix DNS Update errors - Failed DNS update - with error code 26 - by setting update command to use RPC instead of D$
-add to smb.conf => dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool
 
 ## Volumes for quick start
 
