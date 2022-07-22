@@ -504,7 +504,7 @@ appFirstStart () {
 	#Copy root cert as der to netlogon
 	openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
 	# If HostIP is set fix DNS
-    if [[ "$HOSTIP" != "NONE" ]] || ; then
+    if [[ "$HOSTIP" != "NONE" ]]; then
 	#If using behind RProxy, this removes all internal docker IPs from samba DNS
 #    samba_dnsupdate --current-ip="$HOSTIP"
     # if hostip is set use external network ip to calc reverse zone
