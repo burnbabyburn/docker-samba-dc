@@ -31,17 +31,17 @@ config() {
   local IFS=' '
   LDAP_DN=$HOSTNAME$LDAP_SUFFIX
 
+  CHANGE_KRB_TGT_PW=${CHANGE_KRB_TGT_PW:-false}
   JOIN=${JOIN:-false}
   JOIN_SITE=${JOIN_SITE:-Default-First-Site-Name}
   # One could write a service to acomplish a wireguard mesh network between docker container on different sites as an "overlay-network" - https://www.scaleway.com/en/docs/tutorials/wireguard-mesh-vpn/
   JOIN_SITE_VPN=${JOIN_SITE_VPN:-false}
   NTPSERVERLIST=${NTPSERVERLIST:-0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org}
   RECYCLEBIN=${RECYCLEBIN:-true}
-  CHANGE_KRB_TGT_PW=${CHANGE_KRB_TGT_PW:-false}
 
+  DISABLE_DNS_WPAD_ISATAP=${DISABLE_PW_COMPLEXITY:-false}
   DISABLE_MD5=${DISABLE_MD5:-true}
   DISABLE_PW_COMPLEXITY=${DISABLE_PW_COMPLEXITY:-false}
-  DISABLE_DNS_WPAD_ISATAP=${DISABLE_PW_COMPLEXITY:-false}
 
   ENABLE_CUPS=${ENABLE_CUPS:-false}
   ENABLE_DNSFORWARDER=${ENABLE_DNSFORWARDER:-NONE}
@@ -52,23 +52,31 @@ config() {
   ENABLE_LOGS=${ENABLE_LOGS:-false}
   ENABLE_MSCHAPV2=${ENABLE_MSCHAPV2:-false}
   ENABLE_RFC2307=${ENABLE_RFC2307:-true}
-  ENABLE_WINS=${ENABLE_WINS:-true}
+  ENABLE_WINS=${ENABLE_WINS:-false}
 
   ENABLE_TLS=${ENABLE_TLS:-false}
   TLS_PKI=${TLS_PKI:-false}
+  PKI_CN=${PKI_CN:-Simple Samba Root CA}
   PKI_O=${PKI_O:-Simple Root CA}
   PKI_OU=${PKI_OU:-Samba}
-  PKI_CN=${PKI_CN:-Simple Samba Root CA}
 
   # ntpd[740]: select(): nfound=-1, error: Interrupted system call => ignore on DEBUG_LEVEL=99
 
-  ENABLE_DEBUG=${ENABLE_DEBUG:-true}
+  ENABLE_DEBUG=${ENABLE_DEBUG:-false}
   DEBUG_LEVEL=${DEBUG_LEVEL:-0}
 
   ENABLE_BIND_INTERFACE=${ENABLE_BIND_INTERFACE:-false}
-  BIND_INTERFACES=${BIND_INTERFACES:-eth0} # Can be a list of interfaces seperated by spaces
+  BIND_INTERFACES=${BIND_INTERFACES:-127.0.0.1} # Can be a list of interfaces seperated by spaces
 
-  # Min Counter Values for NIS Attributes. Set in docker-compose if you want a different start
+  if [[ "$ENABLE_BIND_INTERFACE" = true ]] && ! $(echo $BIND_INTERFACES | grep "127.0.0.1" >> /dev/null); then
+    echo "127.0.0.1 missing from BIND_INTERFACES. 
+	 If bind interfaces only is set and the network address 127.0.0.1 is not added to the interfaces parameter list smbpasswd(8) may not work as expected due to the reasons covered below.
+     To change a users SMB password, the smbpasswd by default connects to the localhost - 127.0.0.1 address as an SMB client to issue the password change request. 
+	 If bind interfaces only is set then unless the network address 127.0.0.1 is added to the interfaces parameter list then smbpasswd will fail to connect in it's default mode. 
+	 smbpasswd can be forced to use the primary IP interface of the local host by using its smbpasswd(8)	-r remote machine parameter, with remote machine set to the IP name of the primary interface of the local host. "
+	 BIND_INTERFACES+=,127.0.0.1
+  fi
+    # Min Counter Values for NIS Attributes. Set in docker-compose if you want a different start
   # IT does nothing on DCs as they shall not use idmap settings.
   # Using the same Start and stop values on members however gets the RFC2307 attributs (NIS) rights
   # idmap config {{ URDOMAIN }} : range = {{ IDMIN }}-{{ IDMAX }}
@@ -78,45 +86,41 @@ config() {
 
   #file variables
   # DIR_SAMBA_CONF and DIR_SCRIPTS also need to be changed in the Dockerfile
+  DIR_LDIF=/ldif
   DIR_NTP_SOCK=/var/lib/samba/ntp_signd
+  DIR_SAMBA_CONF=$DIR_SAMBA_ETC/smb.conf.d
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba
   DIR_SAMBA_ETC=/etc/samba
   DIR_SAMBA_PRIVATE=$DIR_SAMBA_DATA_PREFIX/private
-  DIR_SAMBA_CONF=$DIR_SAMBA_ETC/smb.conf.d
   DIR_SCRIPTS=/scripts
-  DIR_LDIF=/ldif
 
+  FILE_KRB5=/etc/krb5.conf
+  FILE_KRB5_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/krb5.conf
+  FILE_NSSWITCH=/etc/nsswitch.conf
+  FILE_NSSWITCH_EXTERNAL=$DIR_SAMBA_ETC/external/ntp.conf
+  FILE_NTP=/etc/ntp.conf
+  FILE_NTP_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/ntp.conf
+  FILE_NTP_DRIFT=/var/lib/ntp/ntp.drift
+  FILE_OPENVPNCONF=/docker.ovpn
   FILE_PKI_CA=$DIR_SAMBA_PRIVATE/tls/ca.pem
   FILE_PKI_CERT=$DIR_SAMBA_PRIVATE/tls/cert.pem
   FILE_PKI_CRL=$DIR_SAMBA_PRIVATE/tls/crl.pem
   FILE_PKI_DH=$DIR_SAMBA_PRIVATE/tls/dh.key
   FILE_PKI_INT=$DIR_SAMBA_PRIVATE/tls/intermediate.pem
   FILE_PKI_KEY=$DIR_SAMBA_PRIVATE/tls/key.pem
-
-  FILE_SAMBA_WINSLDB=$DIR_SAMBA_PRIVATE/wins_config.ldb
-
   FILE_SAMBA_CONF=$DIR_SAMBA_ETC/smb.conf
   FILE_SAMBA_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/smb.conf
   FILE_SAMBA_INCLUDES=$DIR_SAMBA_ETC/includes.conf
-  FILE_SAMBA_USER_MAP=$DIR_SAMBA_ETC/user.map
-
-  FILE_SAMBA_SCHEMA_RFC=$DIR_LDIF/RFC_Domain_User_Group.ldif
   FILE_SAMBA_SCHEMA_LAPS1=$DIR_LDIF/laps-1.ldif
   FILE_SAMBA_SCHEMA_LAPS2=$DIR_LDIF/laps-2.ldif
+  FILE_SAMBA_SCHEMA_RFC=$DIR_LDIF/RFC_Domain_User_Group.ldif
   FILE_SAMBA_SCHEMA_WINSREPL=$DIR_LDIF/wins.ldif
-
-  FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
-  FILE_SUPERVISORD_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/supervisord.conf
-  FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
-  FILE_OPENVPNCONF=/docker.ovpn
-  FILE_KRB5=/etc/krb5.conf
-  FILE_KRB5_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/krb5.conf
-  FILE_NSSWITCH=/etc/nsswitch.conf
-  FILE_NSSWITCH_EXTERNAL=$DIR_SAMBA_ETC/external/ntp.conf
+  FILE_SAMBA_USER_MAP=$DIR_SAMBA_ETC/user.map
+  FILE_SAMBA_WINSLDB=$DIR_SAMBA_PRIVATE/wins_config.ldb
   FILE_SAMLDB=$DIR_SAMBA_PRIVATE/sam.ldb
-  FILE_NTP=/etc/ntp.conf
-  FILE_NTP_DRIFT=/var/lib/ntp/ntp.drift
-  FILE_NTP_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/ntp.conf
+  FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
+  FILE_SUPERVISORD_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/supervisord.conf
+  FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
 
   # exports for other scripts and TLS_PKI
   export HOSTNAME="$HOSTNAME"
@@ -381,12 +385,12 @@ appSetup () {
     if [[ ${ENABLE_CUPS,,} = true ]]; then
       sed -i "/\[global\]/a \
         \\\tload printers = yes\\n\
-        \\tprinting = cups\\n\
-        \\tprintcap name = cups\\n\
-        \\tshow add printer wizard = no\\n\
-        \\tcups encrypt = no\\n\
-        \\tcups options = \"raw media=a4\"\\n\
-        \\t#cups server = ${CUPS_SERVER}:${CUPS_PORT}\
+        printing = cups\\n\
+        printcap name = cups\\n\
+        show add printer wizard = no\\n\
+        cups encrypt = no\\n\
+        cups options = \"raw media=a4\"\\n\
+        #cups server = ${CUPS_SERVER}:${CUPS_PORT}\
       " "${FILE_SAMBA_CONF}"
       {
         echo ""
@@ -401,18 +405,18 @@ appSetup () {
     else
       sed -i "/\[global\]/a \
         \\\tload printers = no\\n\
-        \\tprinting = bsd\\n\
-        \\tprintcap name = /dev/null\\n\
-        \\tdisable spoolss = yes\
+        printing = bsd\\n\
+        printcap name = /dev/null\\n\
+        disable spoolss = yes\
       " "${FILE_SAMBA_CONF}"
     fi
 
     # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
     sed -i "/\[global\]/a \
       \\\tpassword hash userPassword schemes = CryptSHA256 CryptSHA512\\n\
-      \\t# Template settings for login shell and home directory\\n\
-      \\ttemplate shell = /bin/bash\\n\
-      \\ttemplate homedir = /home/%U\
+      # Template settings for login shell and home directory\\n\
+      template shell = /bin/bash\\n\
+      template homedir = /home/%U\
     " "${FILE_SAMBA_CONF}"
 
     # nsswitch anpassen
@@ -460,22 +464,22 @@ appSetup () {
       openssl dhparam -out "$FILE_PKI_DH" 2048
     fi
     sed -i "/\[global\]/a \
-      \\\ttls enabled  = yes\\n\
-      \\ttls keyfile  = tls/key.pem\\n\
-      \\ttls certfile = tls/cert.pem\\n\
-      \\t#tls cafile   = tls/intermediate.pem\\n\
-      \\ttls cafile   = tls/ca.pem\\n\
-      \\ttls dh params file = tls/dh.key\\n\
-      \\t#tls crlfile   = tls/crl.pem\\n\
-      \\t#tls verify peer = ca_and_name\
+        \\\ttls enabled  = yes\\n\
+        tls keyfile  = tls/key.pem\\n\
+        tls certfile = tls/cert.pem\\n\
+        #tls cafile   = tls/intermediate.pem\\n\
+        tls cafile   = tls/ca.pem\\n\
+        tls dh params file = tls/dh.key\\n\
+        #tls crlfile   = tls/crl.pem\\n\
+        #tls verify peer = ca_and_name\
     " "${FILE_SAMBA_CONF}"
   fi
 
   if [[ ${ENABLE_LOGS,,} = true ]]; then
     sed -i "/\[global\]/a \
       \\\tlog file = /var/log/samba/%m.log\\n\
-      \\tmax log size = 10000\\n\
-      \\tlog level = ${DEBUG_LEVEL}\
+      max log size = 10000\\n\
+      log level = ${DEBUG_LEVEL}\
     " /etc/samba/smb.conf
     sed -i '/FILE:/s/^#//g' "$FILE_KRB5"
     sed -i '/FILE:/s/^#_//g' "$FILE_NTP"
@@ -500,8 +504,9 @@ appFirstStart () {
 	#Copy root cert as der to netlogon
 	openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
 	# If HostIP is set fix DNS
-    if [[ "$HOSTIP" != "NONE" ]]; then
-#      samba_dnsupdate --current-ip="$HOSTIP"
+    if [[ "$HOSTIP" != "NONE" ]] || ; then
+	#If using behind RProxy, this removes all internal docker IPs from samba DNS
+#    samba_dnsupdate --current-ip="$HOSTIP"
     # if hostip is set use external network ip to calc reverse zone
     #add reverse zone & add site & add ip network to site
     IP_REVERSE=$(echo $HOSTIP | awk -F. '{print $3"." $2"."$1}')
