@@ -2,7 +2,7 @@ name: ci Build and push
 
 on:
   push:
-    branches: [ test ]
+    branches: [ my ]
 
 jobs:
   docker:
@@ -32,4 +32,4 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.actor }}/docker-ubuntu-samba-dc:test
+            ghcr.io/${{ github.actor }}/docker-ubuntu-samba-dc:latest
