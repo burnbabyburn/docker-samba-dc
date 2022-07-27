@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-#
-# enabled the Recycle Bin optional feature
-#
-# https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
-# python3 enablerecylcebin /var/lib/samba/private/sam.ldb
-#
+"""
+Enable the Recycle Bin optional feature
+https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
+python3 enablerecylcebin /var/lib/samba/private/sam.ldb
+"""
 import optparse
 import sys
 
