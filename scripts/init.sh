@@ -5,22 +5,22 @@ set -x
 config() {
   # Set variables
   DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
-  LDOMAIN=${DOMAIN,,} #alllowercase
-  UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
-  URDOMAIN=${UDOMAIN%%.*} #trim
+  LDOMAIN=$(echo "$DOMAIN" | tr '[:upper:]' '[:lower:]')
+  UDOMAIN=$(echo "$LDOMAIN" | tr '[:lower:]' '[:upper:]')
+  URDOMAIN=$(echo "$UDOMAIN" | cut -d "." -f1)
 
   DOMAIN_USER=${DOMAIN_USER:-Administrator}
   DOMAIN_PASS=${DOMAIN_PASS:-youshouldsetapassword}
   DOMAIN_NETBIOS=${DOMAIN_NETBIOS:-$URDOMAIN}
 
-  #Posix
-  #LDOMAIN=$(echo "$DOMAIN" | tr '[:upper:]' '[:lower:]')
-  #UDOMAIN=$(echo "$LDOMAIN" | tr '[:lower:]' '[:upper:]')
-  #URDOMAIN=$(echo "$UDOMAIN" | cut -d "." -f1)
-
   HOSTIP=${HOSTIP:-NONE}
   #Change if hostname includes DNS/DOMAIN SUFFIX e.g. host.example.com - it should only display host
   HOSTNAME=${HOSTNAME:-$(hostname)}
+  
+  # if hostname contains FQDN cut the rest
+  if [[ $HOSTNAME == *"."* ]]; then
+  HOSTNAME=$(echo "$HOSTNAME" | cut -d "." -f1)
+  fi
 
   #DN for LDIF
   LDAP_SUFFIX=""
@@ -59,8 +59,6 @@ config() {
   PKI_CN=${PKI_CN:-Simple Samba Root CA}
   PKI_O=${PKI_O:-Simple Root CA}
   PKI_OU=${PKI_OU:-Samba}
-
-  # ntpd[740]: select(): nfound=-1, error: Interrupted system call => ignore on DEBUG_LEVEL=99
 
   ENABLE_DEBUG=${ENABLE_DEBUG:-false}
   DEBUG_LEVEL=${DEBUG_LEVEL:-0}
@@ -150,7 +148,6 @@ appSetup () {
   #NTP Settings - Instead of just touch the file write a float to the file to get rid of "format error frequency file /var/lib/ntp/ntp.drift" error message
   if [[ ! -f "$FILE_NTP_DRIFT" ]]; then
     echo 0.0 > "$FILE_NTP_DRIFT"
-    chown root:ntp "$FILE_NTP_DRIFT"
   fi
   if grep "{{ NTPSERVER }}" "$FILE_NTP"; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
@@ -169,7 +166,6 @@ appSetup () {
   if [[ ! -f "$DIR_NTP_SOCK" ]]; then
     # Own socket
     mkdir -p "$DIR_NTP_SOCK"
-    chown root:ntp "$DIR_NTP_SOCK"
     chmod 750 "$DIR_NTP_SOCK"
   fi
 
@@ -202,7 +198,7 @@ appSetup () {
   if [[ "$HOSTIP" != "NONE" ]]; then
 	ARGS_SAMBA_TOOL+=("--host-ip=${HOSTIP}")
   fi
-  if [[ "$JOIN_SITE" != "NONE" ]]; then
+  if [[ "$JOIN_SITE" != "Default-First-Site-Name" ]]; then
 	ARGS_SAMBA_TOOL+=("--site=${JOIN_SITE}")
   fi
   if [[ ${ENABLE_BIND_INTERFACE,,} = true ]]; then
@@ -276,6 +272,8 @@ appSetup () {
       ARGS_SAMBA_TOOL+=("--realm=${UDOMAIN}")
       ARGS_SAMBA_TOOL+=("--domain=${DOMAIN_NETBIOS}")
       ARGS_SAMBA_TOOL+=("--option=add machine script=/usr/sbin/useradd -M -g machines -d /dev/null -s /bin/false %u")
+	  ARGS_SAMBA_TOOL+=("--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool")
+	  
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
 
       if [[ "$RECYCLEBIN" = true ]]; then
@@ -376,7 +374,7 @@ appSetup () {
 
     #Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
     if [ ! -f "${FILE_SAMBA_USER_MAP}" ]; then
-      echo '!'"root = ${URDOMAIN}\\${DOMAIN_USER}" > "${FILE_SAMBA_USER_MAP}"
+      echo '!'"root = ${DOMAIN_NETBIOS}\\${DOMAIN_USER}" > "${FILE_SAMBA_USER_MAP}"
       sed -i "/\[global\]/a \
         \\\tusername map = ${FILE_SAMBA_USER_MAP}\
       " "${FILE_SAMBA_CONF}"
@@ -494,26 +492,55 @@ appFirstStart () {
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}" &
 
   if [ "${JOIN,,}" = false ]; then
+    # Better check if net rpc is rdy
+    sleep 30s
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
     if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ]; then
       samba-tool dns add `hostname -s` $LDOMAIN wpad A 127.0.0.1 -P
       samba-tool dns add `hostname -s` $LDOMAIN isatap A 127.0.0.1 -P
 	fi
-    # Better check if net rpc is rdy
-    sleep 300s
 	#Copy root cert as der to netlogon
 	openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
 	# If HostIP is set fix DNS
     if [[ "$HOSTIP" != "NONE" ]]; then
-	#If using behind RProxy, this removes all internal docker IPs from samba DNS
-#    samba_dnsupdate --current-ip="$HOSTIP"
-    # if hostip is set use external network ip to calc reverse zone
-    #add reverse zone & add site & add ip network to site
-    IP_REVERSE=$(echo $HOSTIP | awk -F. '{print $3"." $2"."$1}')
-	echo "${DOMAIN_PASS}" |  samba-tool dns zonecreate 127.0.0.1 $IP_REVERSE.in-addr.arpa -UAdministrator
-    echo "Check NTP $(ntpq -c sysinfo)"
+      if grep '/' <<< "$HOSTIP" ; then
+        IP=${HOSTIP%/*}
+        samba-tool sites subnet create "$CIDR" "$DOMAIN_SITE"
+      else
+        IP=$HOSTIP
+      fi
+      #this removes all internal docker IPs from samba DNS
+      #samba_dnsupdate --current-ip="${HOSTIP%/*}"
+      # if hostip is set use external network ip to calc reverse zone
+      #add reverse zone & add site & add ip network to site
+      IP_REVERSE=$(echo "$IP" | awk -F. '{print $3"." $2"."$1}')
+      echo "${DOMAIN_PASS}" | samba-tool dns zonecreate 127.0.0.1 "$IP_REVERSE".in-addr.arpa -UAdministrator
+      dig -x "$IP"
     fi
 
+    echo "Check NTP $(ntpq -c sysinfo)"
+    echo "ckeck DNS _ldap._tcp"; host -t SRV _ldap._tcp."$LDOMAIN"
+    echo "ckeck DNS _kerberos._tcp"; host -t SRV _kerberos._udp."$LDOMAIN"
+    echo "check Host record"; host -t A "$HOSTNAME.$LDOMAIN"
+
+    # https://stackoverflow.com/questions/5281341/get-local-network-interface-addresses-using-only-proc
+    # https://stackoverflow.com/questions/50413579/bash-convert-netmask-in-cidr-notation
+    ft_local=$(awk '$1=="Local:" {flag=1} flag' <<< "$(</proc/net/fib_trie)")
+    for IF in $(ls /sys/class/net/); do
+      networks=$(awk '$1=="'$IF'" && $3=="00000000" && $8!="FFFFFFFF" {printf $2 $8 "\n"}' <<< "$(</proc/net/route)" )
+      for net_hex in $networks; do
+        net_dec=$(awk '{gsub(/../, "0x& "); printf "%d.%d.%d.%d\n", $4, $3, $2, $1}' <<< $net_hex)
+        mask_dec=$(awk '{gsub(/../, "0x& "); printf "%d.%d.%d.%d\n", $8, $7, $6, $5}' <<< $net_hex)
+        c=0 x=0$( printf '%o' ${mask_dec//./ } )
+        while [ $x -gt 0 ]; do
+          let c+=$((x%2)) 'x>>=1'
+        done
+        CIDR=$net_dec/$c
+        echo "Found the following network: $CIDR - Trying to create Subnet and add to $DOMAIN_SITE"
+        samba-tool sites subnet create "$CIDR" "$DOMAIN_SITE"
+      done
+    done
+	
     #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
 	ARGS_NET_RPC=()
 	ARGS_NET_RPC+=("$UDOMAIN\\Domain Admins")
