@@ -505,7 +505,7 @@ appFirstStart () {
     if [[ "$HOSTIP" != "NONE" ]]; then
       if grep '/' <<< "$HOSTIP" ; then
         IP=${HOSTIP%/*}
-        samba-tool sites subnet create "$CIDR" "$DOMAIN_SITE"
+        samba-tool sites subnet create "$CIDR" "$JOIN_SITE"
       else
         IP=$HOSTIP
       fi
@@ -536,8 +536,8 @@ appFirstStart () {
           let c+=$((x%2)) 'x>>=1'
         done
         CIDR=$net_dec/$c
-        echo "Found the following network: $CIDR - Trying to create Subnet and add to $DOMAIN_SITE"
-        samba-tool sites subnet create "$CIDR" "$DOMAIN_SITE"
+        echo "Found the following network: $CIDR - Trying to create Subnet and add to $JOIN_SITE"
+        samba-tool sites subnet create "$CIDR" "$JOIN_SITE"
       done
     done
 	
