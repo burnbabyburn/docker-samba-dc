@@ -6,12 +6,20 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build the stack
-        run: docker-compose -f docker-compose.yml up -d
-      - name: Check running containers
-        run: docker ps -a
-      - name: docker network
-        run: docker network inspect samba-net
+        run: docker-compose -f docker-compose.yml build
+      - name: Start DC01
+        run: docker-compose -f docker-compose.yml up -d samba
+      - name: Sleep for 30 seconds
+        run: sleep 30
       - name: Check logs DC01
         run: docker logs samba-dc01
+      - name: Start DC02
+        run: docker-compose -f docker-compose.yml up -d samba-join
+      - name: Sleep for 30 seconds
+        run: sleep 30
       - name: Check logs DC02
         run: docker logs samba-dc02
+      - name: Check network
+        run: docker network inspect samba-net
+      - name: Check running containers
+        run: docker ps -a
