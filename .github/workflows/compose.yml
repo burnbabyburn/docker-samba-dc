@@ -6,4 +6,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build the stack
-        run: docker-compose up -d
+        run: docker-compose -f docker-compose.yml up -d
+      - name: Check running containers
+        run: docker ps -a
+      - name: docker network
+        run: docker network inspect samba-net
+      - name: Check logs DC01
+        run: docker logs samba-dc01
+      - name: Check logs DC02
+        run: docker logs samba-dc02
