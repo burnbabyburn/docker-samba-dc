@@ -11,36 +11,44 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 
 | ENVVAR                      | default value                                 |dc only| description  |
 | --------------------------- | --------------------------------------------- |------------- | ------------- |
-| `DOMAIN`                    | SAMDOM.LOCAL                                  |       | Your Domain Name            |
-| `DOMAIN_USER`               | Administrator                                 |       | Best leave at default. unknown consequences  |
-| `DOMAIN_PASS`               | youshouldsetapassword                         |       | Domain Administrator Password  |
-| `DOMAIN_NETBIOS`            | SAMDOM                                        |       | WORKGROPUP/NETBIOS Domain Name usally first part of DOMAIN |
-| `HOSTIP`                    | NONE                                          |   X   | Set external Host IP if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
-| `HOSTNAME`                  | $(hostname)                                   |       | Hostname of Samba. Overrides you containers hostname. Only works while proivisioning a domain ! Samba will use HOSTNAME and HOSTIP to populate internal DNS |
-| `JOIN`                      | false                                         |       | Set to true if DC should join Domain  |
-| `JOIN_SITE`                 | Default-First-Site-Name                       |       | Sitename to join to  |
-| `JOIN_SITE_VPN`             | false                                         |       | Use openvpn config before connection to DC is possible  |
-| `NTPSERVERLIST`             | 0.pool.ntp.org 1.pool...                      |       | List of NTP Server  |
-| `RECYCLEBIN`                | true                                          |   X   | Optional Feature: Enable AD RecylceBin|
+| `BIND_INTERFACES`           | NONE                                          |       | set [interfaces](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#INTERFACES) name,ip.. to bind services to. See   |
 | `CHANGE_KRB_TGT_PW`         | true                                          |   X   | Optional Service: Only activate on PDC! Change password of krbtgt user (Kerberos Ticket Granting Ticket) to prevent Golden Ticket attacks |
-| `DISABLE_MD5`               | true                                          |   X   | Disable MD5 Clients (reject md5 clients) and Server (reject md5 servers) |
-| `DISABLE_PW_COMPLEXITY`     | false                                         |   X   | Disable Password requirements  |
+| `DEBUG_LEVEL`               | 0                                             |       | Level of debug messages |
 | `DISABLE_DNS_WPAD_ISATAP`   | false                                         |   X   | Create DNS records for WPAD and ISATAP pointing to localhost|
+| `DISABLE_MD5`               | true                                          |   X   | Disable MD5 Clients (reject md5 clients) and Server (reject md5 servers) |
+| `DOMAIN_ACC_LOCK_DURATION`  | 30                                            |   X   | min password length  |
+| `DOMAIN_ACC_LOCK_RST_AFTER` | 30                                            |   X   | min password length  |
+| `DOMAIN_ACC_LOCK_THRESHOLD` | 0                                             |   X   | min password length  |
+| `DOMAIN_NETBIOS`            | SAMDOM                                        |       | WORKGROPUP/NETBIOS Domain Name usally first part of DOMAIN |
+| `DOMAIN_PASS`               | youshouldsetapassword                         |       | Domain Administrator Password  |
+| `DOMAIN_PWD_COMPLEXITY`     | true                                          |   X   | set to false to disable Password complexity  |
+| `DOMAIN_PWD_HISTORY_LENGTH` | 24                                            |   X   | length of password history  |
+| `DOMAIN_PWD_MAX_AGE`        | 43                                            |   X   | max password age in days  |
+| `DOMAIN_PWD_MIN_AGE`        | 1                                             |   X   | min password age in days  |
+| `DOMAIN_PWD_MIN_LENGTH`     | 7                                             |   X   | min password length  |
+| `DOMAIN_USER`               | Administrator                                 |       | Best leave at default. unknown consequences  |
+| `DOMAIN`                    | SAMDOM.LOCAL                                  |       | Your Domain Name            |
+| `ENABLE_BIND_INTERFACE`     | false                                         |       | set to true to [bind](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#BINDINTERFACESONLY) services to interfaces  |  
 | `ENABLE_CUPS`               | false                                         |       | Enable CUPS - cups is not installed but setup in smb.conf modify Dockerfile  |
-| `ENABLE_DNSFORWARDER`       | <IP-of-dns-server>                            |       | Ip of upstream dns server  |
+| `ENABLE_DEBUG`              | false                                         |       | Enables debug messages set DEBUG_LEVEL accordingly  |
+| `ENABLE_DNSFORWARDER`       | NONE                                          |       | Ip of upstream dns server. If not set, no upstream dns will be avaible.  |
 | `ENABLE_DYNAMIC_PORTRANGE`  | NONE                                          |       | Set range of [dynamic rpc ports](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#RPCSERVERDYNAMICPORTRANGE). Can be usefull to limit on smaller systems, especially if behind reverse proxy (default 49152-65535) |
-| `ENABLE_INSECURE_LDAP`      | false                                         |       | Enable insecure ldap connections  |
 | `ENABLE_INSECURE_DNSUPDATE` | false                                         |       | Enable insecure dns updates (no packet signing)  |
+| `ENABLE_INSECURE_LDAP`      | false                                         |       | Enable insecure ldap connections  |
 | `ENABLE_LAPS_SCHEMA`        | true                                          |   X   | Setup Local Administrator Password Solution  |
 | `ENABLE_LOGS`               | false                                         |       | Enable log files - disabled. log to stdout and ship docker logs |
 | `ENABLE_MSCHAPV2`           | false                                         |       | Enable MSCHAP authentication  |
 | `ENABLE_RFC2307`            | true                                          |   X   | Enable RDC2307 LDAP Extension in AD |
 | `ENABLE_TLS`                | false                                         |       | Enable TLS. Samba will autogen a cert if not provided before first start  |
 | `ENABLE_WINS`               | false                                         |       | Enable WINS  |
-| `ENABLE_DEBUG`              | false                                         |       | Enables debug messages set DEBUG_LEVEL accordingly  |
-| `DEBUG_LEVEL`               | 0                                             |       | Level of debug messages |
-| `ENABLE_BIND_INTERFACE`     | false                                         |       | set to true to [bind](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#BINDINTERFACESONLY) services to interfaces  |  
-| `BIND_INTERFACES`           | NONE                                          |       | set [interfaces](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#INTERFACES) name,ip.. to bind services to. See   |
+| `HOSTIP`                    | NONE                                          |   X   | Set external Host IP if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
+| `HOSTIPV6`                  | NONE                                          |   X   | Set external Host IPv6 if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
+| `HOSTNAME`                  | $(hostname)                                   |       | Hostname of Samba. Overrides you containers hostname. Only works while proivisioning a domain ! Samba will use HOSTNAME and HOSTIP to populate internal DNS |
+| `JOIN_SITE_VPN`             | false                                         |       | Use openvpn config before connection to DC is possible  |
+| `JOIN_SITE`                 | Default-First-Site-Name                       |       | Sitename to join to  |
+| `JOIN`                      | false                                         |       | Set to true if DC should join Domain  |
+| `NTPSERVERLIST`             | 0.pool.ntp.org 1.pool...                      |       | List of NTP Server  |
+| `RECYCLEBIN`                | true                                          |   X   | Optional Feature: Enable AD RecylceBin|
 
 ## Add Reverse DNS Zone - IF $HOSTIP is set, DNS-Reverse-Zone gets create on first run
 docker exec -it samba-ad-dc "samba-tool dns zonecreate <Your-AD-DNS-Server-IP-or-hostname> <NETADDR>.in-addr.arpa -U<URDOMAIN>\administrator --password=<DOMAINPASS>"

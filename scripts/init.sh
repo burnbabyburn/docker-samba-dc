@@ -2,6 +2,21 @@
 
 set -x
 
+#Define cleanup procedure
+backup() {
+    cp -f "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF_EXTERNAL}"
+    cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_SUPERVISORD_CONF_EXTERNAL}"
+    cp -f "${FILE_NTP}" "${FILE_NTP_CONF_EXTERNAL}"
+    cp -f "${FILE_KRB5}" "${FILE_KRB5_CONF_EXTERNAL}"
+    cp -f "${FILE_NSSWITCH}" "${FILE_NSSWITCH_EXTERNAL}"
+	cp -f "/etc/passwd" "${DIR_SAMBA_EXTERNAL}/passwd"
+	cp -f "/etc/group" "${DIR_SAMBA_EXTERNAL}/group"
+	cp -f "/etc/shadow" "${DIR_SAMBA_EXTERNAL}/shadow"
+}
+
+#Trap SIGTERM
+trap 'backup' SIGTERM
+
 config() {
   # Set variables
   DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
@@ -9,18 +24,25 @@ config() {
   UDOMAIN=$(echo "$LDOMAIN" | tr '[:lower:]' '[:upper:]')
   URDOMAIN=$(echo "$UDOMAIN" | cut -d "." -f1)
 
-  DOMAIN_USER=${DOMAIN_USER:-Administrator}
-  DOMAIN_PASS=${DOMAIN_PASS:-youshouldsetapassword}
+  DOMAIN_ACC_LOCK_DURATION=${DOMAIN_ACC_LOCK_DURATION:-30} 
+  DOMAIN_ACC_LOCK_RST_AFTER=${DOMAIN_ACC_LOCK_RST_AFTER:-30} 
+  DOMAIN_ACC_LOCK_THRESHOLD=${DOMAIN_ACC_LOCK_THRESHOLD:-0} 
   DOMAIN_NETBIOS=${DOMAIN_NETBIOS:-$URDOMAIN}
+  DOMAIN_PASS=${DOMAIN_PASS:-youshouldsetapassword}
+  DOMAIN_PWD_COMPLEXITY=${DOMAIN_PWD_COMPLEXITY:-true} 
+  DOMAIN_PWD_HISTORY_LENGTH=${DOMAIN_PWD_HISTORY_LENGTH:-24} 
+  DOMAIN_PWD_MAX_AGE=${DOMAIN_PWD_MAX_AGE:-43} 
+  DOMAIN_PWD_MIN_AGE=${DOMAIN_PWD_MIN_AGE:-1} 
+  DOMAIN_PWD_MIN_LENGTH=${DOMAIN_PWD_MIN_LENGTH:-7}
+  DOMAIN_USER=${DOMAIN_USER:-Administrator}
 
   HOSTIP=${HOSTIP:-NONE}
+  HOSTIPV6=${HOSTIPV6:-NONE}
   #Change if hostname includes DNS/DOMAIN SUFFIX e.g. host.example.com - it should only display host
   HOSTNAME=${HOSTNAME:-$(hostname)}
   
   # if hostname contains FQDN cut the rest
-  if [[ $HOSTNAME == *"."* ]]; then
-  HOSTNAME=$(echo "$HOSTNAME" | cut -d "." -f1)
-  fi
+  if [[ $HOSTNAME == *"."* ]]; then HOSTNAME=$(echo "$HOSTNAME" | cut -d "." -f1) ; fi
 
   #DN for LDIF
   LDAP_SUFFIX=""
@@ -39,10 +61,8 @@ config() {
   NTPSERVERLIST=${NTPSERVERLIST:-0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org}
   RECYCLEBIN=${RECYCLEBIN:-true}
 
-  DISABLE_DNS_WPAD_ISATAP=${DISABLE_PW_COMPLEXITY:-false}
+  DISABLE_DNS_WPAD_ISATAP=${DISABLE_DNS_WPAD_ISATAP:-false}
   DISABLE_MD5=${DISABLE_MD5:-true}
-  DISABLE_PW_COMPLEXITY=${DISABLE_PW_COMPLEXITY:-false}
-
   ENABLE_CUPS=${ENABLE_CUPS:-false}
   ENABLE_DNSFORWARDER=${ENABLE_DNSFORWARDER:-NONE}
   ENABLE_DYNAMIC_PORTRANGE=${ENABLE_DYNAMIC_PORTRANGE:-NONE}
@@ -66,13 +86,13 @@ config() {
   ENABLE_BIND_INTERFACE=${ENABLE_BIND_INTERFACE:-false}
   BIND_INTERFACES=${BIND_INTERFACES:-127.0.0.1} # Can be a list of interfaces seperated by spaces
 
-  if [[ "$ENABLE_BIND_INTERFACE" = true ]] && ! echo "$BIND_INTERFACES" | grep "127.0.0.1" >> /dev/null; then
-    echo "127.0.0.1 missing from BIND_INTERFACES. 
-	 If bind interfaces only is set and the network address 127.0.0.1 is not added to the interfaces parameter list smbpasswd(8) may not work as expected due to the reasons covered below.
-     To change a users SMB password, the smbpasswd by default connects to the localhost - 127.0.0.1 address as an SMB client to issue the password change request. 
-	 If bind interfaces only is set then unless the network address 127.0.0.1 is added to the interfaces parameter list then smbpasswd will fail to connect in it's default mode. 
+  if [[ "$ENABLE_BIND_INTERFACE" = true ]] && ! echo "$BIND_INTERFACES" | grep "127.0.0.1\|lo\|::1" >> /dev/null; then
+    echo "127.0.0.1 missing from BIND_INTERFACES. \n
+	 If bind interfaces only is set and the network address 127.0.0.1 is not added to the interfaces parameter list smbpasswd(8) may not work as expected due to the reasons covered below. \n
+     To change a users SMB password, the smbpasswd by default connects to the localhost - 127.0.0.1 address as an SMB client to issue the password change request. \n
+	 If bind interfaces only is set then unless the network address 127.0.0.1 is added to the interfaces parameter list then smbpasswd will fail to connect in it's default mode. \n
 	 smbpasswd can be forced to use the primary IP interface of the local host by using its smbpasswd(8)	-r remote machine parameter, with remote machine set to the IP name of the primary interface of the local host. "
-	 BIND_INTERFACES+=,127.0.0.1
+	 BIND_INTERFACES+=,lo
   fi
   # Min Counter Values for NIS Attributes. Set in docker-compose if you want a different start
   # IT does nothing on DCs as they shall not use idmap settings.
@@ -148,10 +168,7 @@ appSetup () {
       -e "s:{{ HOSTNAME }}:$HOSTNAME:" \
   -i "$FILE_KRB5"
 
-  #NTP Settings - Instead of just touch the file write a float to the file to get rid of "format error frequency file /var/lib/ntp/ntp.drift" error message
-  if [[ ! -f "$FILE_NTP_DRIFT" ]]; then
-    echo 0.0 > "$FILE_NTP_DRIFT"
-  fi
+  if [[ ! -f "$FILE_NTP_DRIFT" ]]; then echo 0.0 > "$FILE_NTP_DRIFT" ; fi
   chown root:root "$FILE_NTP_DRIFT"
   if grep "{{ NTPSERVER }}" "$FILE_NTP"; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
@@ -167,21 +184,22 @@ appSetup () {
     sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" -i "$FILE_NTP"
     sed -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" -i "$FILE_NTP"
   fi
-  if [[ ! -f "$DIR_NTP_SOCK" ]]; then
-    mkdir -p "$DIR_NTP_SOCK"
-  fi
+  if [[ ! -f "$DIR_NTP_SOCK" ]]; then mkdir -p "$DIR_NTP_SOCK" ; fi
   chmod 750 "$DIR_NTP_SOCK"
   chown root:root "$DIR_NTP_SOCK"
-  if [[ ! -d "$DIR_SAMBA_EXTERNAL" ]]; then
-    mkdir "$DIR_SAMBA_EXTERNAL"
-  fi
+  if [[ ! -d "$DIR_SAMBA_EXTERNAL" ]]; then mkdir "$DIR_SAMBA_EXTERNAL" ; fi
   #Check if DOMAIN_NETBIOS <15 chars and contains no "."
-  if [[ ${#DOMAIN_NETBIOS} -gt 15 ]]; then
-    echo "DOMAIN_NETBIOS too long => exiting" && exit 1
-  fi
-  if [[ $DOMAIN_NETBIOS == *"."* ]]; then
-    echo "DOMAIN_NETBIOS contains forbiden char    .     => exiting" && exit 1
-  fi
+  if [[ ${#DOMAIN_NETBIOS} -gt 15 ]]; then echo "DOMAIN_NETBIOS too long => exiting" && exit 1 ; fi
+  if [[ $DOMAIN_NETBIOS == *"."* ]]; then echo "DOMAIN_NETBIOS contains forbiden char    .     => exiting" && exit 1 ; fi
+  if [[ "$HOSTIP" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--host-ip=${HOSTIP%/*}") ; fi
+  if [[ "$HOSTIP" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--host-ip6=${HOSTIPV6}") ;  fi
+  if [[ "$JOIN_SITE" != "Default-First-Site-Name" ]]; then ARGS_SAMBA_TOOL+=("--site=${JOIN_SITE}") ; fi
+  if [[ "$ENABLE_DNSFORWARDER" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--option=dns forwarder=${ENABLE_DNSFORWARDER}") ; fi
+  if [[ "$ENABLE_DYNAMIC_PORTRANGE" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--option=rpc server dynamic port range=${ENABLE_DYNAMIC_PORTRANGE}") ; fi
+  if [[ ${ENABLE_MSCHAPV2,,} = true ]]; then ARGS_SAMBA_TOOL+=("--option=ntlm auth=mschapv2-and-ntlmv2-only") ; fi
+  if [ "${ENABLE_INSECURE_DNSUPDATE,,}" = true ]; then ARGS_SAMBA_TOOL+=("--option=allow dns updates  = nonsecure") ; fi
+  if [[ ${ENABLE_INSECURE_LDAP,,} = true ]]; then ARGS_SAMBA_TOOL+=("--option=ldap server require strong auth = no") ; fi
+
   # If multi-site, we need to connect to the VPN before joining the domain
   if [[ ${JOIN_SITE_VPN,,} = true ]]; then
     /usr/sbin/openvpn --config ${FILE_OPENVPNCONF} &
@@ -190,53 +208,26 @@ appSetup () {
     sleep 30
   fi
   if [[ ${ENABLE_RFC2307,,} = true ]]; then
-    if [[ "$JOIN" = true ]]; then
-      OPTION_RFC=--option='idmap_ldb:use rfc2307 = yes'
-    else
-      OPTION_RFC=--use-rfc2307
-    fi
+    if [[ "$JOIN" = true ]]; then OPTION_RFC=--option='idmap_ldb:use rfc2307 = yes' ; else OPTION_RFC=--use-rfc2307 ; fi
     ARGS_SAMBA_TOOL+=("${OPTION_RFC}")
   fi
-  if [[ "$HOSTIP" != "NONE" ]]; then
-	ARGS_SAMBA_TOOL+=("--host-ip=${HOSTIP%/*}")
-  fi
-  if [[ "$JOIN_SITE" != "Default-First-Site-Name" ]]; then
-	ARGS_SAMBA_TOOL+=("--site=${JOIN_SITE}")
-  fi
   if [[ ${ENABLE_BIND_INTERFACE,,} = true ]]; then
-    ARGS_SAMBA_TOOL+=("--option=interfaces=${BIND_INTERFACES,,} lo")
+    ARGS_SAMBA_TOOL+=("--option=interfaces=${BIND_INTERFACES,,}")
     ARGS_SAMBA_TOOL+=("--option=bind interfaces only = yes")
-  fi
-  if [[ "$ENABLE_DNSFORWARDER" != "NONE" ]]; then
-    ARGS_SAMBA_TOOL+=("--option=dns forwarder=${ENABLE_DNSFORWARDER}")
-  fi
-  if [[ "$ENABLE_DYNAMIC_PORTRANGE" != "NONE" ]]; then
-    ARGS_SAMBA_TOOL+=("--option=rpc server dynamic port range=${ENABLE_DYNAMIC_PORTRANGE}")
-  fi
-  if [[ ${ENABLE_MSCHAPV2,,} = true ]]; then
-    ARGS_SAMBA_TOOL+=("--option=ntlm auth=mschapv2-and-ntlmv2-only")
   fi
   if [[ ${DISABLE_MD5,,} = true ]]; then
     # Prevent downgrade attacks to md5
 	ARGS_SAMBA_TOOL+=("--option=reject md5 clients = yes")
 	ARGS_SAMBA_TOOL+=("--option=reject md5 servers = yes")
   fi
-  if [[ ${ENABLE_INSECURE_LDAP,,} = true ]]; then
-	ARGS_SAMBA_TOOL+=("--option=ldap server require strong auth = no")
-  fi
   if [[ ${ENABLE_WINS,,} = true ]]; then
     ARGS_SAMBA_TOOL+=("--option=wins support = yes")
 	ARGS_SAMBA_TOOL+=("--option=time server = yes")
   fi
-  if [ "${ENABLE_INSECURE_DNSUPDATE,,}" = true ]; then
-    ARGS_SAMBA_TOOL+=("--option=allow dns updates  = nonsecure")
-  fi
 
   # If the finished file (external/smb.conf) doesn't exist, this is new container with empty volume, we're not just moving to a new container
   if [[ ! -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
-    if [[ -f "${FILE_SAMBA_CONF}" ]]; then
-      mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig
-    fi
+    if [[ -f "${FILE_SAMBA_CONF}" ]]; then mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig ; fi
     # Optional params encased with "" will break the command
     if [[ ${JOIN,,} = true ]]; then
 #     if [ "$(dig +short -t srv _ldap._tcp.$LDOMAIN.)" ] && echo "got answer"
@@ -280,8 +271,6 @@ appSetup () {
 	  ARGS_SAMBA_TOOL+=("--option=delete group script=/usr/sbin/groupdel %g")
 	  ARGS_SAMBA_TOOL+=("--option=delete user from group script=/usr/sbin/deluser %u %g")
 	  ARGS_SAMBA_TOOL+=("--option=delete user script=/usr/sbin/deluser %u")
-	  
-	  
 	  ARGS_SAMBA_TOOL+=("--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool")
 	  
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
@@ -304,9 +293,9 @@ appSetup () {
         } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
       fi
 
-      if [[ ! -d /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
-        mkdir -p /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
-        mkdir /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/de-DE
+      if [[ ! -d $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
+        mkdir -p $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
+        mkdir -p $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/de-DE
       fi
 
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
@@ -374,12 +363,15 @@ appSetup () {
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS2}" -U "${DOMAIN_USER}"
       fi
 
-      if [[ ${DISABLE_PW_COMPLEXITY,,} = true ]]; then
-        samba-tool domain passwordsettings set --complexity=off "${SAMBA_DEBUG_OPTION}"
-        samba-tool domain passwordsettings set --history-length=0 "${SAMBA_DEBUG_OPTION}"
-        samba-tool domain passwordsettings set --min-pwd-age=0 "${SAMBA_DEBUG_OPTION}"
-        samba-tool domain passwordsettings set --max-pwd-age=0 "${SAMBA_DEBUG_OPTION}"
-      fi
+	  if [[ ${DOMAIN_PWD_HISTORY_LENGTH} != 24 ]]; then samba-tool domain passwordsettings set --history-length="$DOMAIN_PWD_HISTORY_LENGTH" ${SAMBA_DEBUG_OPTION} ; fi
+	  if [[ ${DOMAIN_PWD_MAX_AGE} != 43 ]]; then samba-tool domain passwordsettings set --max-pwd-age="$DOMAIN_PWD_MAX_AGE" ${SAMBA_DEBUG_OPTION} ; fi
+	  if [[ ${DOMAIN_PWD_MIN_AGE} != 1 ]]; then samba-tool domain passwordsettings set --min-pwd-age="$DOMAIN_PWD_MIN_AGE" ${SAMBA_DEBUG_OPTION} ; fi
+	  if [[ ${DOMAIN_PWD_MIN_LENGTH} != 7 ]]; then samba-tool domain passwordsettings set --min-pwd-length="$DOMAIN_PWD_MIN_LENGTH" ${SAMBA_DEBUG_OPTION} ; fi
+      if [[ ${DOMAIN_PWD_COMPLEXITY} = false ]]; then samba-tool domain passwordsettings set --complexity="$DOMAIN_PWD_COMPLEXITY" ${SAMBA_DEBUG_OPTION} ; fi
+	  
+	  if [[ ${DOMAIN_ACC_LOCK_DURATION} != 30 ]]; then samba-tool domain passwordsettings set --account-lockout-duration="$DOMAIN_ACC_LOCK_DURATION" ${SAMBA_DEBUG_OPTION} ; fi
+	  if [[ ${DOMAIN_ACC_LOCK_THRESHOLD} != 0 ]]; then samba-tool domain passwordsettings set --account-lockout-threshold="$DOMAIN_ACC_LOCK_THRESHOLD" ${SAMBA_DEBUG_OPTION} ; fi
+	  if [[ ${DOMAIN_ACC_LOCK_RST_AFTER} != 30 ]]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" ${SAMBA_DEBUG_OPTION} ; fi
     fi
 
     #Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
@@ -439,19 +431,24 @@ appSetup () {
     cp -f "${FILE_NTP}" "${FILE_NTP_CONF_EXTERNAL}"
     cp -f "${FILE_KRB5}" "${FILE_KRB5_CONF_EXTERNAL}"
     cp -f "${FILE_NSSWITCH}" "${FILE_NSSWITCH_EXTERNAL}"
+	cp -f "/etc/passwd" "${DIR_SAMBA_EXTERNAL}/passwd"
+	cp -f "/etc/group" "${DIR_SAMBA_EXTERNAL}/group"
+	cp -f "/etc/shadow" "${DIR_SAMBA_EXTERNAL}/shadow"
+	
   else
     cp -f "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
     cp -f "${FILE_SUPERVISORD_CONF_EXTERNAL}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
     cp -f "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
     cp -f "${FILE_KRB5_CONF_EXTERNAL}" "${FILE_KRB5}"
     cp -f "${FILE_NSSWITCH_EXTERNAL}" "${FILE_NSSWITCH}"
+	cp -f "${DIR_SAMBA_EXTERNAL}/passwd" "/etc/passwd"
+	cp -f "${DIR_SAMBA_EXTERNAL}/group" "/etc/group"
+	cp -f "${DIR_SAMBA_EXTERNAL}/shadow" "/etc/shadow"
   fi
 
   # Stop VPN & write supervisor service
   if [[ ${JOIN_SITE_VPN,,} = true ]]; then
-    if [[ -n "$VPNPID" ]]; then
-      kill "$VPNPID"
-    fi
+    if [[ -n "$VPNPID" ]]; then kill "$VPNPID" ; fi
     {
       echo ""
       echo "[program:openvpn]"
@@ -465,12 +462,8 @@ appSetup () {
   fi
 
   if [ "${ENABLE_TLS,,}" = true ]; then
-    if [ ! -f tls/key.pem ] && [ ! -f tls/key.pem ] && [ ! -f tls/cert.pem ]; then
-      echo "No custom CA found. Samba will autogenerate one"
-    fi
-    if [ ! -f "$FILE_PKI_DH" ]; then
-      openssl dhparam -out "$FILE_PKI_DH" 2048
-    fi
+    if [ ! -f "$FILE_PKI_CERT" ] && [ ! -f "$FILE_PKI_KEY" ] && [ ! -f "$FILE_PKI_CA" ]; then echo "No custom CA found. Samba will autogenerate one" ; fi
+    if [ ! -f "$FILE_PKI_DH" ]; then openssl dhparam -out "$FILE_PKI_DH" 2048 ; fi
     sed -i "/\[global\]/a \
         \\\ttls enabled  = yes\\n\
         tls keyfile  = tls/key.pem\\n\
@@ -481,6 +474,10 @@ appSetup () {
         #tls crlfile   = tls/crl.pem\\n\
         #tls verify peer = ca_and_name\
     " "${FILE_SAMBA_CONF}"
+  else
+    sed -i "/\[global\]/a \
+        \\\ttls enabled  = no\\n\
+	" "${FILE_SAMBA_CONF}"
   fi
 
   if [[ ${ENABLE_LOGS,,} = true ]]; then
@@ -604,10 +601,8 @@ loadconfdir () {
       \\\tinclude = ${FILE_SAMBA_INCLUDES}\
     " "${FILE_SAMBA_CONF}"
   fi
-
   # create directory smb.conf.d to store samba .conf files
   mkdir -p "$DIR_SAMBA_CONF"
-
   # populates includes.conf with files (type -f) in smb.conf.d directory
   find "${DIR_SAMBA_CONF}" -maxdepth 1 -type f| sed -e 's/^/include = /' > "$FILE_SAMBA_INCLUDES"
 }
@@ -625,6 +620,9 @@ if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
   cp -f "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
   cp -f "${FILE_KRB5_CONF_EXTERNAL}" "${FILE_KRB5}"
   cp -f "${FILE_NSSWITCH_EXTERNAL}" "${FILE_NSSWITCH}"
+  cp -f "/etc/passwd" "${DIR_SAMBA_EXTERNAL}/passwd"
+  cp -f "/etc/group" "${DIR_SAMBA_EXTERNAL}/group"
+  cp -f "/etc/shadow" "${DIR_SAMBA_EXTERNAL}/shadow"
   appStart
 else
   appSetup
