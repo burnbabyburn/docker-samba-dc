@@ -74,7 +74,7 @@ config() {
 	 smbpasswd can be forced to use the primary IP interface of the local host by using its smbpasswd(8)	-r remote machine parameter, with remote machine set to the IP name of the primary interface of the local host. "
 	 BIND_INTERFACES+=,127.0.0.1
   fi
-    # Min Counter Values for NIS Attributes. Set in docker-compose if you want a different start
+  # Min Counter Values for NIS Attributes. Set in docker-compose if you want a different start
   # IT does nothing on DCs as they shall not use idmap settings.
   # Using the same Start and stop values on members however gets the RFC2307 attributs (NIS) rights
   # idmap config {{ URDOMAIN }} : range = {{ IDMIN }}-{{ IDMAX }}
@@ -149,6 +149,7 @@ appSetup () {
   if [[ ! -f "$FILE_NTP_DRIFT" ]]; then
     echo 0.0 > "$FILE_NTP_DRIFT"
   fi
+  chown root:root "$FILE_NTP_DRIFT"
   if grep "{{ NTPSERVER }}" "$FILE_NTP"; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
     NTPSERVER=""
@@ -164,15 +165,13 @@ appSetup () {
     sed -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" -i "$FILE_NTP"
   fi
   if [[ ! -f "$DIR_NTP_SOCK" ]]; then
-    # Own socket
     mkdir -p "$DIR_NTP_SOCK"
-    chmod 750 "$DIR_NTP_SOCK"
   fi
-
+  chmod 750 "$DIR_NTP_SOCK"
+  chown root:root "$DIR_NTP_SOCK"
   if [[ ! -d /etc/samba/external/ ]]; then
     mkdir /etc/samba/external
   fi
-
   #Check if DOMAIN_NETBIOS <15 chars and contains no "."
   if [[ ${#DOMAIN_NETBIOS} -gt 15 ]]; then
     echo "DOMAIN_NETBIOS too long => exiting" && exit 1
@@ -196,7 +195,7 @@ appSetup () {
     ARGS_SAMBA_TOOL+=("${OPTION_RFC}")
   fi
   if [[ "$HOSTIP" != "NONE" ]]; then
-	ARGS_SAMBA_TOOL+=("--host-ip=${HOSTIP}")
+	ARGS_SAMBA_TOOL+=("--host-ip=${HOSTIP%/*}")
   fi
   if [[ "$JOIN_SITE" != "Default-First-Site-Name" ]]; then
 	ARGS_SAMBA_TOOL+=("--site=${JOIN_SITE}")
@@ -264,7 +263,7 @@ appSetup () {
       else
         echo "no DNS host record found. Pls see https://wiki.samba.org/index.php/Verifying_and_Creating_a_DC_DNS_Record#Verifying_and_Creating_the_objectGUID_Record"
       fi
-
+    # domain provision
     else
       ARGS_SAMBA_TOOL+=("--server-role=dc")
       ARGS_SAMBA_TOOL+=("--host-name=${HOSTNAME}")
@@ -300,7 +299,7 @@ appSetup () {
       fi
 
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
-      if [[ ${DISABLE_PW_COMPLEXITY,,} = true ]]; then
+      if [[ ${ENABLE_RFC2307,,} = true ]]; then
         GID_DOM_USER=$((IMAP_GID_START))
         GID_DOM_ADMIN=$((IMAP_GID_START+1))
         GID_DOM_COMPUTERS=$((IMAP_GID_START+2))
@@ -595,9 +594,7 @@ loadconfdir () {
 
 #Todo:
 # ID_Map replication: https://wiki.samba.org/index.php/Joining_a_Samba_DC_to_an_Existing_Active_Directory#Built-in_User_.26_Group_ID_Mappings
-# SYSVOL replication:
-# Add the following line to allow a subnet to receive time service and query server statistics:  https://support.ntp.org/bin/view/Support/AccessRestrictions#Section_6.5.1.1.3.
-# time sync as client (beim join)
+# SYSVOL replication
 
 ######### BEGIN MAIN function #########
 config
