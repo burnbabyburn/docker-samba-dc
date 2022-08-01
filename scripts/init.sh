@@ -50,7 +50,7 @@ config() {
   for dn in ${LDOMAIN}; do
     LDAP_SUFFIX="${LDAP_SUFFIX},DC=$dn"
   done
-  local IFS=' '
+  IFS=$' \t\n'
   LDAP_DN=$HOSTNAME$LDAP_SUFFIX
 
   CHANGE_KRB_TGT_PW=${CHANGE_KRB_TGT_PW:-false}
@@ -174,13 +174,13 @@ appSetup () {
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
     NTPSERVER=""
     NTPSERVERRESTRICT=""
-    local IFS=$'\n'
+    #local IFS=$'\n'
     for DC in $DCs
     do
       NTPSERVER="$NTPSERVER server ${DC}    iburst prefer\n"
       NTPSERVERRESTRICT="$NTPSERVERRESTRICT restrict ${DC} mask 255.255.255.255    nomodify notrap nopeer noquery\n"
     done
-    local IFS=' '
+    #local IFS=$' \t\n'
     sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" -i "$FILE_NTP"
     sed -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" -i "$FILE_NTP"
   fi
