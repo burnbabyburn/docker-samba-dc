@@ -192,7 +192,7 @@ appSetup () {
   if [[ ${#DOMAIN_NETBIOS} -gt 15 ]]; then echo "DOMAIN_NETBIOS too long => exiting" && exit 1 ; fi
   if [[ $DOMAIN_NETBIOS == *"."* ]]; then echo "DOMAIN_NETBIOS contains forbiden char    .     => exiting" && exit 1 ; fi
   if [[ "$HOSTIP" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--host-ip=${HOSTIP%/*}") ; fi
-  if [[ "$HOSTIP" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--host-ip6=${HOSTIPV6}") ;  fi
+  if [[ "$HOSTIPV6" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--host-ip6=${HOSTIPV6}") ;  fi
   if [[ "$JOIN_SITE" != "Default-First-Site-Name" ]]; then ARGS_SAMBA_TOOL+=("--site=${JOIN_SITE}") ; fi
   if [[ "$ENABLE_DNSFORWARDER" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--option=dns forwarder=${ENABLE_DNSFORWARDER}") ; fi
   if [[ "$ENABLE_DYNAMIC_PORTRANGE" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--option=rpc server dynamic port range=${ENABLE_DYNAMIC_PORTRANGE}") ; fi
