@@ -1,21 +1,10 @@
 #!/bin/bash
 
 set -x
-
-#Define procedure to run on SIGTERM aka container shutdown
-backup() {
-    cp -f "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF_EXTERNAL}"
-    cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_SUPERVISORD_CONF_EXTERNAL}"
-    cp -f "${FILE_NTP}" "${FILE_NTP_CONF_EXTERNAL}"
-    cp -f "${FILE_KRB5}" "${FILE_KRB5_CONF_EXTERNAL}"
-    cp -f "${FILE_NSSWITCH}" "${FILE_NSSWITCH_EXTERNAL}"
-	cp -f "/etc/passwd" "${DIR_SAMBA_EXTERNAL}/passwd"
-	cp -f "/etc/group" "${DIR_SAMBA_EXTERNAL}/group"
-	cp -f "/etc/shadow" "${DIR_SAMBA_EXTERNAL}/shadow"
-}
+source /scripts/helper.sh
 
 #Trap SIGTERM
-trap 'backup' SIGTERM
+trap 'backupConfig' SIGTERM
 
 config() {
   # Set variables
@@ -300,56 +289,7 @@ appSetup () {
 
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
       if [[ ${ENABLE_RFC2307,,} = true ]]; then
-        GID_DOM_USER=$((IMAP_GID_START))
-        GID_DOM_ADMIN=$((IMAP_GID_START+1))
-        GID_DOM_COMPUTERS=$((IMAP_GID_START+2))
-        GID_DOM_DC=$((IMAP_GID_START+3))
-        GID_DOM_GUEST=$((IMAP_GID_START+4))
-        GID_SCHEMA=$((IMAP_GID_START+5))
-        GID_ENTERPRISE=$((IMAP_GID_START+6))
-        GID_GPO=$((IMAP_GID_START+7))
-        GID_RDOC=$((IMAP_GID_START+8))
-        GID_DNSUPDATE=$((IMAP_GID_START+9))
-        GID_ENTERPRISE_RDOC=$((IMAP_GID_START+10))
-        GID_DNSADMIN=$((IMAP_GID_START+11))
-        GID_ALLOWED_RDOC=$((IMAP_GID_START+12))
-        GID_DENIED_RDOC=$((IMAP_GID_START+13))
-        GID_RAS=$((IMAP_GID_START+14))
-        GID_CERT=$((IMAP_GID_START+15))
-
-        UID_KRBTGT=$((IMAP_UID_START))
-        UID_GUEST=$((IMAP_UID_START+1))
-        UID_ADMINISTRATOR=$((IMAP_UID_START+2))
-
-        #Next Counter value uesd by ADUC for NIS Extension GID and UID
-        IMAP_GID_END=$((IMAP_GID_START+16))
-        IMAP_UID_END=$((IMAP_UID_START+3))
-
-        sed -e "s: {{ LDAP_SUFFIX }}:$LDAP_SUFFIX:g" \
-          -e "s:{{ NETBIOS }}:${DOMAIN_NETBIOS,,}:g" \
-          -e "s:{{ GID_DOM_USER }}:$GID_DOM_USER:g" \
-          -e "s:{{ GID_DOM_ADMIN }}:$GID_DOM_ADMIN:g" \
-          -e "s:{{ GID_DOM_COMPUTERS }}:$GID_DOM_COMPUTERS:g" \
-          -e "s:{{ GID_DOM_DC }}:$GID_DOM_DC:g" \
-          -e "s:{{ GID_DOM_GUEST }}:$GID_DOM_GUEST:g" \
-          -e "s:{{ GID_SCHEMA }}:$GID_SCHEMA:g" \
-          -e "s:{{ GID_ENTERPRISE }}:$GID_ENTERPRISE:g" \
-          -e "s:{{ GID_GPO }}:$GID_GPO:g" \
-          -e "s:{{ GID_RDOC }}:$GID_RDOC:g" \
-          -e "s:{{ GID_DNSUPDATE }}:$GID_DNSUPDATE:g" \
-          -e "s:{{ GID_ENTERPRISE_RDOC }}:$GID_ENTERPRISE_RDOC:g" \
-          -e "s:{{ GID_DNSADMIN }}:$GID_DNSADMIN:g" \
-          -e "s:{{ GID_ALLOWED_RDOC }}:$GID_ALLOWED_RDOC:g" \
-          -e "s:{{ GID_DENIED_RDOC }}:$GID_DENIED_RDOC:g" \
-          -e "s:{{ GID_RAS }}:$GID_RAS:g" \
-          -e "s:{{ GID_CERT }}:$GID_CERT:g" \
-          -e "s:{{ UID_KRBTGT }}:$UID_KRBTGT:g" \
-          -e "s:{{ UID_GUEST }}:$UID_GUEST:g" \
-          -e "s:{{ UID_ADMINISTRATOR }}:$UID_ADMINISTRATOR:g" \
-          -e "s:{{ IMAP_UID_END }}:$IMAP_UID_END:g" \
-          -e "s:{{ IMAP_GID_END }}:$IMAP_GID_END:g" \
-          "${FILE_SAMBA_SCHEMA_RFC}.j2" > "${FILE_SAMBA_SCHEMA_RFC}"
-
+        setupSchemaRFC2307File
         ldbmodify -H "${FILE_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}"
       fi
 
@@ -403,21 +343,16 @@ appSetup () {
         echo "browseable = No"
       } >> "${FILE_SAMBA_CONF}"
     else
-      sed -i "/\[global\]/a \
-        \\\tload printers = no\\n\
-        printing = bsd\\n\
-        printcap name = /dev/null\\n\
-        disable spoolss = yes\
-      " "${FILE_SAMBA_CONF}"
+	  AddSetKeyValueSMBCONF 'load printers' 'no'
+	  AddSetKeyValueSMBCONF 'printing' 'bsd'
+	  AddSetKeyValueSMBCONF 'printcap name' '/dev/null'
+	  AddSetKeyValueSMBCONF 'spoolss' 'yes'
     fi
 
     # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
-    sed -i "/\[global\]/a \
-      \\\tpassword hash userPassword schemes = CryptSHA256 CryptSHA512\\n\
-      # Template settings for login shell and home directory\\n\
-      template shell = /bin/bash\\n\
-      template homedir = /home/%U\
-    " "${FILE_SAMBA_CONF}"
+    AddSetKeyValueSMBCONF 'password hash userPassword schemes' 'CryptSHA256 CryptSHA512'
+	AddSetKeyValueSMBCONF 'template shell' '/bin/false'
+	AddSetKeyValueSMBCONF 'template homedir' "$DIR_SAMBA_DATA_PREFIX/homedir_unix/%U"
 
     # nsswitch anpassen
     sed -i "s,passwd:.*,passwd:         files winbind,g" "$FILE_NSSWITCH"
@@ -426,24 +361,9 @@ appSetup () {
     sed -i "s,networks:.*,networks:      files dns,g" "$FILE_NSSWITCH"
 
     # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
-    cp -f "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF_EXTERNAL}"
-    cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_SUPERVISORD_CONF_EXTERNAL}"
-    cp -f "${FILE_NTP}" "${FILE_NTP_CONF_EXTERNAL}"
-    cp -f "${FILE_KRB5}" "${FILE_KRB5_CONF_EXTERNAL}"
-    cp -f "${FILE_NSSWITCH}" "${FILE_NSSWITCH_EXTERNAL}"
-	cp -f "/etc/passwd" "${DIR_SAMBA_EXTERNAL}/passwd"
-	cp -f "/etc/group" "${DIR_SAMBA_EXTERNAL}/group"
-	cp -f "/etc/shadow" "${DIR_SAMBA_EXTERNAL}/shadow"
-	
+    backupConfig
   else
-    cp -f "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
-    cp -f "${FILE_SUPERVISORD_CONF_EXTERNAL}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
-    cp -f "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
-    cp -f "${FILE_KRB5_CONF_EXTERNAL}" "${FILE_KRB5}"
-    cp -f "${FILE_NSSWITCH_EXTERNAL}" "${FILE_NSSWITCH}"
-	cp -f "${DIR_SAMBA_EXTERNAL}/passwd" "/etc/passwd"
-	cp -f "${DIR_SAMBA_EXTERNAL}/group" "/etc/group"
-	cp -f "${DIR_SAMBA_EXTERNAL}/shadow" "/etc/shadow"
+    restoreConfig
   fi
 
   # Stop VPN & write supervisor service
@@ -615,14 +535,7 @@ loadconfdir () {
 config
 # If the supervisor conf isn't there, we're spinning up a new container
 if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
-  cp -f "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
-  cp -f "${FILE_SUPERVISORD_CONF_EXTERNAL}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  cp -f "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
-  cp -f "${FILE_KRB5_CONF_EXTERNAL}" "${FILE_KRB5}"
-  cp -f "${FILE_NSSWITCH_EXTERNAL}" "${FILE_NSSWITCH}"
-  cp -f "/etc/passwd" "${DIR_SAMBA_EXTERNAL}/passwd"
-  cp -f "/etc/group" "${DIR_SAMBA_EXTERNAL}/group"
-  cp -f "/etc/shadow" "${DIR_SAMBA_EXTERNAL}/shadow"
+  restoreConfig
   appStart
 else
   appSetup
