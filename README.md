@@ -40,7 +40,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `ENABLE_MSCHAPV2`           | false                                         |       | Enable MSCHAP authentication  |
 | `ENABLE_RFC2307`            | true                                          |   X   | Enable RDC2307 LDAP Extension in AD |
 | `ENABLE_TLS`                | false                                         |       | Enable TLS. Samba will autogen a cert if not provided before first start  |
-| `ENABLE_WINS`               | false                                         |       | Enable WINS  |
+| `ENABLE_WINS`               | false                                         |       | Enable WINS and also propagiate time server |
 | `HOSTIP`                    | NONE                                          |   X   | Set external Host IP if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
 | `HOSTIPV6`                  | NONE                                          |   X   | Set external Host IPv6 if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
 | `HOSTNAME`                  | $(hostname)                                   |       | Hostname of Samba. Overrides you containers hostname. Only works while proivisioning a domain ! Samba will use HOSTNAME and HOSTIP to populate internal DNS |

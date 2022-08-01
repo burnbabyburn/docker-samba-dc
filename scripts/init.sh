@@ -2,7 +2,7 @@
 
 set -x
 
-#Define cleanup procedure
+#Define procedure to run on SIGTERM aka container shutdown
 backup() {
     cp -f "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF_EXTERNAL}"
     cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_SUPERVISORD_CONF_EXTERNAL}"
@@ -514,7 +514,7 @@ appFirstStart () {
     if [[ "$HOSTIP" != "NONE" ]]; then
       if grep '/' <<< "$HOSTIP" ; then
         IP=$(echo "$HOSTIP" | cut -d "/" -f1)
-		MASK=$(echo "$HOSTIP" | cut -d "/" -f1)
+		MASK=$(echo "$HOSTIP" | cut -d "/" -f2)
         samba-tool sites subnet create "$HOSTIP" "$JOIN_SITE"
       else
         IP=$HOSTIP
