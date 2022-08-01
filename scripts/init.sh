@@ -66,7 +66,7 @@ config() {
   ENABLE_BIND_INTERFACE=${ENABLE_BIND_INTERFACE:-false}
   BIND_INTERFACES=${BIND_INTERFACES:-127.0.0.1} # Can be a list of interfaces seperated by spaces
 
-  if [[ "$ENABLE_BIND_INTERFACE" = true ]] && ! $(echo $BIND_INTERFACES | grep "127.0.0.1" >> /dev/null); then
+  if [[ "$ENABLE_BIND_INTERFACE" = true ]] && ! echo "$BIND_INTERFACES" | grep "127.0.0.1" >> /dev/null; then
     echo "127.0.0.1 missing from BIND_INTERFACES. 
 	 If bind interfaces only is set and the network address 127.0.0.1 is not added to the interfaces parameter list smbpasswd(8) may not work as expected due to the reasons covered below.
      To change a users SMB password, the smbpasswd by default connects to the localhost - 127.0.0.1 address as an SMB client to issue the password change request. 
@@ -86,20 +86,25 @@ config() {
   # DIR_SAMBA_CONF and DIR_SCRIPTS also need to be changed in the Dockerfile
   DIR_LDIF=/ldif
   DIR_NTP_SOCK=/var/lib/samba/ntp_signd
-  DIR_SAMBA_CONF=$DIR_SAMBA_ETC/smb.conf.d
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba
   DIR_SAMBA_ETC=/etc/samba
-  DIR_SAMBA_PRIVATE=$DIR_SAMBA_DATA_PREFIX/private
   DIR_SCRIPTS=/scripts
 
+  DIR_SAMBA_CONF=$DIR_SAMBA_ETC/smb.conf.d
+  DIR_SAMBA_EXTERNAL=$DIR_SAMBA_ETC/external
+  DIR_SAMBA_PRIVATE=$DIR_SAMBA_DATA_PREFIX/private
+
   FILE_KRB5=/etc/krb5.conf
-  FILE_KRB5_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
-  FILE_NSSWITCH_EXTERNAL=$DIR_SAMBA_ETC/external/ntp.conf
   FILE_NTP=/etc/ntp.conf
-  FILE_NTP_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/ntp.conf
   FILE_NTP_DRIFT=/var/lib/ntp/ntp.drift
   FILE_OPENVPNCONF=/docker.ovpn
+  FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
+  FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
+
+  FILE_KRB5_CONF_EXTERNAL=$DIR_SAMBA_EXTERNAL/krb5.conf
+  FILE_NSSWITCH_EXTERNAL=$DIR_SAMBA_EXTERNAL/nsswitch.conf
+  FILE_NTP_CONF_EXTERNAL=$DIR_SAMBA_EXTERNAL/ntp.conf
   FILE_PKI_CA=$DIR_SAMBA_PRIVATE/tls/ca.pem
   FILE_PKI_CERT=$DIR_SAMBA_PRIVATE/tls/cert.pem
   FILE_PKI_CRL=$DIR_SAMBA_PRIVATE/tls/crl.pem
@@ -107,7 +112,7 @@ config() {
   FILE_PKI_INT=$DIR_SAMBA_PRIVATE/tls/intermediate.pem
   FILE_PKI_KEY=$DIR_SAMBA_PRIVATE/tls/key.pem
   FILE_SAMBA_CONF=$DIR_SAMBA_ETC/smb.conf
-  FILE_SAMBA_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/smb.conf
+  FILE_SAMBA_CONF_EXTERNAL=$DIR_SAMBA_EXTERNAL/smb.conf
   FILE_SAMBA_INCLUDES=$DIR_SAMBA_ETC/includes.conf
   FILE_SAMBA_SCHEMA_LAPS1=$DIR_LDIF/laps-1.ldif
   FILE_SAMBA_SCHEMA_LAPS2=$DIR_LDIF/laps-2.ldif
@@ -116,9 +121,7 @@ config() {
   FILE_SAMBA_USER_MAP=$DIR_SAMBA_ETC/user.map
   FILE_SAMBA_WINSLDB=$DIR_SAMBA_PRIVATE/wins_config.ldb
   FILE_SAMLDB=$DIR_SAMBA_PRIVATE/sam.ldb
-  FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
-  FILE_SUPERVISORD_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/supervisord.conf
-  FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
+  FILE_SUPERVISORD_CONF_EXTERNAL=$DIR_SAMBA_EXTERNAL/supervisord.conf
 
   # exports for other scripts and TLS_PKI
   export HOSTNAME="$HOSTNAME"
@@ -169,8 +172,8 @@ appSetup () {
   fi
   chmod 750 "$DIR_NTP_SOCK"
   chown root:root "$DIR_NTP_SOCK"
-  if [[ ! -d /etc/samba/external/ ]]; then
-    mkdir /etc/samba/external
+  if [[ ! -d "$DIR_SAMBA_EXTERNAL" ]]; then
+    mkdir "$DIR_SAMBA_EXTERNAL"
   fi
   #Check if DOMAIN_NETBIOS <15 chars and contains no "."
   if [[ ${#DOMAIN_NETBIOS} -gt 15 ]]; then
@@ -223,6 +226,7 @@ appSetup () {
   fi
   if [[ ${ENABLE_WINS,,} = true ]]; then
     ARGS_SAMBA_TOOL+=("--option=wins support = yes")
+	ARGS_SAMBA_TOOL+=("--option=time server = yes")
   fi
   if [ "${ENABLE_INSECURE_DNSUPDATE,,}" = true ]; then
     ARGS_SAMBA_TOOL+=("--option=allow dns updates  = nonsecure")
@@ -270,7 +274,14 @@ appSetup () {
       ARGS_SAMBA_TOOL+=("--adminpass=${DOMAIN_PASS}")
       ARGS_SAMBA_TOOL+=("--realm=${UDOMAIN}")
       ARGS_SAMBA_TOOL+=("--domain=${DOMAIN_NETBIOS}")
-      ARGS_SAMBA_TOOL+=("--option=add machine script=/usr/sbin/useradd -M -g machines -d /dev/null -s /bin/false %u")
+      ARGS_SAMBA_TOOL+=("--option=add machine script=/usr/sbin/useradd -N -M -g machines -d /dev/null -s /bin/false %u")
+	  ARGS_SAMBA_TOOL+=("--option=add group script=/usr/sbin/groupadd %g")
+	  ARGS_SAMBA_TOOL+=("--option=add user to group script=/usr/sbin/adduser %u %g")
+	  ARGS_SAMBA_TOOL+=("--option=delete group script=/usr/sbin/groupdel %g")
+	  ARGS_SAMBA_TOOL+=("--option=delete user from group script=/usr/sbin/deluser %u %g")
+	  ARGS_SAMBA_TOOL+=("--option=delete user script=/usr/sbin/deluser %u")
+	  
+	  
 	  ARGS_SAMBA_TOOL+=("--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool")
 	  
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
@@ -438,8 +449,8 @@ appSetup () {
 
   # Stop VPN & write supervisor service
   if [[ ${JOIN_SITE_VPN,,} = true ]]; then
-    if [[ -n $VPNPID ]]; then
-      kill $VPNPID
+    if [[ -n "$VPNPID" ]]; then
+      kill "$VPNPID"
     fi
     {
       echo ""
@@ -495,24 +506,33 @@ appFirstStart () {
     sleep 30s
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
     if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ]; then
-      samba-tool dns add `hostname -s` $LDOMAIN wpad A 127.0.0.1 -P
-      samba-tool dns add `hostname -s` $LDOMAIN isatap A 127.0.0.1 -P
+      samba-tool dns add $(hostname -s) "$LDOMAIN" wpad A 127.0.0.1 -P
+      samba-tool dns add $(hostname -s) "$LDOMAIN" isatap A 127.0.0.1 -P
 	fi
 	#Copy root cert as der to netlogon
-	openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
+	#openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
 	# If HostIP is set fix DNS
+	IP=0
+	MASK=0
     if [[ "$HOSTIP" != "NONE" ]]; then
       if grep '/' <<< "$HOSTIP" ; then
-        IP=${HOSTIP%/*}
-        samba-tool sites subnet create "$CIDR" "$JOIN_SITE"
+        IP=$(echo "$HOSTIP" | cut -d "/" -f1)
+		MASK=$(echo "$HOSTIP" | cut -d "/" -f1)
+        samba-tool sites subnet create "$HOSTIP" "$JOIN_SITE"
       else
         IP=$HOSTIP
       fi
       #this removes all internal docker IPs from samba DNS
       #samba_dnsupdate --current-ip="${HOSTIP%/*}"
-      # if hostip is set use external network ip to calc reverse zone
-      #add reverse zone & add site & add ip network to site
-      IP_REVERSE=$(echo "$IP" | awk -F. '{print $3"." $2"."$1}')
+	  if $(($MASK >= 1 && $MASK <= 8)); then
+        IP_REVERSE=$(echo "$IP" | awk -F. '{print $1}')
+	  fi
+	  if (($MASK >= 9 && $MASK <= 16)); then
+        IP_REVERSE=$(echo "$IP" | awk -F. '{print $2"."$1}')
+	  fi
+	  if (($MASK >= 17 && $MASK <= 24)); then
+        IP_REVERSE=$(echo "$IP" | awk -F. '{print $3"." $2"."$1}')
+	  fi
       echo "${DOMAIN_PASS}" | samba-tool dns zonecreate 127.0.0.1 "$IP_REVERSE".in-addr.arpa -UAdministrator
       dig -x "$IP"
     fi
