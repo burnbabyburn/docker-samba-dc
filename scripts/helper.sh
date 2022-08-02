@@ -53,24 +53,26 @@ setupSchemaRFC2307File() {
 }
 
 # AddSetKeyValueSMBCONF workgroup MYWORKGROUPNAME
-https://stackoverflow.com/questions/407523/escape-a-string-for-a-sed-replace-pattern
-https://fabianlee.org/2019/10/05/bash-setting-and-replacing-values-in-a-properties-file-use-sed/
-AddSetKeyValueSMBCONF() {
-  PATTERN="[global]"
+# https://stackoverflow.com/questions/407523/escape-a-string-for-a-sed-replace-pattern
+# https://fabianlee.org/2019/10/05/bash-setting-and-replacing-values-in-a-properties-file-use-sed/
+ 
+SetKeyValueFilePattern() {
+  PATTERN=${4:-[global]}
+  FILE=${3:-${FILE_SAMBA_CONF}}
   ESCAPED_PATTERN=$(printf '%s\n' "$PATTERN" | sed -e 's/[]\/$*.^[]/\\&/g')
   ESCAPED_REPLACE=$(printf '%s\n' "$2" | sed -e 's/[\/&]/\\&/g')
   echo $ESCAPED_PATTERN
   echo $ESCAPED_REPLACE
-  if ! grep -R "^[#]*\s*$1[[:space:]]=.*" "${FILE_SAMBA_CONF}" > /dev/null; then
+  if ! grep -R "^[#]*\s*$1[[:space:]]=.*" "$4" > /dev/null; then
     echo "Key: $1 not found. APPENDING $1 = $2 after $PATTERN"
-    sed -i "/^$ESCAPED_PATTERN"'/a\\t'"$1 = $ESCAPED_REPLACE" "${FILE_SAMBA_CONF}"
+    sed -i "/^$ESCAPED_PATTERN"'/a\\t'"$1 = $ESCAPED_REPLACE" "$4"
   else
     echo "Key: $1 found. SETTING $1 = $2"
-    sed -ir "s/^[#]*\s*$1[[:space:]]=.*/\\t$1 = $ESCAPED_REPLACE/" "${FILE_SAMBA_CONF}"
+    sed -ir "s/^[#]*\s*$1[[:space:]]=.*/\\t$1 = $ESCAPED_REPLACE/" "$4"
   fi
 }
 
-https://stackoverflow.com/questions/41451159/how-to-execute-a-script-when-i-terminate-a-docker-container
+# https://stackoverflow.com/questions/41451159/how-to-execute-a-script-when-i-terminate-a-docker-container
 backupConfig () {
   cp -f "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF_EXTERNAL}"
   cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_SUPERVISORD_CONF_EXTERNAL}"

@@ -77,11 +77,11 @@ config() {
 
   if [[ "$ENABLE_BIND_INTERFACE" = true ]] && ! echo "$BIND_INTERFACES" | grep "127.0.0.1\|lo\|::1" >> /dev/null; then
     echo "127.0.0.1 missing from BIND_INTERFACES. \n
-	 If bind interfaces only is set and the network address 127.0.0.1 is not added to the interfaces parameter list smbpasswd(8) may not work as expected due to the reasons covered below. \n
+     If bind interfaces only is set and the network address 127.0.0.1 is not added to the interfaces parameter list smbpasswd(8) may not work as expected due to the reasons covered below. \n
      To change a users SMB password, the smbpasswd by default connects to the localhost - 127.0.0.1 address as an SMB client to issue the password change request. \n
-	 If bind interfaces only is set then unless the network address 127.0.0.1 is added to the interfaces parameter list then smbpasswd will fail to connect in it's default mode. \n
-	 smbpasswd can be forced to use the primary IP interface of the local host by using its smbpasswd(8)	-r remote machine parameter, with remote machine set to the IP name of the primary interface of the local host. "
-	 BIND_INTERFACES+=,lo
+     If bind interfaces only is set then unless the network address 127.0.0.1 is added to the interfaces parameter list then smbpasswd will fail to connect in it's default mode. \n
+     smbpasswd can be forced to use the primary IP interface of the local host by using its smbpasswd(8)    -r remote machine parameter, with remote machine set to the IP name of the primary interface of the local host. "
+     BIND_INTERFACES+=,lo
   fi
   # Min Counter Values for NIS Attributes. Set in docker-compose
   # does nothing on DCs as they shall not use idmap settings.
@@ -200,12 +200,12 @@ appSetup () {
   fi
   if [[ ${DISABLE_MD5,,} = true ]]; then
     # Prevent downgrade attacks to md5
-	ARGS_SAMBA_TOOL+=("--option=reject md5 clients = yes")
-	ARGS_SAMBA_TOOL+=("--option=reject md5 servers = yes")
+    ARGS_SAMBA_TOOL+=("--option=reject md5 clients = yes")
+    ARGS_SAMBA_TOOL+=("--option=reject md5 servers = yes")
   fi
   if [[ ${ENABLE_WINS,,} = true ]]; then
     ARGS_SAMBA_TOOL+=("--option=wins support = yes")
-	ARGS_SAMBA_TOOL+=("--option=time server = yes")
+    ARGS_SAMBA_TOOL+=("--option=time server = yes")
   fi
 
   # If external/smb.conf doesn't exist, this is new container with empty volume, we're not just moving to a new container
@@ -215,10 +215,10 @@ appSetup () {
     if [[ ${JOIN,,} = true ]]; then
 #     if [ "$(dig +short -t srv _ldap._tcp.$LDOMAIN.)" ] && echo "got answer"
       s=1
-	  ARGS_SAMBA_TOOL+=("${LDOMAIN}")
-	  ARGS_SAMBA_TOOL+=("DC")
-	  ARGS_SAMBA_TOOL+=("-U${DOMAIN_NETBIOS}\\${DOMAIN_USER}")
-	  ARGS_SAMBA_TOOL+=("--password=${DOMAIN_PASS}")
+      ARGS_SAMBA_TOOL+=("${LDOMAIN}")
+      ARGS_SAMBA_TOOL+=("DC")
+      ARGS_SAMBA_TOOL+=("-U${DOMAIN_NETBIOS}\\${DOMAIN_USER}")
+      ARGS_SAMBA_TOOL+=("--password=${DOMAIN_PASS}")
       until [ $s = 0 ]
       do
         samba-tool domain join "${ARGS_SAMBA_TOOL[@]}" && s=0 && break || s=$? && sleep 60
@@ -249,13 +249,13 @@ appSetup () {
       ARGS_SAMBA_TOOL+=("--realm=${UDOMAIN}")
       ARGS_SAMBA_TOOL+=("--domain=${DOMAIN_NETBIOS}")
       ARGS_SAMBA_TOOL+=("--option=add machine script=/usr/sbin/useradd -N -M -g machines -d /dev/null -s /bin/false %u")
-	  ARGS_SAMBA_TOOL+=("--option=add group script=/usr/sbin/groupadd %g")
-	  ARGS_SAMBA_TOOL+=("--option=add user to group script=/usr/sbin/adduser %u %g")
-	  ARGS_SAMBA_TOOL+=("--option=delete group script=/usr/sbin/groupdel %g")
-	  ARGS_SAMBA_TOOL+=("--option=delete user from group script=/usr/sbin/deluser %u %g")
-	  ARGS_SAMBA_TOOL+=("--option=delete user script=/usr/sbin/deluser %u")
-	  ARGS_SAMBA_TOOL+=("--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool")
-	  
+      ARGS_SAMBA_TOOL+=("--option=add group script=/usr/sbin/groupadd %g")
+      ARGS_SAMBA_TOOL+=("--option=add user to group script=/usr/sbin/adduser %u %g")
+      ARGS_SAMBA_TOOL+=("--option=delete group script=/usr/sbin/groupdel %g")
+      ARGS_SAMBA_TOOL+=("--option=delete user from group script=/usr/sbin/deluser %u %g")
+      ARGS_SAMBA_TOOL+=("--option=delete user script=/usr/sbin/deluser %u")
+      ARGS_SAMBA_TOOL+=("--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool")
+      
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
       if [[ "$RECYCLEBIN" = true ]]; then
@@ -296,33 +296,31 @@ appSetup () {
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS2}" -U "${DOMAIN_USER}" ${SAMBA_DEBUG_OPTION}
       fi
 
-	  if [[ ${DOMAIN_PWD_HISTORY_LENGTH} != 24 ]]; then samba-tool domain passwordsettings set --history-length="$DOMAIN_PWD_HISTORY_LENGTH" ${SAMBA_DEBUG_OPTION} ; fi
-	  if [[ ${DOMAIN_PWD_MAX_AGE} != 43 ]]; then samba-tool domain passwordsettings set --max-pwd-age="$DOMAIN_PWD_MAX_AGE" ${SAMBA_DEBUG_OPTION} ; fi
-	  if [[ ${DOMAIN_PWD_MIN_AGE} != 1 ]]; then samba-tool domain passwordsettings set --min-pwd-age="$DOMAIN_PWD_MIN_AGE" ${SAMBA_DEBUG_OPTION} ; fi
-	  if [[ ${DOMAIN_PWD_MIN_LENGTH} != 7 ]]; then samba-tool domain passwordsettings set --min-pwd-length="$DOMAIN_PWD_MIN_LENGTH" ${SAMBA_DEBUG_OPTION} ; fi
+      if [[ ${DOMAIN_PWD_HISTORY_LENGTH} != 24 ]]; then samba-tool domain passwordsettings set --history-length="$DOMAIN_PWD_HISTORY_LENGTH" ${SAMBA_DEBUG_OPTION} ; fi
+      if [[ ${DOMAIN_PWD_MAX_AGE} != 43 ]]; then samba-tool domain passwordsettings set --max-pwd-age="$DOMAIN_PWD_MAX_AGE" ${SAMBA_DEBUG_OPTION} ; fi
+      if [[ ${DOMAIN_PWD_MIN_AGE} != 1 ]]; then samba-tool domain passwordsettings set --min-pwd-age="$DOMAIN_PWD_MIN_AGE" ${SAMBA_DEBUG_OPTION} ; fi
+      if [[ ${DOMAIN_PWD_MIN_LENGTH} != 7 ]]; then samba-tool domain passwordsettings set --min-pwd-length="$DOMAIN_PWD_MIN_LENGTH" ${SAMBA_DEBUG_OPTION} ; fi
       if [[ ${DOMAIN_PWD_COMPLEXITY} = false ]]; then samba-tool domain passwordsettings set --complexity="$DOMAIN_PWD_COMPLEXITY" ${SAMBA_DEBUG_OPTION} ; fi
-	  
-	  if [[ ${DOMAIN_ACC_LOCK_DURATION} != 30 ]]; then samba-tool domain passwordsettings set --account-lockout-duration="$DOMAIN_ACC_LOCK_DURATION" ${SAMBA_DEBUG_OPTION} ; fi
-	  if [[ ${DOMAIN_ACC_LOCK_THRESHOLD} != 0 ]]; then samba-tool domain passwordsettings set --account-lockout-threshold="$DOMAIN_ACC_LOCK_THRESHOLD" ${SAMBA_DEBUG_OPTION} ; fi
-	  if [[ ${DOMAIN_ACC_LOCK_RST_AFTER} != 30 ]]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" ${SAMBA_DEBUG_OPTION} ; fi
+      
+      if [[ ${DOMAIN_ACC_LOCK_DURATION} != 30 ]]; then samba-tool domain passwordsettings set --account-lockout-duration="$DOMAIN_ACC_LOCK_DURATION" ${SAMBA_DEBUG_OPTION} ; fi
+      if [[ ${DOMAIN_ACC_LOCK_THRESHOLD} != 0 ]]; then samba-tool domain passwordsettings set --account-lockout-threshold="$DOMAIN_ACC_LOCK_THRESHOLD" ${SAMBA_DEBUG_OPTION} ; fi
+      if [[ ${DOMAIN_ACC_LOCK_RST_AFTER} != 30 ]]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" ${SAMBA_DEBUG_OPTION} ; fi
     fi
 
     #Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
     if [ ! -f "${FILE_SAMBA_USER_MAP}" ]; then
       echo '!'"root = ${DOMAIN_NETBIOS}\\${DOMAIN_USER}" > "${FILE_SAMBA_USER_MAP}"
-      AddSetKeyValueSMBCONF 'username map' "${FILE_SAMBA_USER_MAP}"
+      SetKeyValueFilePattern 'username map' "${FILE_SAMBA_USER_MAP}"
     fi
 
     if [[ ${ENABLE_CUPS,,} = true ]]; then
-      sed -i "/\[global\]/a \
-        \\\tload printers = yes\\n\
-        printing = cups\\n\
-        printcap name = cups\\n\
-        show add printer wizard = no\\n\
-        cups encrypt = no\\n\
-        cups options = \"raw media=a4\"\\n\
-        #cups server = ${CUPS_SERVER}:${CUPS_PORT}\
-      " "${FILE_SAMBA_CONF}"
+	  SetKeyValueFilePattern 'load printers' 'yes'
+	  SetKeyValueFilePattern 'printing' 'cups'
+	  SetKeyValueFilePattern 'printcap name' 'cups'
+	  SetKeyValueFilePattern 'show add printer wizard' 'no'
+	  SetKeyValueFilePattern 'cups encrypt' 'no'
+	  SetKeyValueFilePattern 'cups options' '\"raw media=a4\"'
+	  SetKeyValueFilePattern '#cups server' "${CUPS_SERVER}:${CUPS_PORT}"
       {
         echo ""
         echo "[printers]"
@@ -334,19 +332,19 @@ appSetup () {
         echo "browseable = No"
       } >> "${FILE_SAMBA_CONF}"
     else
-	  AddSetKeyValueSMBCONF 'load printers' 'no'
-	  AddSetKeyValueSMBCONF 'printing' 'bsd'
-	  AddSetKeyValueSMBCONF 'printcap name' '/dev/null'
-	  AddSetKeyValueSMBCONF 'disable spoolss' 'yes'
+      SetKeyValueFilePattern 'load printers' 'no'
+      SetKeyValueFilePattern 'printing' 'bsd'
+      SetKeyValueFilePattern 'printcap name' '/dev/null'
+      SetKeyValueFilePattern 'disable spoolss' 'yes'
     fi
 
     # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
-    AddSetKeyValueSMBCONF 'password hash userPassword schemes' 'CryptSHA256 CryptSHA512'
+    SetKeyValueFilePattern 'password hash userPassword schemes' 'CryptSHA256 CryptSHA512'
     # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes
-	AddSetKeyValueSMBCONF 'template shell' '/bin/false'
-	AddSetKeyValueSMBCONF 'template homedir' "$DIR_SAMBA_DATA_PREFIX/userhome-unix/%D/%U"
-	# Setup ACLs correctly https://github.com/thctlo/samba4/blob/master/samba-setup-share-folders.sh
-    if [[ ! -d "$DIR_SAMBA_DATA_PREFIX/userhome-unix/" ]]; then mkdir -p "$DIR_SAMBA_DATA_PREFIX/userhome-unix/" ; fi
+    SetKeyValueFilePattern 'template shell' '/bin/false'
+    SetKeyValueFilePattern 'template homedir' "$DIR_SAMBA_DATA_PREFIX/unixhome/%U"
+    # Setup ACLs correctly https://github.com/thctlo/samba4/blob/master/samba-setup-share-folders.sh
+    if [[ ! -d "$DIR_SAMBA_DATA_PREFIX/unixhome/" ]]; then mkdir -p "$DIR_SAMBA_DATA_PREFIX/unixhome/" ; fi
     # nsswitch anpassen
     sed -i "s,passwd:.*,passwd:         files winbind,g" "$FILE_NSSWITCH"
     sed -i "s,group:.*,group:          files winbind,g" "$FILE_NSSWITCH"
@@ -377,29 +375,24 @@ appSetup () {
   if [ "${ENABLE_TLS,,}" = true ]; then
     if [ ! -f "$FILE_PKI_CERT" ] && [ ! -f "$FILE_PKI_KEY" ] && [ ! -f "$FILE_PKI_CA" ]; then echo "No custom CA found. Samba will autogenerate one" ; fi
     if [ ! -f "$FILE_PKI_DH" ]; then openssl dhparam -out "$FILE_PKI_DH" 2048 ; fi
-    sed -i "/\[global\]/a \
-        \\\ttls enabled  = yes\\n\
-        tls keyfile  = tls/key.pem\\n\
-        tls certfile = tls/cert.pem\\n\
-        #tls cafile   = tls/intermediate.pem\\n\
-        tls cafile   = tls/ca.pem\\n\
-        tls dh params file = tls/dh.key\\n\
-        #tls crlfile   = tls/crl.pem\\n\
-        #tls verify peer = ca_and_name\
-    " "${FILE_SAMBA_CONF}"
+	SetKeyValueFilePattern 'tls enabled' 'yes'
+	SetKeyValueFilePattern 'tls keyfile' "$FILE_PKI_KEY"
+	SetKeyValueFilePattern 'tls certfile' "$FILE_PKI_CERT"
+	SetKeyValueFilePattern 'tls cafile' "$FILE_PKI_CA"
+	SetKeyValueFilePattern 'tls dh params file' "$FILE_PKI_DH"
+#	SetKeyValueFilePattern 'tls crlfile' "$FILE_PKI_CRL"
+#	SetKeyValueFilePattern 'tls verify peer'  'ca_and_name'
   else
-    sed -i "/\[global\]/a \
-        \\\ttls enabled  = no\\n\
-	" "${FILE_SAMBA_CONF}"
+    SetKeyValueFilePattern 'tls enabled' 'no'
   fi
 
   if [[ ${ENABLE_LOGS,,} = true ]]; then
-    sed -i "/\[global\]/a \
-      \\\tlog file = /var/log/samba/%m.log\\n\
-      max log size = 10000\\n\
-      log level = ${DEBUG_LEVEL}\
-    " /etc/samba/smb.conf
-    sed -i '/FILE:/s/^#//g' "$FILE_KRB5"
+    SetKeyValueFilePattern 'log file' '/var/log/samba/%m.log'
+	SetKeyValueFilePattern 'max log size' '10000'
+	SetKeyValueFilePattern 'log level' "${DEBUG_LEVEL}"
+    SetKeyValueFilePattern 'admin_server' 'FILE:/var/log/samba/kadmind.log' '$FILE_KRB5' '[logging]'
+    SetKeyValueFilePattern 'default' 'FILE:/var/log/samba/krb5libs.log' '$FILE_KRB5' '[logging]'
+    SetKeyValueFilePattern 'kdc' 'FILE:/var/log/samba/krb5kdc.log' '$FILE_KRB5' '[logging]'
     sed -i '/FILE:/s/^#_//g' "$FILE_NTP"
   fi
 
@@ -414,31 +407,31 @@ appFirstStart () {
   if [ "${JOIN,,}" = false ]; then
     # Better check if net rpc is rdy
     sleep 30s
-	RDNSZonefromCIDR
+    RDNSZonefromCIDR
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
     if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ]; then
       samba-tool dns add "$(hostname -s)" "$LDOMAIN" wpad A 127.0.0.1 -P ${SAMBA_DEBUG_OPTION}
       samba-tool dns add "$(hostname -s)" "$LDOMAIN" isatap A 127.0.0.1 -P ${SAMBA_DEBUG_OPTION}
-	fi
-	#Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
+    fi
+    #Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
     echo "rpcclient: Connect as ${DOMAIN_USER}" ; if rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" ${SAMBA_DEBUG_OPTION} 127.0.0.1 ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
-	echo "smbclient: Connect as anonymous user" ; if grep 'Anonymous login successful' <(smbclient -N -L LOCALHOST ${SAMBA_DEBUG_OPTION}) ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
-	echo "smbclient: Connect as ${DOMAIN_USER}" ; if grep '[[:blank:]]session setup ok' <(smbclient --debug-stdout -d 4 -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST) ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
-	echo "Kerberos: Connect as ${DOMAIN_USER}" ; if echo "${DOMAIN_PASS}" | kinit "${DOMAIN_USER}" ; then echo 'OK' && klist ; else echo 'FAILED' ; exit 1 ; fi
-	echo "Check NTP"; ntpq -c sysinfo ${SAMBA_DEBUG_OPTION}
+    echo "smbclient: Connect as anonymous user" ; if grep 'Anonymous login successful' <(smbclient -N -L LOCALHOST ${SAMBA_DEBUG_OPTION}) ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
+    echo "smbclient: Connect as ${DOMAIN_USER}" ; if grep '[[:blank:]]session setup ok' <(smbclient --debug-stdout -d 4 -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST) ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
+    echo "Kerberos: Connect as ${DOMAIN_USER}" ; if echo "${DOMAIN_PASS}" | kinit "${DOMAIN_USER}" ; then echo 'OK' && klist ; else echo 'FAILED' ; exit 1 ; fi
+    echo "Check NTP"; ntpq -c sysinfo ${SAMBA_DEBUG_OPTION}
     echo "Check DNS _ldap._tcp"; host -t SRV _ldap._tcp."$LDOMAIN"
     echo "Check DNS _kerberos._tcp"; host -t SRV _kerberos._udp."$LDOMAIN"
     echo "Check Host record"; host -t A "$HOSTNAME.$LDOMAIN"
-	echo "Check Reverse DNS resolution"; dig -x "$IP"
-	
-	#Copy root cert as der to netlogon
-	#openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
+    echo "Check Reverse DNS resolution"; dig -x "$IP"
+    
+    #Copy root cert as der to netlogon
+    #openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
     #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
-	ARGS_NET_RPC=()
-	ARGS_NET_RPC+=("$UDOMAIN\\Domain Admins")
-	ARGS_NET_RPC+=("SeDiskOperatorPrivilege")
-	ARGS_NET_RPC+=("-U$UDOMAIN\\${DOMAIN_USER,,}")
-	ARGS_NET_RPC+=("-d $DEBUG_LEVEL")
+    ARGS_NET_RPC=()
+    ARGS_NET_RPC+=("$UDOMAIN\\Domain Admins")
+    ARGS_NET_RPC+=("SeDiskOperatorPrivilege")
+    ARGS_NET_RPC+=("-U$UDOMAIN\\${DOMAIN_USER,,}")
+    ARGS_NET_RPC+=("-d $DEBUG_LEVEL")
     echo "${DOMAIN_PASS}" | net rpc rights grant "${ARGS_NET_RPC[@]}"
   # if JOIN=true
   else
@@ -456,6 +449,7 @@ appFirstStart () {
 
 appStart () {
   update-ca-certificates
+  config
   loadconfdir
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}"
 }
@@ -469,7 +463,7 @@ loadconfdir () {
     " "${FILE_SAMBA_CONF}"
   fi
   # create directory smb.conf.d to store samba .conf files
-  mkdir -p "$DIR_SAMBA_CONF"
+  if [[ ! -d "$DIR_SAMBA_CONF" ]]; then mkdir -p "$DIR_SAMBA_CONF" ; fi
   # populates includes.conf with files (type -f) in smb.conf.d directory
   find "${DIR_SAMBA_CONF}" -maxdepth 1 -type f| sed -e 's/^/include = /' > "$FILE_SAMBA_INCLUDES"
 }
