@@ -346,14 +346,16 @@ appSetup () {
 	  AddSetKeyValueSMBCONF 'load printers' 'no'
 	  AddSetKeyValueSMBCONF 'printing' 'bsd'
 	  AddSetKeyValueSMBCONF 'printcap name' '/dev/null'
-	  AddSetKeyValueSMBCONF 'spoolss' 'yes'
+	  AddSetKeyValueSMBCONF 'disable spoolss' 'yes'
     fi
 
     # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
     AddSetKeyValueSMBCONF 'password hash userPassword schemes' 'CryptSHA256 CryptSHA512'
+    # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes
 	AddSetKeyValueSMBCONF 'template shell' '/bin/false'
 	AddSetKeyValueSMBCONF 'template homedir' "$DIR_SAMBA_DATA_PREFIX/homedir_unix/%U"
-
+	# Setup ACLs correctly https://github.com/thctlo/samba4/blob/master/samba-setup-share-folders.sh
+    if [[ ! -d "$DIR_SAMBA_DATA_PREFIX/homedir_unix" ]]; then mkdir -p "$DIR_SAMBA_DATA_PREFIX/homedir_unix" ; fi
     # nsswitch anpassen
     sed -i "s,passwd:.*,passwd:         files winbind,g" "$FILE_NSSWITCH"
     sed -i "s,group:.*,group:          files winbind,g" "$FILE_NSSWITCH"

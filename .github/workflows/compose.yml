@@ -13,6 +13,16 @@ jobs:
         run: sleep 30
       - name: Check logs DC01
         run: docker logs samba-dc01
+      - name: Check DC01 NTP
+        run: docker-compose exec samba ntpq -p
+      - name: Check DC01 config
+        run: docker-compose exec samba testparm -vs
+      - name: Check DC01 processes
+        run: docker-compose exec samba samba-tool processes
+      - name: Check DC01 domain
+        run: docker-compose exec samba samba-tool domain info 127.0.0.1
+      - name: Check DC01 winbindd
+        run: docker-compose exec samba wbinfo -u        
       - name: Start DC02
         run: docker-compose -f docker-compose.yml up -d samba-join
       - name: Sleep for 30 seconds
