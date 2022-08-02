@@ -58,7 +58,7 @@ setupSchemaRFC2307File() {
  
 SetKeyValueFilePattern() {
   PATTERN=${4:-[global]}
-  FILE=${3:-${FILE_SAMBA_CONF}}
+  FILE=${3:-"$FILE_SAMBA_CONF"}
   ESCAPED_PATTERN=$(printf '%s\n' "$PATTERN" | sed -e 's/[]\/$*.^[]/\\&/g')
   ESCAPED_REPLACE=$(printf '%s\n' "$2" | sed -e 's/[\/&]/\\&/g')
   echo $ESCAPED_PATTERN

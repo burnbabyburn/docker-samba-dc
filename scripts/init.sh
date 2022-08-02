@@ -1,11 +1,5 @@
 #!/bin/bash
 
-if [ "$ENABLE_DEBUG" = "true" ] ; then set -x ; else set -e ; fi
-source /scripts/helper.sh
-
-#Trap SIGTERM
-trap 'backupConfig' SIGTERM
-
 config() {
   # Set variables
   DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
@@ -39,7 +33,7 @@ config() {
   for dn in ${LDOMAIN}; do
     LDAP_SUFFIX="${LDAP_SUFFIX},DC=$dn"
   done
-  IFS=$' \t\n'
+  local IFS=$' \t\n'
   LDAP_DN=$HOSTNAME$LDAP_SUFFIX
 
   CHANGE_KRB_TGT_PW=${CHANGE_KRB_TGT_PW:-false}
@@ -136,6 +130,12 @@ config() {
   export LDAP_DN="$LDAP_DN"
   export LDAP_SUFFIX="$LDAP_SUFFIX"
   export DIR_SCRIPTS="$DIR_SCRIPTS"
+  
+  source /scripts/helper.sh
+  if [ "$ENABLE_DEBUG" = "true" ] ; then set -x ; else set -e ; fi
+
+  #Trap SIGTERM
+trap 'backupConfig' SIGTERM
 }
 
 appSetup () {
@@ -390,9 +390,9 @@ appSetup () {
     SetKeyValueFilePattern 'log file' '/var/log/samba/%m.log'
 	SetKeyValueFilePattern 'max log size' '10000'
 	SetKeyValueFilePattern 'log level' "${DEBUG_LEVEL}"
-    SetKeyValueFilePattern 'admin_server' 'FILE:/var/log/samba/kadmind.log' '$FILE_KRB5' '[logging]'
-    SetKeyValueFilePattern 'default' 'FILE:/var/log/samba/krb5libs.log' '$FILE_KRB5' '[logging]'
-    SetKeyValueFilePattern 'kdc' 'FILE:/var/log/samba/krb5kdc.log' '$FILE_KRB5' '[logging]'
+    SetKeyValueFilePattern 'admin_server' 'FILE:/var/log/samba/kadmind.log' "$FILE_KRB5" '[logging]'
+    SetKeyValueFilePattern 'default' 'FILE:/var/log/samba/krb5libs.log' "$FILE_KRB5" '[logging]'
+    SetKeyValueFilePattern 'kdc' 'FILE:/var/log/samba/krb5kdc.log' "$FILE_KRB5" '[logging]'
     sed -i '/FILE:/s/^#_//g' "$FILE_NTP"
   fi
 
