@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+if [ "$ENABLE_DEBUG" = "true" ] ; then set -x ; else set -e ; fi
 source /scripts/helper.sh
 
 #Trap SIGTERM
@@ -83,9 +83,8 @@ config() {
 	 smbpasswd can be forced to use the primary IP interface of the local host by using its smbpasswd(8)	-r remote machine parameter, with remote machine set to the IP name of the primary interface of the local host. "
 	 BIND_INTERFACES+=,lo
   fi
-  # Min Counter Values for NIS Attributes. Set in docker-compose if you want a different start
-  # IT does nothing on DCs as they shall not use idmap settings.
-  # Using the same Start and stop values on members however gets the RFC2307 attributs (NIS) rights
+  # Min Counter Values for NIS Attributes. Set in docker-compose
+  # does nothing on DCs as they shall not use idmap settings.
   # idmap config {{ URDOMAIN }} : range = {{ IDMIN }}-{{ IDMAX }}
   IMAP_ID_START=${IMAP_UID_START:-10000}
   IMAP_UID_START=${IMAP_UID_START:-$IMAP_ID_START}
@@ -142,11 +141,8 @@ config() {
 appSetup () {
   ARGS_SAMBA_TOOL=()
   ARGS_SAMBA_TOOL+=("--dns-backend=SAMBA_INTERNAL")
-  if [[ $DEBUG_LEVEL -gt 0 ]]; then
-    SAMBA_DEBUG_OPTION="-d $DEBUG_LEVEL"
-    ARGS_SAMBA_TOOL+=("${SAMBA_DEBUG_OPTION}")
-  fi
-
+  SAMBA_DEBUG_OPTION="-d $DEBUG_LEVEL"
+  ARGS_SAMBA_TOOL+=("${SAMBA_DEBUG_OPTION}")
   SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d $DEBUG_LEVEL"
   NTP_DEBUG_OPTION="-D $DEBUG_LEVEL"
   sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:$SAMBADAEMON_DEBUG_OPTION:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
@@ -157,19 +153,17 @@ appSetup () {
       -e "s:{{ HOSTNAME }}:$HOSTNAME:" \
   -i "$FILE_KRB5"
 
-  if [[ ! -f "$FILE_NTP_DRIFT" ]]; then echo 0.0 > "$FILE_NTP_DRIFT" ; fi
-  chown root:root "$FILE_NTP_DRIFT"
+  if [[ ! -f "$FILE_NTP_DRIFT" ]]; then echo 0.0 > "$FILE_NTP_DRIFT" ; chown root:root "$FILE_NTP_DRIFT" ; fi
+
   if grep "{{ NTPSERVER }}" "$FILE_NTP"; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
     NTPSERVER=""
     NTPSERVERRESTRICT=""
-    #local IFS=$'\n'
     for DC in $DCs
     do
       NTPSERVER="$NTPSERVER server ${DC}    iburst prefer\n"
       NTPSERVERRESTRICT="$NTPSERVERRESTRICT restrict ${DC} mask 255.255.255.255    nomodify notrap nopeer noquery\n"
     done
-    #local IFS=$' \t\n'
     sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" -i "$FILE_NTP"
     sed -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" -i "$FILE_NTP"
   fi
@@ -178,8 +172,8 @@ appSetup () {
   chown root:root "$DIR_NTP_SOCK"
   if [[ ! -d "$DIR_SAMBA_EXTERNAL" ]]; then mkdir "$DIR_SAMBA_EXTERNAL" ; fi
   #Check if DOMAIN_NETBIOS <15 chars and contains no "."
-  if [[ ${#DOMAIN_NETBIOS} -gt 15 ]]; then echo "DOMAIN_NETBIOS too long => exiting" && exit 1 ; fi
-  if [[ $DOMAIN_NETBIOS == *"."* ]]; then echo "DOMAIN_NETBIOS contains forbiden char    .     => exiting" && exit 1 ; fi
+  if [[ ${#DOMAIN_NETBIOS} -gt 15 ]]; then echo "DOMAIN_NETBIOS too long => exiting" ; exit 1 ; fi
+  if [[ $DOMAIN_NETBIOS == *"."* ]]; then echo "DOMAIN_NETBIOS contains forbiden char    .     => exiting" ; exit 1 ; fi
   if [[ "$HOSTIP" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--host-ip=${HOSTIP%/*}") ; fi
   if [[ "$HOSTIPV6" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--host-ip6=${HOSTIPV6}") ;  fi
   if [[ "$JOIN_SITE" != "Default-First-Site-Name" ]]; then ARGS_SAMBA_TOOL+=("--site=${JOIN_SITE}") ; fi
@@ -214,19 +208,19 @@ appSetup () {
 	ARGS_SAMBA_TOOL+=("--option=time server = yes")
   fi
 
-  # If the finished file (external/smb.conf) doesn't exist, this is new container with empty volume, we're not just moving to a new container
+  # If external/smb.conf doesn't exist, this is new container with empty volume, we're not just moving to a new container
   if [[ ! -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
     if [[ -f "${FILE_SAMBA_CONF}" ]]; then mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig ; fi
     # Optional params encased with "" will break the command
     if [[ ${JOIN,,} = true ]]; then
 #     if [ "$(dig +short -t srv _ldap._tcp.$LDOMAIN.)" ] && echo "got answer"
       s=1
+	  ARGS_SAMBA_TOOL+=("${LDOMAIN}")
+	  ARGS_SAMBA_TOOL+=("DC")
+	  ARGS_SAMBA_TOOL+=("-U${DOMAIN_NETBIOS}\\${DOMAIN_USER}")
+	  ARGS_SAMBA_TOOL+=("--password=${DOMAIN_PASS}")
       until [ $s = 0 ]
       do
-	    ARGS_SAMBA_TOOL+=("${LDOMAIN}")
-		ARGS_SAMBA_TOOL+=("DC")
-		ARGS_SAMBA_TOOL+=("-U${DOMAIN_NETBIOS}\\${DOMAIN_USER}")
-		ARGS_SAMBA_TOOL+=("--password=${DOMAIN_PASS}")
         samba-tool domain join "${ARGS_SAMBA_TOOL[@]}" && s=0 && break || s=$? && sleep 60
       done; (exit $s)
 #      # Netlogon & sysvol readonly on secondary DC
@@ -263,9 +257,8 @@ appSetup () {
 	  ARGS_SAMBA_TOOL+=("--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool")
 	  
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
-
+      # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
       if [[ "$RECYCLEBIN" = true ]]; then
-        # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
         python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
       fi
 
@@ -290,7 +283,7 @@ appSetup () {
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
       if [[ ${ENABLE_RFC2307,,} = true ]]; then
         setupSchemaRFC2307File
-        ldbmodify -H "${FILE_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}"
+        ldbmodify -H "${FILE_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}" ${SAMBA_DEBUG_OPTION}
       fi
 
       #Microsoft Local Administrator Password Solution (LAPS)
@@ -299,8 +292,8 @@ appSetup () {
           "${FILE_SAMBA_SCHEMA_LAPS1}.j2" > "${FILE_SAMBA_SCHEMA_LAPS1}"
         sed -e "s: {{ LDAP_SUFFIX }}:$LDAP_SUFFIX:g" \
           "${FILE_SAMBA_SCHEMA_LAPS2}.j2" > "${FILE_SAMBA_SCHEMA_LAPS2}"
-        ldbadd -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS1}" -U "${DOMAIN_USER}"
-        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS2}" -U "${DOMAIN_USER}"
+        ldbadd -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS1}" -U "${DOMAIN_USER}" ${SAMBA_DEBUG_OPTION}
+        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS2}" -U "${DOMAIN_USER}" ${SAMBA_DEBUG_OPTION}
       fi
 
 	  if [[ ${DOMAIN_PWD_HISTORY_LENGTH} != 24 ]]; then samba-tool domain passwordsettings set --history-length="$DOMAIN_PWD_HISTORY_LENGTH" ${SAMBA_DEBUG_OPTION} ; fi
@@ -317,9 +310,7 @@ appSetup () {
     #Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
     if [ ! -f "${FILE_SAMBA_USER_MAP}" ]; then
       echo '!'"root = ${DOMAIN_NETBIOS}\\${DOMAIN_USER}" > "${FILE_SAMBA_USER_MAP}"
-      sed -i "/\[global\]/a \
-        \\\tusername map = ${FILE_SAMBA_USER_MAP}\
-      " "${FILE_SAMBA_CONF}"
+      AddSetKeyValueSMBCONF 'username map' "${FILE_SAMBA_USER_MAP}"
     fi
 
     if [[ ${ENABLE_CUPS,,} = true ]]; then
@@ -353,9 +344,9 @@ appSetup () {
     AddSetKeyValueSMBCONF 'password hash userPassword schemes' 'CryptSHA256 CryptSHA512'
     # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes
 	AddSetKeyValueSMBCONF 'template shell' '/bin/false'
-	AddSetKeyValueSMBCONF 'template homedir' "$DIR_SAMBA_DATA_PREFIX/homedir_unix/%U"
+	AddSetKeyValueSMBCONF 'template homedir' "$DIR_SAMBA_DATA_PREFIX/userhome-unix/%D/%U"
 	# Setup ACLs correctly https://github.com/thctlo/samba4/blob/master/samba-setup-share-folders.sh
-    if [[ ! -d "$DIR_SAMBA_DATA_PREFIX/homedir_unix" ]]; then mkdir -p "$DIR_SAMBA_DATA_PREFIX/homedir_unix" ; fi
+    if [[ ! -d "$DIR_SAMBA_DATA_PREFIX/userhome-unix/" ]]; then mkdir -p "$DIR_SAMBA_DATA_PREFIX/userhome-unix/" ; fi
     # nsswitch anpassen
     sed -i "s,passwd:.*,passwd:         files winbind,g" "$FILE_NSSWITCH"
     sed -i "s,group:.*,group:          files winbind,g" "$FILE_NSSWITCH"
@@ -423,62 +414,25 @@ appFirstStart () {
   if [ "${JOIN,,}" = false ]; then
     # Better check if net rpc is rdy
     sleep 30s
+	RDNSZonefromCIDR
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
     if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ]; then
-      samba-tool dns add $(hostname -s) "$LDOMAIN" wpad A 127.0.0.1 -P
-      samba-tool dns add $(hostname -s) "$LDOMAIN" isatap A 127.0.0.1 -P
+      samba-tool dns add "$(hostname -s)" "$LDOMAIN" wpad A 127.0.0.1 -P ${SAMBA_DEBUG_OPTION}
+      samba-tool dns add "$(hostname -s)" "$LDOMAIN" isatap A 127.0.0.1 -P ${SAMBA_DEBUG_OPTION}
 	fi
+	#Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
+    echo "rpcclient: Connect as ${DOMAIN_USER}" ; if rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" ${SAMBA_DEBUG_OPTION} 127.0.0.1 ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
+	echo "smbclient: Connect as anonymous user" ; if grep 'Anonymous login successful' <(smbclient -N -L LOCALHOST ${SAMBA_DEBUG_OPTION}) ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
+	echo "smbclient: Connect as ${DOMAIN_USER}" ; if grep '[[:blank:]]session setup ok' <(smbclient --debug-stdout -d 4 -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST) ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
+	echo "Kerberos: Connect as ${DOMAIN_USER}" ; if echo "${DOMAIN_PASS}" | kinit "${DOMAIN_USER}" ; then echo 'OK' && klist ; else echo 'FAILED' ; exit 1 ; fi
+	echo "Check NTP"; ntpq -c sysinfo ${SAMBA_DEBUG_OPTION}
+    echo "Check DNS _ldap._tcp"; host -t SRV _ldap._tcp."$LDOMAIN"
+    echo "Check DNS _kerberos._tcp"; host -t SRV _kerberos._udp."$LDOMAIN"
+    echo "Check Host record"; host -t A "$HOSTNAME.$LDOMAIN"
+	echo "Check Reverse DNS resolution"; dig -x "$IP"
+	
 	#Copy root cert as der to netlogon
 	#openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
-	# If HostIP is set fix DNS
-	IP=0
-	MASK=0
-    if [[ "$HOSTIP" != "NONE" ]]; then
-      if grep '/' <<< "$HOSTIP" ; then
-        IP=$(echo "$HOSTIP" | cut -d "/" -f1)
-		MASK=$(echo "$HOSTIP" | cut -d "/" -f2)
-        samba-tool sites subnet create "$HOSTIP" "$JOIN_SITE"
-      else
-        IP=$HOSTIP
-      fi
-      #this removes all internal docker IPs from samba DNS
-      #samba_dnsupdate --current-ip="${HOSTIP%/*}"
-	  if $(($MASK >= 1 && $MASK <= 8)); then
-        IP_REVERSE=$(echo "$IP" | awk -F. '{print $1}')
-	  fi
-	  if (($MASK >= 9 && $MASK <= 16)); then
-        IP_REVERSE=$(echo "$IP" | awk -F. '{print $2"."$1}')
-	  fi
-	  if (($MASK >= 17 && $MASK <= 24)); then
-        IP_REVERSE=$(echo "$IP" | awk -F. '{print $3"." $2"."$1}')
-	  fi
-      echo "${DOMAIN_PASS}" | samba-tool dns zonecreate 127.0.0.1 "$IP_REVERSE".in-addr.arpa -UAdministrator
-      dig -x "$IP"
-    fi
-
-    echo "Check NTP $(ntpq -c sysinfo)"
-    echo "ckeck DNS _ldap._tcp"; host -t SRV _ldap._tcp."$LDOMAIN"
-    echo "ckeck DNS _kerberos._tcp"; host -t SRV _kerberos._udp."$LDOMAIN"
-    echo "check Host record"; host -t A "$HOSTNAME.$LDOMAIN"
-
-    # https://stackoverflow.com/questions/5281341/get-local-network-interface-addresses-using-only-proc
-    # https://stackoverflow.com/questions/50413579/bash-convert-netmask-in-cidr-notation
-    ft_local=$(awk '$1=="Local:" {flag=1} flag' <<< "$(</proc/net/fib_trie)")
-    for IF in $(ls /sys/class/net/); do
-      networks=$(awk '$1=="'$IF'" && $3=="00000000" && $8!="FFFFFFFF" {printf $2 $8 "\n"}' <<< "$(</proc/net/route)" )
-      for net_hex in $networks; do
-        net_dec=$(awk '{gsub(/../, "0x& "); printf "%d.%d.%d.%d\n", $4, $3, $2, $1}' <<< $net_hex)
-        mask_dec=$(awk '{gsub(/../, "0x& "); printf "%d.%d.%d.%d\n", $8, $7, $6, $5}' <<< $net_hex)
-        c=0 x=0$( printf '%o' ${mask_dec//./ } )
-        while [ $x -gt 0 ]; do
-          let c+=$((x%2)) 'x>>=1'
-        done
-        CIDR=$net_dec/$c
-        echo "Found the following network: $CIDR - Trying to create Subnet and add to $JOIN_SITE"
-        samba-tool sites subnet create "$CIDR" "$JOIN_SITE"
-      done
-    done
-	
     #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
 	ARGS_NET_RPC=()
 	ARGS_NET_RPC+=("$UDOMAIN\\Domain Admins")
@@ -486,6 +440,7 @@ appFirstStart () {
 	ARGS_NET_RPC+=("-U$UDOMAIN\\${DOMAIN_USER,,}")
 	ARGS_NET_RPC+=("-d $DEBUG_LEVEL")
     echo "${DOMAIN_PASS}" | net rpc rights grant "${ARGS_NET_RPC[@]}"
+  # if JOIN=true
   else
   #ERROR?`{{DC_IP}}:$LDAP_SUFFIX:g {DC_DNS}}:$LDAP_SUFFIX:g
     if [ -f "$FILE_SAMBA_WINSLDB" ] && [ "${ENABLE_WINS}" = true ];then
@@ -495,16 +450,6 @@ appFirstStart () {
     ldbadd -H "$FILE_SAMBA_WINSLDB" "$FILE_SAMBA_SCHEMA_WINSREPL"
     fi
   fi
-  # https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
-  #Test Kerberos
-  if echo "${DOMAIN_PASS}" | kinit "${DOMAIN_USER}";then
-    echo " kinit successfull"
-    klist
-  fi
-  # Verify Samba Fileserver is working
-  smbclient -L localhost -N
-  # Test Samba Auth
-  smbclient //localhost/netlogon -U"${DOMAIN_USER}" -c 'ls' --password "${DOMAIN_PASS}"
   wait
   # source /scripts/firstrun.sh
 }

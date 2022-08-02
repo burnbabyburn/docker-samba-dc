@@ -13,7 +13,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | --------------------------- | --------------------------------------------- |------------- | ------------- |
 | `BIND_INTERFACES`           | NONE                                          |       | set [interfaces](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#INTERFACES) name,ip.. to bind services to. See   |
 | `CHANGE_KRB_TGT_PW`         | true                                          |   X   | Optional Service: Only activate on PDC! Change password of krbtgt user (Kerberos Ticket Granting Ticket) to prevent Golden Ticket attacks |
-| `DEBUG_LEVEL`               | 0                                             |       | Level of debug messages |
+| `DEBUG_LEVEL`               | 0                                             |       | Level of debug messages from services (e.g. ntpd, samba)|
 | `DISABLE_DNS_WPAD_ISATAP`   | false                                         |   X   | Create DNS records for WPAD and ISATAP pointing to localhost|
 | `DISABLE_MD5`               | true                                          |   X   | Disable MD5 Clients (reject md5 clients) and Server (reject md5 servers) |
 | `DOMAIN_ACC_LOCK_DURATION`  | 30                                            |   X   | min password length  |
@@ -30,7 +30,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `DOMAIN`                    | SAMDOM.LOCAL                                  |       | Your Domain Name            |
 | `ENABLE_BIND_INTERFACE`     | false                                         |       | set to true to [bind](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#BINDINTERFACESONLY) services to interfaces  |  
 | `ENABLE_CUPS`               | false                                         |       | Enable CUPS - cups is not installed but setup in smb.conf modify Dockerfile  |
-| `ENABLE_DEBUG`              | false                                         |       | Enables debug messages set DEBUG_LEVEL accordingly  |
+| `ENABLE_DEBUG`              | false                                         |       | Enables script debug messages |
 | `ENABLE_DNSFORWARDER`       | NONE                                          |       | Ip of upstream dns server. If not set, no upstream dns will be avaible.  |
 | `ENABLE_DYNAMIC_PORTRANGE`  | NONE                                          |       | Set range of [dynamic rpc ports](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#RPCSERVERDYNAMICPORTRANGE). Can be usefull to limit on smaller systems, especially if behind reverse proxy (default 49152-65535) |
 | `ENABLE_INSECURE_DNSUPDATE` | false                                         |       | Enable insecure dns updates (no packet signing)  |

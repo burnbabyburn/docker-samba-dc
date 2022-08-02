@@ -56,38 +56,84 @@ setupSchemaRFC2307File() {
 https://stackoverflow.com/questions/407523/escape-a-string-for-a-sed-replace-pattern
 https://fabianlee.org/2019/10/05/bash-setting-and-replacing-values-in-a-properties-file-use-sed/
 AddSetKeyValueSMBCONF() {
-PATTERN="[global]"
-ESCAPED_PATTERN=$(printf '%s\n' "$PATTERN" | sed -e 's/[]\/$*.^[]/\\&/g')
-ESCAPED_REPLACE=$(printf '%s\n' "$2" | sed -e 's/[\/&]/\\&/g')
-echo $ESCAPED_PATTERN
-echo $ESCAPED_REPLACE
-if ! grep -R "^[#]*\s*$1[[:space:]]=.*" "${FILE_SAMBA_CONF}" > /dev/null; then
-  echo "Key: $1 not found. APPENDING $1 = $2 after $PATTERN"
-  sed -i "/^$ESCAPED_PATTERN"'/a\\t'"$1 = $ESCAPED_REPLACE" "${FILE_SAMBA_CONF}"
-else
-  echo "Key: $1 found. SETTING $1 = $2"
-  sed -ir "s/^[#]*\s*$1[[:space:]]=.*/\\t$1 = $ESCAPED_REPLACE/" "${FILE_SAMBA_CONF}"
-fi
+  PATTERN="[global]"
+  ESCAPED_PATTERN=$(printf '%s\n' "$PATTERN" | sed -e 's/[]\/$*.^[]/\\&/g')
+  ESCAPED_REPLACE=$(printf '%s\n' "$2" | sed -e 's/[\/&]/\\&/g')
+  echo $ESCAPED_PATTERN
+  echo $ESCAPED_REPLACE
+  if ! grep -R "^[#]*\s*$1[[:space:]]=.*" "${FILE_SAMBA_CONF}" > /dev/null; then
+    echo "Key: $1 not found. APPENDING $1 = $2 after $PATTERN"
+    sed -i "/^$ESCAPED_PATTERN"'/a\\t'"$1 = $ESCAPED_REPLACE" "${FILE_SAMBA_CONF}"
+  else
+    echo "Key: $1 found. SETTING $1 = $2"
+    sed -ir "s/^[#]*\s*$1[[:space:]]=.*/\\t$1 = $ESCAPED_REPLACE/" "${FILE_SAMBA_CONF}"
+  fi
 }
 
 https://stackoverflow.com/questions/41451159/how-to-execute-a-script-when-i-terminate-a-docker-container
 backupConfig () {
-    cp -f "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF_EXTERNAL}"
-    cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_SUPERVISORD_CONF_EXTERNAL}"
-    cp -f "${FILE_NTP}" "${FILE_NTP_CONF_EXTERNAL}"
-    cp -f "${FILE_KRB5}" "${FILE_KRB5_CONF_EXTERNAL}"
-    cp -f "${FILE_NSSWITCH}" "${FILE_NSSWITCH_EXTERNAL}"
-	cp -f "/etc/passwd" "${DIR_SAMBA_EXTERNAL}/passwd"
-	cp -f "/etc/group" "${DIR_SAMBA_EXTERNAL}/group"
-	cp -f "/etc/shadow" "${DIR_SAMBA_EXTERNAL}/shadow"
+  cp -f "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF_EXTERNAL}"
+  cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_SUPERVISORD_CONF_EXTERNAL}"
+  cp -f "${FILE_NTP}" "${FILE_NTP_CONF_EXTERNAL}"
+  cp -f "${FILE_KRB5}" "${FILE_KRB5_CONF_EXTERNAL}"
+  cp -f "${FILE_NSSWITCH}" "${FILE_NSSWITCH_EXTERNAL}"
+  cp -f "/etc/passwd" "${DIR_SAMBA_EXTERNAL}/passwd"
+  cp -f "/etc/group" "${DIR_SAMBA_EXTERNAL}/group"
+  cp -f "/etc/shadow" "${DIR_SAMBA_EXTERNAL}/shadow"
 }
 restoreConfig () {
-    cp -f "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
-    cp -f "${FILE_SUPERVISORD_CONF_EXTERNAL}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
-    cp -f "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
-    cp -f "${FILE_KRB5_CONF_EXTERNAL}" "${FILE_KRB5}"
-    cp -f "${FILE_NSSWITCH_EXTERNAL}" "${FILE_NSSWITCH}"
-	cp -f "${DIR_SAMBA_EXTERNAL}/passwd" "/etc/passwd"
-	cp -f "${DIR_SAMBA_EXTERNAL}/group" "/etc/group"
-	cp -f "${DIR_SAMBA_EXTERNAL}/shadow" "/etc/shadow"
+  cp -f "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
+  cp -f "${FILE_SUPERVISORD_CONF_EXTERNAL}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  cp -f "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
+  cp -f "${FILE_KRB5_CONF_EXTERNAL}" "${FILE_KRB5}"
+  cp -f "${FILE_NSSWITCH_EXTERNAL}" "${FILE_NSSWITCH}"
+  cp -f "${DIR_SAMBA_EXTERNAL}/passwd" "/etc/passwd"
+  cp -f "${DIR_SAMBA_EXTERNAL}/group" "/etc/group"
+  cp -f "${DIR_SAMBA_EXTERNAL}/shadow" "/etc/shadow"
+}
+
+# If Hostname is in CIDR notaion, create a reverse DNS zone and a subnet in $JOIN_SITE (default-First-Site-Name)
+RDNSZonefromCIDR () {
+  IP=''
+  MASK=''
+  IP_REVERSE=''
+  if [[ "$HOSTIP" != "NONE" ]]; then
+    if grep '/' <<< "$HOSTIP" ; then
+      IP=$(echo "$HOSTIP" | cut -d "/" -f1)
+      MASK=$(echo "$HOSTIP" | cut -d "/" -f2)
+      # https://stackoverflow.com/questions/13777387/check-for-ip-validity
+      if [[ $IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then samba-tool sites subnet create "$HOSTIP" "$JOIN_SITE" ${SAMBA_DEBUG_OPTION}
+      else echo "Cant not create subnet: $HOSTIP for site: $JOIN_SITE. Invalid IP parameter ... exiting" ; exit 1 ; fi
+      if ((MASK >= 1 && MASK <= 8)); then
+        IP_REVERSE=$(echo "$IP" | awk -F. '{print $1}')
+      fi
+      if ((MASK >= 9 && MASK <= 16)); then
+        IP_REVERSE=$(echo "$IP" | awk -F. '{print $2"."$1}')
+      fi
+      if ((MASK >= 17 && MASK <= 24)); then
+        IP_REVERSE=$(echo "$IP" | awk -F. '{print $3"." $2"."$1}')
+      fi
+      echo "${DOMAIN_PASS}" | samba-tool dns zonecreate 127.0.0.1 "$IP_REVERSE".in-addr.arpa -UAdministrator ${SAMBA_DEBUG_OPTION}
+    fi
+      #this removes all internal docker IPs from samba DNS
+      #samba_dnsupdate --current-ip="${HOSTIP%/*}"
+  fi
+
+  # https://stackoverflow.com/questions/5281341/get-local-network-interface-addresses-using-only-proc
+  # https://stackoverflow.com/questions/50413579/bash-convert-netmask-in-cidr-notation
+  ft_local=$(awk '$1=="Local:" {flag=1} flag' <<< "$(</proc/net/fib_trie)")
+  for IF in $(ls /sys/class/net/); do
+    networks=$(awk '$1=="'$IF'" && $3=="00000000" && $8!="FFFFFFFF" {printf $2 $8 "\n"}' <<< "$(</proc/net/route)" )
+    for net_hex in $networks; do
+      net_dec=$(awk '{gsub(/../, "0x& "); printf "%d.%d.%d.%d\n", $4, $3, $2, $1}' <<< $net_hex)
+      mask_dec=$(awk '{gsub(/../, "0x& "); printf "%d.%d.%d.%d\n", $8, $7, $6, $5}' <<< $net_hex)
+      c=0 x=0$( printf '%o' ${mask_dec//./ } )
+      while [ $x -gt 0 ]; do
+        let c+=$((x%2)) 'x>>=1'
+      done
+      CIDR=$net_dec/$c
+      if [[ $net_dec =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then samba-tool sites subnet create "$CIDR" "$JOIN_SITE" ${SAMBA_DEBUG_OPTION}
+      else echo "Cant not create subnet: $CIDR for site: $JOIN_SITE. Invalid parameter ... exiting" ; exit 1 ; fi
+    done
+  done
 }
