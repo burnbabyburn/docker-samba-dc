@@ -1,5 +1,4 @@
 FROM ubuntu:devel as builder
-WORKDIR /tmp/
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update \
@@ -7,10 +6,10 @@ RUN apt-get update \
     && apt-get install -y msitools wget curl \
     && admxurl=$(curl -s 'https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507' | grep -o -m1 -E "url=http.*msi" | cut -d '=' -f2) \
     && wget -O admx.msi "$admxurl" \
-    && msiextract -C /tmp admx.msi
+    && msiextract -C / admx.msi
 
 FROM ubuntu:devel
-ARG src="/tmp/Program Files/Microsoft Group Policy/"
+ARG src="/Program Files/Microsoft Group Policy"
 LABEL maintainer="Fmstrat <fmstrat@NOSPAM.NO>"
 
 ENV DEBIAN_FRONTEND noninteractive
