@@ -13,6 +13,10 @@ jobs:
         run: docker-compose -f docker-compose.yml up -d samba
       - name: Sleep for 30 seconds
         run: sleep 30
+      - name: Check network
+        run: docker network inspect samba-net
+      - name: Check running containers
+        run: docker ps -a
       - name: Check logs DC01
         run: docker logs samba-dc01
       - name: Check DC01 NTP
@@ -31,7 +35,13 @@ jobs:
         run: sleep 30
       - name: Check logs DC02
         run: docker logs samba-dc02
-      - name: Check network
-        run: docker network inspect samba-net
-      - name: Check running containers
-        run: docker ps -a
+      - name: Check DC02 NTP
+        run: docker exec --tty samba-dc02 /usr/bin/ntpq -p
+      - name: Check DC02 config
+        run: docker exec --tty samba-dc02 /usr/bin/testparm -vs
+      - name: Check DC02 processes
+        run: docker exec --tty samba-dc02 /usr/bin/samba-tool processes
+      - name: Check DC02 domain
+        run: docker exec --tty samba-dc02 /usr/bin/samba-tool domain info 127.0.0.1
+      - name: Check DC02 winbindd
+        run: docker exec --tty samba-dc02 /usr/bin/wbinfo -u
