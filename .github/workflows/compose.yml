@@ -14,7 +14,7 @@ jobs:
       - name: Check logs DC01
         run: docker logs samba-dc01
       - name: Check DC01 NTP
-        run: docker-compose exec samba ntpq -p
+        run: docker-compose exec -t samba ntpq -p
       - name: Check DC01 config
         run: docker-compose exec samba testparm -vs
       - name: Check DC01 processes

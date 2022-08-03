@@ -269,7 +269,7 @@ appSetup () {
       if [[ "$CHANGE_KRB_TGT_PW" = true ]]; then EnableChangeKRBTGTSupervisord ; fi
       #if [[ ! -d $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
         #mkdir -p $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
-		samba-tool gpo admxload -U Administrator
+		echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator
       #fi
 
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
