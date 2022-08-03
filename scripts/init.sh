@@ -269,7 +269,6 @@ appSetup () {
       if [[ "$CHANGE_KRB_TGT_PW" = true ]]; then EnableChangeKRBTGTSupervisord ; fi
       #if [[ ! -d $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
         #mkdir -p $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
-		echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator
       #fi
 
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
@@ -393,6 +392,7 @@ appFirstStart () {
     # Better check if net rpc is rdy
     sleep 30s
     RDNSZonefromCIDR
+	echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
     if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ]; then
       samba-tool dns add "$(hostname -s)" "$LDOMAIN" wpad A 127.0.0.1 -P ${SAMBA_DEBUG_OPTION}
