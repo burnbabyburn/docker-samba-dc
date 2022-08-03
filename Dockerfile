@@ -30,7 +30,7 @@ COPY /ldif /ldif/
 COPY /etc /etc/
 COPY /scripts /scripts/
 COPY /smb.conf.d/ /etc/samba/smb.conf.d/
-COPY --from=builder '/tmp/Program Files/Microsoft Group Policy/' /tmp/
+COPY --from=builder /tmp/Program\ Files/Microsoft\ Group\ Policy/ /tmp/
 
 RUN chmod -R +x /scripts/
 
