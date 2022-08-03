@@ -263,15 +263,14 @@ appSetup () {
       if [[ "$RECYCLEBIN" = true ]]; then
         python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
 		if grep 'CN=Recycle Bin Feature' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base \
-		-b "CN=NTDS Settings,CN=$HOSTNAME,CN=Servers,CN=$JOIN_SITE,CN=Sites,CN=Configuration$LDAP_SUFFIX" msDS-EnabledFeature) ; then echo "OK" ; else echo "FAILED" ; exit 1 ; fi
+		-b "CN=NTDS Settings,CN=$HOSTNAME,CN=Servers,CN=$JOIN_SITE,CN=Sites,CN=Configuration$LDAP_SUFFIX" msDS-EnabledFeature) ; then echo "Optional Feature Recycle Bin Feature OK" ; else echo "FAILED" ; exit 1 ; fi
       fi 
 
       if [[ "$CHANGE_KRB_TGT_PW" = true ]]; then EnableChangeKRBTGTSupervisord ; fi
-
-      if [[ ! -d $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
-        mkdir -p $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
+      #if [[ ! -d $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
+        #mkdir -p $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
 		samba-tool gpo admxload -U Administrator
-      fi
+      #fi
 
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
       if [[ ${ENABLE_RFC2307,,} = true ]]; then
