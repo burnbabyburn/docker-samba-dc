@@ -10,7 +10,7 @@ RUN apt-get update \
     && msiextract -C /tmp admx.msi
 
 FROM ubuntu:devel
-
+ARG src="/tmp/Program Files/Microsoft Group Policy/"
 LABEL maintainer="Fmstrat <fmstrat@NOSPAM.NO>"
 
 ENV DEBIAN_FRONTEND noninteractive
@@ -30,7 +30,7 @@ COPY /ldif /ldif/
 COPY /etc /etc/
 COPY /scripts /scripts/
 COPY /smb.conf.d/ /etc/samba/smb.conf.d/
-COPY --from=builder /tmp/Program\ Files/Microsoft\ Group\ Policy/ /tmp/
+COPY --from=builder ${src} /tmp/
 
 RUN chmod -R +x /scripts/
 
