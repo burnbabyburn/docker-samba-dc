@@ -55,6 +55,7 @@ config() {
   ENABLE_LOGS=${ENABLE_LOGS:-false}
   ENABLE_MSCHAPV2=${ENABLE_MSCHAPV2:-false}
   ENABLE_RFC2307=${ENABLE_RFC2307:-true}
+  ENABLE_WINDOWS_GPO=${ENABLE_WINDOWS_GPO:-false}
   ENABLE_WINS=${ENABLE_WINS:-false}
 
   ENABLE_TLS=${ENABLE_TLS:-false}
@@ -89,6 +90,7 @@ config() {
   # DIR_SAMBA_CONF and DIR_SCRIPTS also need to be changed in the Dockerfile
   DIR_LDIF=/ldif
   DIR_NTP_SOCK=/var/lib/samba/ntp_signd
+  DIR_NTP_DRIFT=/var/lib/ntp/
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba
   DIR_SAMBA_ETC=/etc/samba
   DIR_SCRIPTS=/scripts
@@ -159,7 +161,7 @@ appSetup () {
   -i "$FILE_KRB5"
 
   if [[ ! -f "$FILE_NTP_DRIFT" ]]; then echo "0.0" > "$FILE_NTP_DRIFT" ; fi
-  chown root:root "$FILE_NTP_DRIFT"
+  chown -r root:root "${DIR_NTP_DRIFT}"
   if grep "{{ NTPSERVER }}" "$FILE_NTP"; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
     NTPSERVER=""
@@ -388,18 +390,14 @@ appFirstStart () {
     # Better check if net rpc is rdy
     sleep 30s
     RDNSZonefromCIDR
-	admxdir=$(find /tmp/ -name PolicyDefinitions)
-	# https://wiki.samba.org/index.php/Group_Policy#Installing_Samba_ADMX_Templates
-	#admxurl=$(curl -s 'https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507' | grep -o -m1 -E "url=http.*msi" | cut -d '=' -f2)
-	#wget -O admx.msi "$admxurl"
-	#msiextract -C /tmp admx.msi
-	# samba. admx&adml
-	echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator
-	# Import Windows admx&adml
-	echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir="${admxdir}"
-	rm -rf "${admxdir}"
-	#echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir=/tmp/Program\ Files/Microsoft\ Group\ Policy/Windows\ 11\ October\ 2021\ Update\ \(21H2\)/PolicyDefinitions/
-	#echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator
+	if [ "${ENABLE_WINDOWS_GPO,,}" = true ]; then
+	  admxdir=$(find /tmp/ -name PolicyDefinitions)
+	  # Import one Samba. admx&adml gpo
+	  echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator
+	  # Import Windows admx&adml
+	  echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir="${admxdir}"
+	  rm -rf "${admxdir}"
+	fi
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
     if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ]; then
       samba-tool dns add "$(hostname -s)" "$LDOMAIN" wpad A 127.0.0.1 -P ${SAMBA_DEBUG_OPTION}
