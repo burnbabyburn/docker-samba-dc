@@ -70,11 +70,12 @@ config() {
   BIND_INTERFACES=${BIND_INTERFACES:-127.0.0.1} # Can be a list of interfaces seperated by spaces
 
   if [[ "$ENABLE_BIND_INTERFACE" = true ]] && ! echo "$BIND_INTERFACES" | grep "127.0.0.1\|lo\|::1" >> /dev/null; then
-    echo "127.0.0.1 missing from BIND_INTERFACES. \n
-     If bind interfaces only is set and the network address 127.0.0.1 is not added to the interfaces parameter list smbpasswd(8) may not work as expected due to the reasons covered below. \n
-     To change a users SMB password, the smbpasswd by default connects to the localhost - 127.0.0.1 address as an SMB client to issue the password change request. \n
-     If bind interfaces only is set then unless the network address 127.0.0.1 is added to the interfaces parameter list then smbpasswd will fail to connect in it's default mode. \n
-     smbpasswd can be forced to use the primary IP interface of the local host by using its smbpasswd(8)    -r remote machine parameter, with remote machine set to the IP name of the primary interface of the local host. "
+    printf "
+     127.0.0.1 missing from BIND_INTERFACES. \n
+     If bind interfaces only is set and the network address 127.0.0.1 is not added to the interfaces parameter list smbpasswd(8) may not work as expected due to the reasons covered below.
+     To change a users SMB password, the smbpasswd by default connects to the localhost - 127.0.0.1 address as an SMB client to issue the password change request.
+     If bind interfaces only is set then unless the network address 127.0.0.1 is added to the interfaces parameter list then smbpasswd will fail to connect in it's default mode.
+     smbpasswd can be forced to use the primary IP interface of the local host by using its smbpasswd(8) -r remote machine parameter, with remote machine set to the IP name of the primary interface of the local host. "
      BIND_INTERFACES+=,lo
   fi
   # Min Counter Values for NIS Attributes. Set in docker-compose
@@ -161,8 +162,8 @@ appSetup () {
       -e "s:{{ UDOMAIN }}:$UDOMAIN:" \
   -i "$FILE_KRB5"
 
-  if [[ ! -f "$FILE_NTP_DRIFT" ]]; then echo 0.0 > "$FILE_NTP_DRIFT" ; chown root:root "$FILE_NTP_DRIFT" ; fi
-
+  if [[ ! -f "$FILE_NTP_DRIFT" ]]; then echo 0.0 > "$FILE_NTP_DRIFT" ; fi
+  chown root:root "$FILE_NTP_DRIFT"
   if grep "{{ NTPSERVER }}" "$FILE_NTP"; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
     NTPSERVER=""
