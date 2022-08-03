@@ -1,3 +1,14 @@
+FROM ubuntu:devel as builder
+WORKDIR /tmp/
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install msitools wget curl \
+    && admxurl=$(curl -s 'https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507' | grep -o -m1 -E "url=http.*msi" | cut -d '=' -f2) \
+    wget -O admx.msi "$admxurl" \
+    msiextract -C /tmp admx.msi
+
 FROM ubuntu:devel
 
 LABEL maintainer="Fmstrat <fmstrat@NOSPAM.NO>"
@@ -19,6 +30,7 @@ COPY /ldif /ldif/
 COPY /etc /etc/
 COPY /scripts /scripts/
 COPY /smb.conf.d/ /etc/samba/smb.conf.d/
+COPY --from=builder '/tmp/Program Files/Microsoft Group Policy/' /tmp/
 
 RUN chmod -R +x /scripts/
 

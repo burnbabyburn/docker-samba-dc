@@ -133,7 +133,7 @@ config() {
   export DIR_SCRIPTS="$DIR_SCRIPTS"
   
   source /scripts/helper.sh
-  if [ "$ENABLE_DEBUG" = "true" ] ; then set -x ; else set -e ; fi
+#  if [ "$ENABLE_DEBUG" = "true" ] ; then set -x ; else set -e ; fi
   if [ "$ENABLE_DEBUG" = "true" ] ; then set -x ; fi
 
   #Trap SIGTERM
@@ -162,7 +162,7 @@ appSetup () {
       -e "s:{{ UDOMAIN }}:$UDOMAIN:" \
   -i "$FILE_KRB5"
 
-  if [[ ! -f "$FILE_NTP_DRIFT" ]]; then echo 0.0 > "$FILE_NTP_DRIFT" ; fi
+  if [[ ! -f "$FILE_NTP_DRIFT" ]]; then echo "0.0" > "$FILE_NTP_DRIFT" ; fi
   chown root:root "$FILE_NTP_DRIFT"
   if grep "{{ NTPSERVER }}" "$FILE_NTP"; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
@@ -392,7 +392,14 @@ appFirstStart () {
     # Better check if net rpc is rdy
     sleep 30s
     RDNSZonefromCIDR
-	echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator
+	admxdir=$(find /tmp/Microsoft\ Group\ Policy/ -name PolicyDefinitions)
+	# https://wiki.samba.org/index.php/Group_Policy#Installing_Samba_ADMX_Templates
+	#admxurl=$(curl -s --remote-header-name --location --request GET 'https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507' | grep -o -m1 -E "url=http.*msi\>" | cut -d '=' -f2)
+	#wget -O admx.msi "$admxurl"
+	#msiextract -C /tmp admx.msi
+	echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir=$admxdir
+	#echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir=/tmp/Program\ Files/Microsoft\ Group\ Policy/Windows\ 11\ October\ 2021\ Update\ \(21H2\)/PolicyDefinitions/
+	#echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
     if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ]; then
       samba-tool dns add "$(hostname -s)" "$LDOMAIN" wpad A 127.0.0.1 -P ${SAMBA_DEBUG_OPTION}

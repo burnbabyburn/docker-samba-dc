@@ -1,3 +1,5 @@
+# samba-dc01 is the container name and samba is the service name in docker-compose file of the samba PDC
+# samba-dc02 is the second domain controller joining the domain of dc01
 name: Docker Compose Actions Workflow
 on: push
 jobs:
@@ -14,15 +16,15 @@ jobs:
       - name: Check logs DC01
         run: docker logs samba-dc01
       - name: Check DC01 NTP
-        run: docker-compose exec -t samba ntpq -p
+        run: docker exec -T samba-dc01 ntpq -p
       - name: Check DC01 config
-        run: docker-compose exec samba testparm -vs
+        run: docker exec -T samba-dc01 testparm -vs
       - name: Check DC01 processes
-        run: docker-compose exec samba samba-tool processes
+        run: docker exec -T samba-dc01 samba-tool processes
       - name: Check DC01 domain
-        run: docker-compose exec samba samba-tool domain info 127.0.0.1
+        run: docker exec -T samba-dc01 samba-tool domain info 127.0.0.1
       - name: Check DC01 winbindd
-        run: docker-compose exec samba wbinfo -u        
+        run: docker exec -T samba-dc01 wbinfo -u        
       - name: Start DC02
         run: docker-compose -f docker-compose.yml up -d samba-join
       - name: Sleep for 30 seconds
