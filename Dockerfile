@@ -6,8 +6,8 @@ RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install msitools wget curl \
     && admxurl=$(curl -s 'https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507' | grep -o -m1 -E "url=http.*msi" | cut -d '=' -f2) \
-    wget -O admx.msi "$admxurl" \
-    msiextract -C /tmp admx.msi
+    && wget -O admx.msi "$admxurl" \
+    && msiextract -C /tmp admx.msi
 
 FROM ubuntu:devel
 
