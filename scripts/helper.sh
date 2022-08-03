@@ -68,7 +68,7 @@ SetKeyValueFilePattern() {
   ESCAPED_REPLACE=$(printf '%s\n' "$2" | sed -e 's/[\/&]/\\&/g')
   echo $ESCAPED_PATTERN
   echo $ESCAPED_REPLACE
-  if ! grep -R "^[#]*\s*$1[[:space:]]=.*" "$4" > /dev/null; then
+  if ! grep -R "^[#]*\s*$1[[:space:]]=.*" "$FILE" > /dev/null; then
     echo "Key: $1 not found. APPENDING $1 = $2 after $PATTERN"
     sed -i "/^$ESCAPED_PATTERN"'/a\\t'"$1 = $ESCAPED_REPLACE" "$FILE"
   else
@@ -143,4 +143,29 @@ RDNSZonefromCIDR () {
       else echo "Cant not create subnet: $CIDR for site: $JOIN_SITE. Invalid parameter ... exiting" ; exit 1 ; fi
     done
   done
+}
+EnableChangeKRBTGTSupervisord () {
+  {
+    echo ""
+    echo "[program:ChangeKRBTGT]"
+    echo "command=/bin/sh /scripts/chgkrbtgtpass.sh"
+    echo "stdout_logfile=/dev/fd/1"
+    echo "stdout_logfile_maxbytes=0"
+    echo "stdout_logfile_backups=0"
+    echo "redirect_stderr=true"
+    echo "priority=99"
+  } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
+}
+
+EnableOpenvpnSupervisord () {
+  {
+    echo ""
+    echo "[program:openvpn]"
+    echo "command=/usr/sbin/openvpn --config $FILE_OPENVPNCONF"
+    echo "stdout_logfile=/dev/fd/1"
+    echo "stdout_logfile_maxbytes=0"
+    echo "stdout_logfile_backups=0"
+    echo "redirect_stderr=true"
+    echo "priority=1"
+  } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
 }

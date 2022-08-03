@@ -133,9 +133,10 @@ config() {
   
   source /scripts/helper.sh
   if [ "$ENABLE_DEBUG" = "true" ] ; then set -x ; else set -e ; fi
+  if [ "$ENABLE_DEBUG" = "true" ] ; then set -x ; fi
 
   #Trap SIGTERM
-trap 'backupConfig' SIGTERM
+  trap 'backupConfig' SIGTERM
 }
 
 appSetup () {
@@ -260,24 +261,15 @@ appSetup () {
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
       if [[ "$RECYCLEBIN" = true ]]; then
         python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
-      fi
+		if grep 'CN=Recycle Bin Feature' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base \
+		-b "CN=NTDS Settings,CN=$HOSTNAME,CN=Servers,CN=$JOIN_SITE,CN=Sites,CN=Configuration$LDAP_SUFFIX" msDS-EnabledFeature) ; then echo "OK" ; else echo "FAILED" ; exit 1 ; fi
+      fi 
 
-      if [[ "$CHANGE_KRB_TGT_PW" = true ]]; then
-        {
-          echo ""
-          echo "[program:ChangeKRBTGT]"
-          echo "command=/bin/sh /scripts/chgkrbtgtpass.sh"
-          echo "stdout_logfile=/dev/fd/1"
-          echo "stdout_logfile_maxbytes=0"
-          echo "stdout_logfile_backups=0"
-          echo "redirect_stderr=true"
-          echo "priority=99"
-        } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
-      fi
+      if [[ "$CHANGE_KRB_TGT_PW" = true ]]; then EnableChangeKRBTGTSupervisord ; fi
 
       if [[ ! -d $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
         mkdir -p $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
-        mkdir -p $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/de-DE
+		samba-tool gpo admxload -U Administrator
       fi
 
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
@@ -362,16 +354,7 @@ appSetup () {
   # Stop VPN & write supervisor service
   if [[ ${JOIN_SITE_VPN,,} = true ]]; then
     if [[ -n "$VPNPID" ]]; then kill "$VPNPID" ; fi
-    {
-      echo ""
-      echo "[program:openvpn]"
-      echo "command=/usr/sbin/openvpn --config $FILE_OPENVPNCONF"
-      echo "stdout_logfile=/dev/fd/1"
-      echo "stdout_logfile_maxbytes=0"
-      echo "stdout_logfile_backups=0"
-      echo "redirect_stderr=true"
-      echo "priority=1"
-    } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
+    EnableOpenvpnSupervisord
   fi
 
   if [ "${ENABLE_TLS,,}" = true ]; then
