@@ -16,15 +16,15 @@ jobs:
       - name: Check logs DC01
         run: docker logs samba-dc01
       - name: Check DC01 NTP
-        run: docker exec --tty samba-dc01 'ntpq -p'
+        run: docker exec --tty samba-dc01 '/usr/bin/ntpq -p'
       - name: Check DC01 config
-        run: docker exec -T samba-dc01 testparm -vs
+        run: docker exec --tty samba-dc01 /usr/bin/testparm -vs
       - name: Check DC01 processes
-        run: docker exec -T samba-dc01 samba-tool processes
+        run: docker exec --tty samba-dc01 /usr/bin/samba-tool processes
       - name: Check DC01 domain
-        run: docker exec -T samba-dc01 samba-tool domain info 127.0.0.1
+        run: docker exec --tty samba-dc01 /usr/bin/samba-tool domain info 127.0.0.1
       - name: Check DC01 winbindd
-        run: docker exec -T samba-dc01 wbinfo -u        
+        run: docker exec --tty samba-dc01 /usr/bin/wbinfo -u        
       - name: Start DC02
         run: docker-compose -f docker-compose.yml up -d samba-join
       - name: Sleep for 30 seconds

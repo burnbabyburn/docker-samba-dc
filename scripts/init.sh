@@ -388,12 +388,16 @@ appFirstStart () {
     # Better check if net rpc is rdy
     sleep 30s
     RDNSZonefromCIDR
-	admxdir=$(find /tmp/Microsoft\ Group\ Policy/ -name PolicyDefinitions)
+	admxdir=$(find /tmp/ -name PolicyDefinitions)
 	# https://wiki.samba.org/index.php/Group_Policy#Installing_Samba_ADMX_Templates
-	#admxurl=$(curl -s --remote-header-name --location --request GET 'https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507' | grep -o -m1 -E "url=http.*msi\>" | cut -d '=' -f2)
+	#admxurl=$(curl -s 'https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507' | grep -o -m1 -E "url=http.*msi" | cut -d '=' -f2)
 	#wget -O admx.msi "$admxurl"
 	#msiextract -C /tmp admx.msi
-	echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir=$admxdir
+	# samba. admx&adml
+	echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator
+	# Import Windows admx&adml
+	echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir="${admxdir}"
+	rm -rf "${admxdir}"
 	#echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir=/tmp/Program\ Files/Microsoft\ Group\ Policy/Windows\ 11\ October\ 2021\ Update\ \(21H2\)/PolicyDefinitions/
 	#echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
