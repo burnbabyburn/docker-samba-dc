@@ -133,11 +133,7 @@ config() {
   export DIR_SCRIPTS="$DIR_SCRIPTS"
   
   source /scripts/helper.sh
-#  if [ "$ENABLE_DEBUG" = "true" ] ; then set -x ; else set -e ; fi
-  if [ "$ENABLE_DEBUG" = "true" ] ; then set -x ; fi
 
-  #Trap SIGTERM
-  trap 'backupConfig' SIGTERM
 }
 
 appSetup () {
@@ -466,6 +462,11 @@ loadconfdir () {
 
 ######### BEGIN MAIN function #########
 config
+#  if [ "$ENABLE_DEBUG" = "true" ] ; then set -x ; else set -e ; fi
+if [[ "$ENABLE_DEBUG" = true ]] ; then set -x ; fi
+
+#Trap SIGTERM
+trap 'backupConfig' SIGTERM
 # If the supervisor conf isn't there, we're spinning up a new container
 if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
   restoreConfig
