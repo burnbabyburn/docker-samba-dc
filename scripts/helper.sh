@@ -1,5 +1,7 @@
 #!/bin/bash
-
+# https://docs.microsoft.com/de-de/archive/blogs/activedirectoryua/identity-management-for-unix-idmu-is-deprecated-in-windows-server
+# https://wiki.samba.org/index.php/Maintaining_Unix_Attributes_in_AD_using_ADUC
+# Improvements: e.g. set memberofid
 setupSchemaRFC2307File() {
   GID_DOM_USER=$((IMAP_GID_START))
   GID_DOM_ADMIN=$((IMAP_GID_START+1))
@@ -20,12 +22,15 @@ setupSchemaRFC2307File() {
 
   UID_KRBTGT=$((IMAP_UID_START))
   UID_GUEST=$((IMAP_UID_START+1))
-  UID_ADMINISTRATOR=$((IMAP_UID_START+2))
+  # https://wiki.samba.org/index.php/Setting_up_Samba_as_a_Domain_Member#Mapping_the_Domain_Administrator_Account_to_the_Local_root_User
+  # When using the ad ID mapping back end, never set a uidNumber attribute for the domain Administrator account.
+  # If the account has the attribute set, the value will override the local UID 0 of the root user on Samba AD DC's and thus the mapping fails.
+  #UID_ADMINISTRATOR=$((IMAP_UID_START+2))
 
   #Next Counter value uesd by ADUC for NIS Extension GID and UID
-  IMAP_GID_END=$((IMAP_GID_START+16))
-  IMAP_UID_END=$((IMAP_UID_START+3))
-
+  IMAP_GID_END=$((IMAP_GID_START+15))
+  IMAP_UID_END=$((IMAP_UID_START+1))
+  
   sed -e "s: {{ LDAP_SUFFIX }}:$LDAP_SUFFIX:g" \
     -e "s:{{ NETBIOS }}:${DOMAIN_NETBIOS,,}:g" \
     -e "s:{{ GID_DOM_USER }}:$GID_DOM_USER:g" \
@@ -65,10 +70,10 @@ SetKeyValueFilePattern() {
   echo $ESCAPED_REPLACE
   if ! grep -R "^[#]*\s*$1[[:space:]]=.*" "$4" > /dev/null; then
     echo "Key: $1 not found. APPENDING $1 = $2 after $PATTERN"
-    sed -i "/^$ESCAPED_PATTERN"'/a\\t'"$1 = $ESCAPED_REPLACE" "$4"
+    sed -i "/^$ESCAPED_PATTERN"'/a\\t'"$1 = $ESCAPED_REPLACE" "$FILE"
   else
     echo "Key: $1 found. SETTING $1 = $2"
-    sed -ir "s/^[#]*\s*$1[[:space:]]=.*/\\t$1 = $ESCAPED_REPLACE/" "$4"
+    sed -ir "s/^[#]*\s*$1[[:space:]]=.*/\\t$1 = $ESCAPED_REPLACE/" "$FILE"
   fi
 }
 

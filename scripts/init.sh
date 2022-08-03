@@ -141,16 +141,23 @@ trap 'backupConfig' SIGTERM
 appSetup () {
   ARGS_SAMBA_TOOL=()
   ARGS_SAMBA_TOOL+=("--dns-backend=SAMBA_INTERNAL")
-  SAMBA_DEBUG_OPTION="-d $DEBUG_LEVEL"
-  ARGS_SAMBA_TOOL+=("${SAMBA_DEBUG_OPTION}")
-  SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d $DEBUG_LEVEL"
+  ARGS_SAMBA_TOOL+=("--option=add group script=/usr/sbin/groupadd %g")
+  ARGS_SAMBA_TOOL+=("--option=add machine script=/usr/sbin/useradd -N -M -g machines -d /dev/null -s /bin/false %u")
+  ARGS_SAMBA_TOOL+=("--option=add user to group script=/usr/sbin/adduser %u %g")
+  ARGS_SAMBA_TOOL+=("--option=delete group script=/usr/sbin/groupdel %g")
+  ARGS_SAMBA_TOOL+=("--option=delete user from group script=/usr/sbin/deluser %u %g")
+  ARGS_SAMBA_TOOL+=("--option=delete user script=/usr/sbin/deluser %u")
+  ARGS_SAMBA_TOOL+=("--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool")
+  ARGS_SAMBA_TOOL+=("-d $DEBUG_LEVEL")
   NTP_DEBUG_OPTION="-D $DEBUG_LEVEL"
-  sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:$SAMBADAEMON_DEBUG_OPTION:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d $DEBUG_LEVEL"
+  SAMBA_DEBUG_OPTION="-d $DEBUG_LEVEL"
   sed -e "s:{{ NTP_DEBUG_OPTION }}:$NTP_DEBUG_OPTION:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:$SAMBADAEMON_DEBUG_OPTION:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
-  sed -e "s:{{ UDOMAIN }}:$UDOMAIN:" \
+  sed -e "s:{{ HOSTNAME }}:$HOSTNAME:" \
       -e "s:{{ LDOMAIN }}:$LDOMAIN:" \
-      -e "s:{{ HOSTNAME }}:$HOSTNAME:" \
+      -e "s:{{ UDOMAIN }}:$UDOMAIN:" \
   -i "$FILE_KRB5"
 
   if [[ ! -f "$FILE_NTP_DRIFT" ]]; then echo 0.0 > "$FILE_NTP_DRIFT" ; chown root:root "$FILE_NTP_DRIFT" ; fi
@@ -248,13 +255,6 @@ appSetup () {
       ARGS_SAMBA_TOOL+=("--adminpass=${DOMAIN_PASS}")
       ARGS_SAMBA_TOOL+=("--realm=${UDOMAIN}")
       ARGS_SAMBA_TOOL+=("--domain=${DOMAIN_NETBIOS}")
-      ARGS_SAMBA_TOOL+=("--option=add machine script=/usr/sbin/useradd -N -M -g machines -d /dev/null -s /bin/false %u")
-      ARGS_SAMBA_TOOL+=("--option=add group script=/usr/sbin/groupadd %g")
-      ARGS_SAMBA_TOOL+=("--option=add user to group script=/usr/sbin/adduser %u %g")
-      ARGS_SAMBA_TOOL+=("--option=delete group script=/usr/sbin/groupdel %g")
-      ARGS_SAMBA_TOOL+=("--option=delete user from group script=/usr/sbin/deluser %u %g")
-      ARGS_SAMBA_TOOL+=("--option=delete user script=/usr/sbin/deluser %u")
-      ARGS_SAMBA_TOOL+=("--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool")
       
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
@@ -284,6 +284,8 @@ appSetup () {
       if [[ ${ENABLE_RFC2307,,} = true ]]; then
         setupSchemaRFC2307File
         ldbmodify -H "${FILE_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}" ${SAMBA_DEBUG_OPTION}
+        if grep 'returned 1 records' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base -b CN="$DOMAIN_NETBIOS",CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System"$LDAP_SUFFIX"); then 
+          echo "Add RFC2307 Attributes for default AD users" ; else echo 'FAILED' ; exit 1 ; fi
       fi
 
       #Microsoft Local Administrator Password Solution (LAPS)
@@ -314,13 +316,13 @@ appSetup () {
     fi
 
     if [[ ${ENABLE_CUPS,,} = true ]]; then
-	  SetKeyValueFilePattern 'load printers' 'yes'
-	  SetKeyValueFilePattern 'printing' 'cups'
-	  SetKeyValueFilePattern 'printcap name' 'cups'
-	  SetKeyValueFilePattern 'show add printer wizard' 'no'
-	  SetKeyValueFilePattern 'cups encrypt' 'no'
-	  SetKeyValueFilePattern 'cups options' '\"raw media=a4\"'
-	  SetKeyValueFilePattern '#cups server' "${CUPS_SERVER}:${CUPS_PORT}"
+      SetKeyValueFilePattern 'load printers' 'yes'
+      SetKeyValueFilePattern 'printing' 'cups'
+      SetKeyValueFilePattern 'printcap name' 'cups'
+      SetKeyValueFilePattern 'show add printer wizard' 'no'
+      SetKeyValueFilePattern 'cups encrypt' 'no'
+      SetKeyValueFilePattern 'cups options' '\"raw media=a4\"'
+      SetKeyValueFilePattern '#cups server' "${CUPS_SERVER}:${CUPS_PORT}"
       {
         echo ""
         echo "[printers]"
@@ -340,7 +342,7 @@ appSetup () {
 
     # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
     SetKeyValueFilePattern 'password hash userPassword schemes' 'CryptSHA256 CryptSHA512'
-    # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes
+    # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes also for idmap 
     SetKeyValueFilePattern 'template shell' '/bin/false'
     SetKeyValueFilePattern 'template homedir' "$DIR_SAMBA_DATA_PREFIX/unixhome/%U"
     # Setup ACLs correctly https://github.com/thctlo/samba4/blob/master/samba-setup-share-folders.sh
@@ -375,21 +377,21 @@ appSetup () {
   if [ "${ENABLE_TLS,,}" = true ]; then
     if [ ! -f "$FILE_PKI_CERT" ] && [ ! -f "$FILE_PKI_KEY" ] && [ ! -f "$FILE_PKI_CA" ]; then echo "No custom CA found. Samba will autogenerate one" ; fi
     if [ ! -f "$FILE_PKI_DH" ]; then openssl dhparam -out "$FILE_PKI_DH" 2048 ; fi
-	SetKeyValueFilePattern 'tls enabled' 'yes'
-	SetKeyValueFilePattern 'tls keyfile' "$FILE_PKI_KEY"
-	SetKeyValueFilePattern 'tls certfile' "$FILE_PKI_CERT"
-	SetKeyValueFilePattern 'tls cafile' "$FILE_PKI_CA"
-	SetKeyValueFilePattern 'tls dh params file' "$FILE_PKI_DH"
-#	SetKeyValueFilePattern 'tls crlfile' "$FILE_PKI_CRL"
-#	SetKeyValueFilePattern 'tls verify peer'  'ca_and_name'
+    SetKeyValueFilePattern 'tls enabled' 'yes'
+    SetKeyValueFilePattern 'tls keyfile' "$FILE_PKI_KEY"
+    SetKeyValueFilePattern 'tls certfile' "$FILE_PKI_CERT"
+    SetKeyValueFilePattern 'tls cafile' "$FILE_PKI_CA"
+    SetKeyValueFilePattern 'tls dh params file' "$FILE_PKI_DH"
+#   SetKeyValueFilePattern 'tls crlfile' "$FILE_PKI_CRL"
+#   SetKeyValueFilePattern 'tls verify peer'  'ca_and_name'
   else
     SetKeyValueFilePattern 'tls enabled' 'no'
   fi
 
   if [[ ${ENABLE_LOGS,,} = true ]]; then
     SetKeyValueFilePattern 'log file' '/var/log/samba/%m.log'
-	SetKeyValueFilePattern 'max log size' '10000'
-	SetKeyValueFilePattern 'log level' "${DEBUG_LEVEL}"
+    SetKeyValueFilePattern 'max log size' '10000'
+    SetKeyValueFilePattern 'log level' "${DEBUG_LEVEL}"
     SetKeyValueFilePattern 'admin_server' 'FILE:/var/log/samba/kadmind.log' "$FILE_KRB5" '[logging]'
     SetKeyValueFilePattern 'default' 'FILE:/var/log/samba/krb5libs.log' "$FILE_KRB5" '[logging]'
     SetKeyValueFilePattern 'kdc' 'FILE:/var/log/samba/krb5kdc.log' "$FILE_KRB5" '[logging]'
