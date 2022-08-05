@@ -29,8 +29,8 @@ services:
       - JOIN=false
 #      - JOIN_SITE=Site0
       - NTPSERVERLIST=0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org
-      - RECYCLEBIN=true
-      - CHANGE_KRB_TGT_PW=true
+      - FEATURE_RECYCLEBIN=true
+      - FEATURE_KERBEROS_TGT=true
       - DISABLE_MD5=true
       - DISABLE_PWCOMPLEXITY=true
       - ENABLE_CUPS=false
@@ -41,10 +41,10 @@ services:
       - ENABLE_LOGS=true
       - ENABLE_MSCHAPV2=true
       - ENABLE_RFC2307=true
-      - ENABLE_TLS=false
-      - ENABLE_DEBUG=true
+      - TLS_ENABLE=false
+      - DEBUG_ENABLE=true
       - DEBUGLEVEL=1
-      - ENABLE_BIND_INTERFACE=false
+      - BIND_INTERFACES_ENABLE=false
       - BIND_INTERFACES=eth1
     networks:
       samba-net:
@@ -107,10 +107,10 @@ services:
       - ENABLE_INSECURELDAP=false
       - ENABLE_LOGS=false
       - ENABLE_MSCHAPV2=true
-      - ENABLE_TLS=false
-      - ENABLE_DEBUG=true
+      - TLS_ENABLE=false
+      - DEBUG_ENABLE=true
       - DEBUGLEVEL=1
-      - ENABLE_BIND_INTERFACE=false
+      - BIND_INTERFACES_ENABLE=false
       - BIND_INTERFACES=eth1
     networks:
       samba-net:

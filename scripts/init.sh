@@ -1,5 +1,10 @@
 #!/bin/bash
 
+#Todo:
+# ID_Map replication: https://wiki.samba.org/index.php/Joining_a_Samba_DC_to_an_Existing_Active_Directory#Built-in_User_.26_Group_ID_Mappings
+# SYSVOL replication
+# Write a service for a wireguard mesh network between two docker containers on different sites as an "overlay-network" - https://www.scaleway.com/en/docs/tutorials/wireguard-mesh-vpn/
+
 config() {
   # Set variables
   DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
@@ -7,6 +12,12 @@ config() {
   UDOMAIN=$(echo "$LDOMAIN" | tr '[:lower:]' '[:upper:]')
   URDOMAIN=$(echo "$UDOMAIN" | cut -d "." -f1)
 
+  BIND_INTERFACES=${BIND_INTERFACES:-127.0.0.1} # Can be a list of interfaces seperated by spaces
+  BIND_INTERFACES_ENABLE=${BIND_INTERFACES_ENABLE:-false}
+  DEBUG_ENABLE=${DEBUG_ENABLE:-false}
+  DEBUG_LEVEL=${DEBUG_LEVEL:-0}
+  DISABLE_DNS_WPAD_ISATAP=${DISABLE_DNS_WPAD_ISATAP:-false}
+  DISABLE_MD5=${DISABLE_MD5:-true}
   DOMAIN_ACC_LOCK_DURATION=${DOMAIN_ACC_LOCK_DURATION:-30} 
   DOMAIN_ACC_LOCK_RST_AFTER=${DOMAIN_ACC_LOCK_RST_AFTER:-30} 
   DOMAIN_ACC_LOCK_THRESHOLD=${DOMAIN_ACC_LOCK_THRESHOLD:-0} 
@@ -18,67 +29,32 @@ config() {
   DOMAIN_PWD_MIN_AGE=${DOMAIN_PWD_MIN_AGE:-1} 
   DOMAIN_PWD_MIN_LENGTH=${DOMAIN_PWD_MIN_LENGTH:-7}
   DOMAIN_USER=${DOMAIN_USER:-Administrator}
-
-  HOSTIP=${HOSTIP:-NONE}
-  HOSTIPV6=${HOSTIPV6:-NONE}
-  #Change if hostname includes DNS/DOMAIN SUFFIX e.g. host.example.com - it should only display host
-  HOSTNAME=${HOSTNAME:-$(hostname)}
-  
-  # if hostname contains FQDN cut the rest
-  if [[ $HOSTNAME == *"."* ]]; then HOSTNAME=$(echo "$HOSTNAME" | cut -d "." -f1) ; fi
-
-  #DN for LDIF
-  LDAP_SUFFIX=""
-  local IFS='.'
-  for dn in ${LDOMAIN}; do
-    LDAP_SUFFIX="${LDAP_SUFFIX},DC=$dn"
-  done
-  local IFS=$' \t\n'
-  LDAP_DN=$HOSTNAME$LDAP_SUFFIX
-
-  CHANGE_KRB_TGT_PW=${CHANGE_KRB_TGT_PW:-false}
-  JOIN=${JOIN:-false}
-  JOIN_SITE=${JOIN_SITE:-Default-First-Site-Name}
-  # One could write a service to acomplish a wireguard mesh network between docker container on different sites as an "overlay-network" - https://www.scaleway.com/en/docs/tutorials/wireguard-mesh-vpn/
-  JOIN_SITE_VPN=${JOIN_SITE_VPN:-false}
-  NTPSERVERLIST=${NTPSERVERLIST:-0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org}
-  RECYCLEBIN=${RECYCLEBIN:-true}
-
-  DISABLE_DNS_WPAD_ISATAP=${DISABLE_DNS_WPAD_ISATAP:-false}
-  DISABLE_MD5=${DISABLE_MD5:-true}
   ENABLE_CUPS=${ENABLE_CUPS:-false}
   ENABLE_DNSFORWARDER=${ENABLE_DNSFORWARDER:-NONE}
   ENABLE_DYNAMIC_PORTRANGE=${ENABLE_DYNAMIC_PORTRANGE:-NONE}
   ENABLE_INSECURE_DNSUPDATE=${ENABLE_INSECURE_DNSUPDATE:-false}
   ENABLE_INSECURE_LDAP=${ENABLE_INSECURE_LDAP:-false}
-  ENABLE_LAPS_SCHEMA=${ENABLE_LAPS_SCHEMA:-true}
+  ENABLE_LAPS_SCHEMA=${ENABLE_LAPS_SCHEMA:-false}
   ENABLE_LOGS=${ENABLE_LOGS:-false}
   ENABLE_MSCHAPV2=${ENABLE_MSCHAPV2:-false}
-  ENABLE_RFC2307=${ENABLE_RFC2307:-true}
-  ENABLE_WINDOWS_GPO=${ENABLE_WINDOWS_GPO:-false}
+  ENABLE_RFC2307=${ENABLE_RFC2307:-false}
   ENABLE_WINS=${ENABLE_WINS:-false}
-
-  ENABLE_TLS=${ENABLE_TLS:-false}
+  FEATURE_KERBEROS_TGT=${FEATURE_KERBEROS_TGT:-false}
+  FEATURE_RECYCLEBIN=${FEATURE_RECYCLEBIN:-true}
+  FEATURE_WIN_GPO=${FEATURE_WIN_GPO:-false}
+  HOSTIP=${HOSTIP:-NONE}
+  HOSTIPV6=${HOSTIPV6:-NONE}
+  HOSTNAME=${HOSTNAME:-$(hostname)} # Only hostname, no FQDN
+  JOIN=${JOIN:-false}
+  JOIN_SITE=${JOIN_SITE:-Default-First-Site-Name}
+  JOIN_SITE_VPN=${JOIN_SITE_VPN:-false}
+  NTPSERVERLIST=${NTPSERVERLIST:-0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org}
+  TLS_ENABLE=${TLS_ENABLE:-false}
   TLS_PKI=${TLS_PKI:-false}
-  PKI_CN=${PKI_CN:-Simple Samba Root CA}
-  PKI_O=${PKI_O:-Simple Root CA}
-  PKI_OU=${PKI_OU:-Samba}
+  TLS_PKI_CN=${PKI_CN:-Simple Samba Root CA}
+  TLS_PKI_O=${PKI_O:-Simple Root CA}
+  TLS_PKI_OU=${PKI_OU:-Samba}
 
-  ENABLE_DEBUG=${ENABLE_DEBUG:-false}
-  DEBUG_LEVEL=${DEBUG_LEVEL:-0}
-
-  ENABLE_BIND_INTERFACE=${ENABLE_BIND_INTERFACE:-false}
-  BIND_INTERFACES=${BIND_INTERFACES:-127.0.0.1} # Can be a list of interfaces seperated by spaces
-
-  if [[ "$ENABLE_BIND_INTERFACE" = true ]] && ! echo "$BIND_INTERFACES" | grep "127.0.0.1\|lo\|::1" >> /dev/null; then
-    printf "
-     127.0.0.1 missing from BIND_INTERFACES. \n
-     If bind interfaces only is set and the network address 127.0.0.1 is not added to the interfaces parameter list smbpasswd(8) may not work as expected due to the reasons covered below.
-     To change a users SMB password, the smbpasswd by default connects to the localhost - 127.0.0.1 address as an SMB client to issue the password change request.
-     If bind interfaces only is set then unless the network address 127.0.0.1 is added to the interfaces parameter list then smbpasswd will fail to connect in it's default mode.
-     smbpasswd can be forced to use the primary IP interface of the local host by using its smbpasswd(8) -r remote machine parameter, with remote machine set to the IP name of the primary interface of the local host. "
-     BIND_INTERFACES+=,lo
-  fi
   # Min Counter Values for NIS Attributes. Set in docker-compose
   # does nothing on DCs as they shall not use idmap settings.
   # idmap config {{ URDOMAIN }} : range = {{ IDMIN }}-{{ IDMAX }}
@@ -87,18 +63,14 @@ config() {
   IMAP_GID_START=${IMAP_GID_START:-$IMAP_ID_START}
 
   #file variables
-  # DIR_SAMBA_CONF and DIR_SCRIPTS also need to be changed in the Dockerfile
-  DIR_LDIF=/ldif
-  DIR_NTP_SOCK=/var/lib/samba/ntp_signd
+  # DIR_SAMBA_CONF, DIR_LDIF and DIR_SCRIPTS need to be changed in the Dockerfile
+#  DIR_LDIF=/ldif
+#  DIR_SCRIPTS=/scripts
+#  DIR_SAMBA_CONF=/etc/samba/smb.conf.d/
   DIR_NTP_DRIFT=/var/lib/ntp/
+  DIR_NTP_SOCK=/var/lib/samba/ntp_signd
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba
   DIR_SAMBA_ETC=/etc/samba
-  DIR_SCRIPTS=/scripts
-
-  DIR_SAMBA_CONF=$DIR_SAMBA_ETC/smb.conf.d
-  DIR_SAMBA_EXTERNAL=$DIR_SAMBA_ETC/external
-  DIR_SAMBA_PRIVATE=$DIR_SAMBA_DATA_PREFIX/private
-
   FILE_KRB5=/etc/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
   FILE_NTP=/etc/ntp.conf
@@ -106,7 +78,9 @@ config() {
   FILE_OPENVPNCONF=/docker.ovpn
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
-
+  
+  DIR_SAMBA_EXTERNAL=$DIR_SAMBA_ETC/external
+  DIR_SAMBA_PRIVATE=$DIR_SAMBA_DATA_PREFIX/private
   FILE_KRB5_CONF_EXTERNAL=$DIR_SAMBA_EXTERNAL/krb5.conf
   FILE_NSSWITCH_EXTERNAL=$DIR_SAMBA_EXTERNAL/nsswitch.conf
   FILE_NTP_CONF_EXTERNAL=$DIR_SAMBA_EXTERNAL/ntp.conf
@@ -128,6 +102,18 @@ config() {
   FILE_SAMLDB=$DIR_SAMBA_PRIVATE/sam.ldb
   FILE_SUPERVISORD_CONF_EXTERNAL=$DIR_SAMBA_EXTERNAL/supervisord.conf
 
+  # if hostname contains FQDN cut the rest
+  if [[ $HOSTNAME == *"."* ]]; then HOSTNAME=$(echo "$HOSTNAME" | cut -d "." -f1) ; fi
+
+  #DN for LDIF
+  LDAP_SUFFIX=""
+  local IFS='.'
+  for dn in ${LDOMAIN}; do
+    LDAP_SUFFIX="${LDAP_SUFFIX},DC=$dn"
+  done
+  local IFS=$' \t\n'
+  LDAP_DN=$HOSTNAME$LDAP_SUFFIX
+
   # exports for other scripts and TLS_PKI
   export HOSTNAME="$HOSTNAME"
   export LDAP_DN="$LDAP_DN"
@@ -135,7 +121,6 @@ config() {
   export DIR_SCRIPTS="$DIR_SCRIPTS"
   
   source /scripts/helper.sh
-
 }
 
 appSetup () {
@@ -201,7 +186,16 @@ appSetup () {
     if [[ "$JOIN" = true ]]; then OPTION_RFC=--option='idmap_ldb:use rfc2307 = yes' ; else OPTION_RFC=--use-rfc2307 ; fi
     ARGS_SAMBA_TOOL+=("${OPTION_RFC}")
   fi
-  if [[ ${ENABLE_BIND_INTERFACE,,} = true ]]; then
+  if [[ ${BIND_INTERFACES_ENABLE,,} = true ]]; then
+    if ! echo "$BIND_INTERFACES" | grep "127.0.0.1\|lo\|::1" >> /dev/null; then
+      printf "
+       127.0.0.1 missing from BIND_INTERFACES. \n
+       If bind interfaces only is set and the network address 127.0.0.1 is not added to the interfaces parameter list smbpasswd(8) may not work as expected due to the reasons covered below.
+       To change a users SMB password, the smbpasswd by default connects to the localhost - 127.0.0.1 address as an SMB client to issue the password change request.
+       If bind interfaces only is set then unless the network address 127.0.0.1 is added to the interfaces parameter list then smbpasswd will fail to connect in it's default mode.
+       smbpasswd can be forced to use the primary IP interface of the local host by using its smbpasswd(8) -r remote machine parameter, with remote machine set to the IP name of the primary interface of the local host. "
+       BIND_INTERFACES+=,lo
+    fi
     ARGS_SAMBA_TOOL+=("--option=interfaces=${BIND_INTERFACES,,}")
     ARGS_SAMBA_TOOL+=("--option=bind interfaces only = yes")
   fi
@@ -258,13 +252,13 @@ appSetup () {
       
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
-      if [[ "$RECYCLEBIN" = true ]]; then
+      if [[ "$FEATURE_RECYCLEBIN" = true ]]; then
         python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
 		if grep 'CN=Recycle Bin Feature' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base \
 		-b "CN=NTDS Settings,CN=$HOSTNAME,CN=Servers,CN=$JOIN_SITE,CN=Sites,CN=Configuration$LDAP_SUFFIX" msDS-EnabledFeature) ; then echo "Optional Feature Recycle Bin Feature OK" ; else echo "FAILED" ; exit 1 ; fi
       fi 
 
-      if [[ "$CHANGE_KRB_TGT_PW" = true ]]; then EnableChangeKRBTGTSupervisord ; fi
+      if [[ "$FEATURE_KERBEROS_TGT" = true ]]; then EnableChangeKRBTGTSupervisord ; fi
       #if [[ ! -d $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
         #mkdir -p $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
       #fi
@@ -354,7 +348,7 @@ appSetup () {
     EnableOpenvpnSupervisord
   fi
 
-  if [ "${ENABLE_TLS,,}" = true ]; then
+  if [ "${TLS_ENABLE,,}" = true ]; then
     if [ ! -f "$FILE_PKI_CERT" ] && [ ! -f "$FILE_PKI_KEY" ] && [ ! -f "$FILE_PKI_CA" ]; then echo "No custom CA found. Samba will autogenerate one" ; fi
     if [ ! -f "$FILE_PKI_DH" ]; then openssl dhparam -out "$FILE_PKI_DH" 2048 ; fi
     SetKeyValueFilePattern 'tls enabled' 'yes'
@@ -390,7 +384,7 @@ appFirstStart () {
     # Better check if net rpc is rdy
     sleep 30s
     RDNSZonefromCIDR
-	if [ "${ENABLE_WINDOWS_GPO,,}" = true ]; then
+	if [ "${FEATURE_WIN_GPO,,}" = true ]; then
 	  admxdir=$(find /tmp/ -name PolicyDefinitions)
 	  # Import one Samba. admx&adml gpo
 	  echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator
@@ -445,8 +439,8 @@ appStart () {
 }
 
 #https://gist.github.com/meetnick/fb5587d25d4174d7adbc8a1ded642d3c
-loadconfdir () {
 # adds includes.conf file existance to smb.conf file
+loadconfdir () {
   if ! grep -q 'include = '"${FILE_SAMBA_INCLUDES}" "${FILE_SAMBA_CONF}" ; then
     sed -i "/\[global\]/a \
       \\\tinclude = ${FILE_SAMBA_INCLUDES}\
@@ -458,14 +452,10 @@ loadconfdir () {
   find "${DIR_SAMBA_CONF}" -maxdepth 1 -type f| sed -e 's/^/include = /' > "$FILE_SAMBA_INCLUDES"
 }
 
-#Todo:
-# ID_Map replication: https://wiki.samba.org/index.php/Joining_a_Samba_DC_to_an_Existing_Active_Directory#Built-in_User_.26_Group_ID_Mappings
-# SYSVOL replication
-
 ######### BEGIN MAIN function #########
 config
-#  if [ "$ENABLE_DEBUG" = "true" ] ; then set -x ; else set -e ; fi
-if [[ "$ENABLE_DEBUG" = true ]] ; then set -x ; fi
+#  if [ "$DEBUG_ENABLE" = "true" ] ; then set -x ; else set -e ; fi
+if [[ "$DEBUG_ENABLE" = true ]] ; then set -x ; fi
 
 #Trap SIGTERM
 trap 'backupConfig' SIGTERM

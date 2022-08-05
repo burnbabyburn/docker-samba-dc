@@ -11,8 +11,9 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 
 | ENVVAR                      | default value                                 |dc only| description  |
 | --------------------------- | --------------------------------------------- |------------- | ------------- |
+| `BIND_INTERFACES_ENABLE`    | false                                         |       | set to true to [bind](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#BINDINTERFACESONLY) services to interfaces  |  
 | `BIND_INTERFACES`           | NONE                                          |       | set [interfaces](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#INTERFACES) name,ip.. to bind services to. See   |
-| `CHANGE_KRB_TGT_PW`         | true                                          |   X   | Optional Service: Only activate on PDC! Change password of krbtgt user (Kerberos Ticket Granting Ticket) to prevent Golden Ticket attacks |
+| `DEBUG_ENABLE`              | false                                         |       | Enables script debug messages |
 | `DEBUG_LEVEL`               | 0                                             |       | Level of debug messages from services (e.g. ntpd, samba)|
 | `DISABLE_DNS_WPAD_ISATAP`   | false                                         |   X   | Create DNS records for WPAD and ISATAP pointing to localhost|
 | `DISABLE_MD5`               | true                                          |   X   | Disable MD5 Clients (reject md5 clients) and Server (reject md5 servers) |
@@ -28,30 +29,29 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `DOMAIN_PWD_MIN_LENGTH`     | 7                                             |   X   | min password length  |
 | `DOMAIN_USER`               | Administrator                                 |       | Best leave at default. unknown consequences  |
 | `DOMAIN`                    | SAMDOM.LOCAL                                  |       | Your Domain Name            |
-| `ENABLE_BIND_INTERFACE`     | false                                         |       | set to true to [bind](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#BINDINTERFACESONLY) services to interfaces  |  
 | `ENABLE_CUPS`               | false                                         |       | Enable CUPS - cups is not installed but setup in smb.conf modify Dockerfile  |
-| `ENABLE_DEBUG`              | false                                         |       | Enables script debug messages |
 | `ENABLE_DNSFORWARDER`       | NONE                                          |       | Ip of upstream dns server. If not set, no upstream dns will be avaible.  |
 | `ENABLE_DYNAMIC_PORTRANGE`  | NONE                                          |       | Set range of [dynamic rpc ports](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#RPCSERVERDYNAMICPORTRANGE). Can be usefull to limit on smaller systems, especially if behind reverse proxy (default 49152-65535) |
 | `ENABLE_INSECURE_DNSUPDATE` | false                                         |       | Enable insecure dns updates (no packet signing)  |
 | `ENABLE_INSECURE_LDAP`      | false                                         |       | Enable insecure ldap connections  |
-| `ENABLE_LAPS_SCHEMA`        | true                                          |   X   | Setup Local Administrator Password Solution  |
+| `ENABLE_LAPS_SCHEMA`        | false                                         |   X   | Setup Local Administrator Password Solution  |
 | `ENABLE_LOGS`               | false                                         |       | Enable log files - disabled. log to stdout and ship docker logs |
 | `ENABLE_MSCHAPV2`           | false                                         |       | Enable MSCHAP authentication  |
-| `ENABLE_RFC2307`            | true                                          |   X   | Enable RDC2307 LDAP Extension in AD |
-| `ENABLE_TLS`                | false                                         |       | Enable TLS. Samba will autogen a cert if not provided before first start  |
-| `ENABLE_WINDOWS_GPO`        | false                                         |   X   | Enable Windows GPO set. GPO level W11. |
+| `ENABLE_RFC2307`            | false                                         |   X   | Enable RFC2307 LDAP Extension in AD |
 | `ENABLE_WINS`               | false                                         |       | Enable WINS and also propagiate time server |
-| `HOSTIP`                    | NONE                                          |   X   | Set external Host IP if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
+| `FEATURE_KERBEROS_TGT`      | true                                          |   X   | Feature: Only activate on PDC! Change password of krbtgt user (Kerberos Ticket Granting Ticket) to prevent Golden Ticket attacks |
+| `FEATURE_RECYCLEBIN`        | true                                          |   X   | Feature: Enable AD RecylceBin|
+| `FEATURE_WIN_GPO`           | false                                         |   X   | Feature: Install Windows GPO set. GPO level W11. |
 | `HOSTIPV6`                  | NONE                                          |   X   | Set external Host IPv6 if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
+| `HOSTIP`                    | NONE                                          |   X   | Set external Host IP if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
 | `HOSTNAME`                  | $(hostname)                                   |       | Hostname of Samba. Overrides you containers hostname. Only works while proivisioning a domain ! Samba will use HOSTNAME and HOSTIP to populate internal DNS |
 | `JOIN_SITE_VPN`             | false                                         |       | Use openvpn config before connection to DC is possible  |
 | `JOIN_SITE`                 | Default-First-Site-Name                       |       | Sitename to join to  |
 | `JOIN`                      | false                                         |       | Set to true if DC should join Domain  |
 | `NTPSERVERLIST`             | 0.pool.ntp.org 1.pool...                      |       | List of NTP Server  |
-| `RECYCLEBIN`                | true                                          |   X   | Optional Feature: Enable AD RecylceBin|
+| `TLS_ENABLE`                | false                                         |       | Enable TLS. Samba will autogen a cert if not provided before first start  |
 
-## Add Reverse DNS Zone - IF $HOSTIP is set, DNS-Reverse-Zone gets create on first run
+## Add Reverse DNS Zone - IF $HOSTIP is set, DNS-Reverse-Zone gets created on first run. Additional subnets connected to the host are
 docker exec -it samba-ad-dc "samba-tool dns zonecreate <Your-AD-DNS-Server-IP-or-hostname> <NETADDR>.in-addr.arpa -U<URDOMAIN>\administrator --password=<DOMAINPASS>"
 ## Add Share Privileges to DomAdmin Group - Set by default
 docker exec -it samba-ad-dc "net rpc rights grant "<URDOMAIN>\Domain Admins" SeDiskOperatorPrivilege -U<URDOMAIN>\administrator --password=<DOMAINPASS> "
@@ -64,7 +64,7 @@ net ads leave -UAdministrator --password
 
 * `/etc/localtime:/etc/localtime:ro` - Sets the timezone to match the host
 * `/data/docker/containers/samba/data/:/var/lib/samba` - Stores samba data so the container can be moved to another host if required.
-* `/data/docker/containers/samba/config/samba:/etc/samba/external` - Stores the smb.conf so the container can be mored or updates can be easily made.
+* `/data/docker/containers/samba/config/samba:/etc/samba/external` - Stores the smb.conf so the container can be moved or updates can be easily made.
 * `/data/docker/containers/samba/config/openvpn/docker.ovpn:/docker.ovpn` - Optional for connecting to another site via openvpn.
 * `/data/docker/containers/samba/config/openvpn/credentials:/credentials` - Optional for connecting to another site via openvpn that requires a username/password. The format for this file should be two lines, with the username on the first, and the password on the second. Also, make sure your ovpn file contains `auth-user-pass /credentials`
 

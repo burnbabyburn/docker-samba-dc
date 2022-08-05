@@ -12,7 +12,10 @@ FROM ubuntu:devel
 ARG src="/tmp/Program Files/Microsoft Group Policy/"
 LABEL maintainer="Fmstrat <fmstrat@NOSPAM.NO>"
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND noninteractive \
+    DIR_SAMBA_CONF /etc/samba/smb.conf.d/ \
+	DIR_SCRIPTS /scripts/ \
+	DIR_LDIF=/ldif/ \
 
 RUN apt-get update \
     && apt-get upgrade -y \
@@ -25,10 +28,10 @@ RUN apt-get update \
     && rm -rf /var/lib/{apt,dpkg,cache,log}/ \
     && rm -fr /tmp/* /var/tmp/*
 
-COPY /ldif /ldif/
+COPY /ldif $DIR_LDIF
 COPY /etc /etc/
-COPY /scripts /scripts/
-COPY /smb.conf.d/ /etc/samba/smb.conf.d/
+COPY /scripts $DIR_SCRIPTS
+COPY /smb.conf.d/ $DIR_SAMBA_CONF
 COPY --from=builder ${src} /tmp/
 
 RUN chmod -R +x /scripts/

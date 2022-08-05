@@ -87,7 +87,7 @@ if ! [ -f "$MKDCS_CERT" ] && [ -f "$MKDCS_KEY" ]; then
     done
     IFS=' '
     {
-      #echo "organizationName        = \"$PKI_O\""
+      #echo "organizationName        = \"$TLS_PKI_O\""
       echo "organizationalUnitName=\"Domain Controllers\""
       echo "commonName=\"$DN\""
     } >> "$MKDCS_CNF"
