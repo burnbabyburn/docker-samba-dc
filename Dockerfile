@@ -12,9 +12,9 @@ FROM ubuntu:devel
 #ARG src="/tmp/Program Files/Microsoft Group Policy/"
 LABEL maintainer="Fmstrat <fmstrat@NOSPAM.NO>"
 
-ENV DEBIAN_FRONTEND noninteractive \
-    DIR_SAMBA_CONF /etc/samba/smb.conf.d/ \
-	DIR_SCRIPTS /scripts/ \
+ENV DEBIAN_FRONTEND=noninteractive \
+    DIR_SAMBA_CONF=/etc/samba/smb.conf.d/ \
+	DIR_SCRIPTS=/scripts/ \
 	DIR_LDIF=/ldif/ \
 	DIR_GPO=/gpo/ 
 
