@@ -259,9 +259,6 @@ appSetup () {
       fi 
 
       if [[ "$FEATURE_KERBEROS_TGT" = true ]]; then EnableChangeKRBTGTSupervisord ; fi
-      #if [[ ! -d $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
-        #mkdir -p $DIR_SAMBA_DATA_PREFIX/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
-      #fi
 
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
       if [[ ${ENABLE_RFC2307,,} = true ]]; then
@@ -270,8 +267,8 @@ appSetup () {
         if grep 'returned 1 records' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base -b CN="$DOMAIN_NETBIOS",CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System"$LDAP_SUFFIX"); then 
           echo "Add RFC2307 Attributes for default AD users" ; else echo 'FAILED' ; exit 1 ; fi
       fi
-
-      #Microsoft Local Administrator Password Solution (LAPS) https://www.microsoft.com/en-us/download/details.aspx?id=46899
+      # https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507'
+      # Microsoft Local Administrator Password Solution (LAPS) https://www.microsoft.com/en-us/download/details.aspx?id=46899
       if [[ ${ENABLE_LAPS_SCHEMA,,} = true ]]; then
         sed -e "s: {{ LDAP_SUFFIX }}:$LDAP_SUFFIX:g" \
           "${FILE_SAMBA_SCHEMA_LAPS1}.j2" > "${FILE_SAMBA_SCHEMA_LAPS1}"
@@ -384,14 +381,13 @@ appFirstStart () {
     # Better check if net rpc is rdy
     sleep 30s
     RDNSZonefromCIDR
-#	if [ "${FEATURE_WIN_GPO,,}" = true ]; then
 	  #admxdir=$(find /tmp/ -name PolicyDefinitions)
 	  admxdir="${DIR_GPO}"
-	  # Import one Samba. admx&adml gpo
+	  # Import Samba. admx&adml gpo
 	  echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator
 	  # Import Windows admx&adml
 	  echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir="${admxdir}"
-#	fi
+
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
     if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ]; then
       samba-tool dns add "$(hostname -s)" "$LDOMAIN" wpad A 127.0.0.1 -P ${SAMBA_DEBUG_OPTION}
