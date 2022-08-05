@@ -62,11 +62,11 @@ config() {
   IMAP_UID_START=${IMAP_UID_START:-$IMAP_ID_START}
   IMAP_GID_START=${IMAP_GID_START:-$IMAP_ID_START}
 
-  #file variables
-  # DIR_SAMBA_CONF, DIR_LDIF and DIR_SCRIPTS need to be changed in the Dockerfile
-#  DIR_LDIF=/ldif
-#  DIR_SCRIPTS=/scripts
-#  DIR_SAMBA_CONF=/etc/samba/smb.conf.d/
+  # DIR_GPO, DIR_SAMBA_CONF, DIR_LDIF and DIR_SCRIPTS need to be changed in the Dockerfile
+  #DIR_LDIF=/ldif
+  #DIR_SCRIPTS=/scripts
+  #DIR_SAMBA_CONF=/etc/samba/smb.conf.d/
+  #DIR_GPO=/gpo
   DIR_NTP_DRIFT=/var/lib/ntp/
   DIR_NTP_SOCK=/var/lib/samba/ntp_signd
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba
@@ -271,7 +271,7 @@ appSetup () {
           echo "Add RFC2307 Attributes for default AD users" ; else echo 'FAILED' ; exit 1 ; fi
       fi
 
-      #Microsoft Local Administrator Password Solution (LAPS)
+      #Microsoft Local Administrator Password Solution (LAPS) https://www.microsoft.com/en-us/download/details.aspx?id=46899
       if [[ ${ENABLE_LAPS_SCHEMA,,} = true ]]; then
         sed -e "s: {{ LDAP_SUFFIX }}:$LDAP_SUFFIX:g" \
           "${FILE_SAMBA_SCHEMA_LAPS1}.j2" > "${FILE_SAMBA_SCHEMA_LAPS1}"
@@ -384,14 +384,14 @@ appFirstStart () {
     # Better check if net rpc is rdy
     sleep 30s
     RDNSZonefromCIDR
-	if [ "${FEATURE_WIN_GPO,,}" = true ]; then
-	  admxdir=$(find /tmp/ -name PolicyDefinitions)
+#	if [ "${FEATURE_WIN_GPO,,}" = true ]; then
+	  #admxdir=$(find /tmp/ -name PolicyDefinitions)
+	  admxdir="${DIR_GPO}"
 	  # Import one Samba. admx&adml gpo
 	  echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator
 	  # Import Windows admx&adml
 	  echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir="${admxdir}"
-	  rm -rf "${admxdir}"
-	fi
+#	fi
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
     if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ]; then
       samba-tool dns add "$(hostname -s)" "$LDOMAIN" wpad A 127.0.0.1 -P ${SAMBA_DEBUG_OPTION}

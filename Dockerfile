@@ -1,21 +1,22 @@
-FROM ubuntu:devel as builder
-ENV DEBIAN_FRONTEND noninteractive
+#FROM ubuntu:devel as builder
+#ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install -y msitools wget curl \
-    && admxurl=$(curl -s 'https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507' | grep -o -m1 -E "url=http.*msi" | cut -d '=' -f2) \
-    && wget -O admx.msi "$admxurl" \
-    && msiextract -C /tmp/ admx.msi
+#RUN apt-get update \
+#    && apt-get upgrade -y \
+#    && apt-get install -y msitools wget curl \
+#    && admxurl=$(curl -s 'https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507' | grep -o -m1 -E "url=http.*msi" | cut -d '=' -f2) \
+#    && wget -O admx.msi "$admxurl" \
+#    && msiextract -C /tmp/ admx.msi
 
 FROM ubuntu:devel
-ARG src="/tmp/Program Files/Microsoft Group Policy/"
+#ARG src="/tmp/Program Files/Microsoft Group Policy/"
 LABEL maintainer="Fmstrat <fmstrat@NOSPAM.NO>"
 
 ENV DEBIAN_FRONTEND noninteractive \
     DIR_SAMBA_CONF /etc/samba/smb.conf.d/ \
 	DIR_SCRIPTS /scripts/ \
 	DIR_LDIF=/ldif/ \
+	DIR_GPO=/gpo/ 
 
 RUN apt-get update \
     && apt-get upgrade -y \
@@ -32,7 +33,8 @@ COPY /ldif $DIR_LDIF
 COPY /etc /etc/
 COPY /scripts $DIR_SCRIPTS
 COPY /smb.conf.d/ $DIR_SAMBA_CONF
-COPY --from=builder ${src} /tmp/
+COPY /gpo /$DIR_GPO
+#COPY --from=builder ${src} /tmp/
 
 RUN chmod -R +x /scripts/
 

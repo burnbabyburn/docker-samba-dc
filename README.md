@@ -64,6 +64,7 @@ net ads leave -UAdministrator --password
 
 * `/etc/localtime:/etc/localtime:ro` - Sets the timezone to match the host
 * `/data/docker/containers/samba/data/:/var/lib/samba` - Stores samba data so the container can be moved to another host if required.
+* `/data/docker/containers/samba/gpo/:/gpo` - Stores admx and adml GPO files which get imported to sysvol on first start.
 * `/data/docker/containers/samba/config/samba:/etc/samba/external` - Stores the smb.conf so the container can be moved or updates can be easily made.
 * `/data/docker/containers/samba/config/openvpn/docker.ovpn:/docker.ovpn` - Optional for connecting to another site via openvpn.
 * `/data/docker/containers/samba/config/openvpn/credentials:/credentials` - Optional for connecting to another site via openvpn that requires a username/password. The format for this file should be two lines, with the username on the first, and the password on the second. Also, make sure your ovpn file contains `auth-user-pass /credentials`
