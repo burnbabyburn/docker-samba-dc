@@ -115,7 +115,8 @@ config() {
   #DN for LDIF
   LDAP_SUFFIX=""
   local IFS='.'
-  for dn in "${LDOMAIN}"; do
+  # Qouting LDMAIN will break the loop
+  for dn in ${LDOMAIN}; do
     LDAP_SUFFIX="${LDAP_SUFFIX},DC=${dn}"
   done
   local IFS=$' \t\n'
@@ -158,10 +159,10 @@ appSetup () {
   SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d ${DEBUG_LEVEL}"
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
 
-  if [ ! -f /etc/timezone ] && [ ! -z "${TZ}" ]; then
+  if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
     echo 'Set timezone'
-    cp /usr/share/zoneinfo/$TZ /etc/localtime
-    echo ${TZ} >/etc/timezone
+    cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
+    echo "${TZ}" >/etc/timezone
   fi
 
   sed -e "s:{{ NTP_DEBUG_OPTION }}:${NTP_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
@@ -253,7 +254,7 @@ appSetup () {
   fi
   # Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
   if [ ! -f "${FILE_SAMBA_USER_MAP}" ]; then
-    printf '!'"root = ${DOMAIN_NETBIOS}\\${DOMAIN_USER}" > "${FILE_SAMBA_USER_MAP}"
+    printf '!'"root = %s\\%s" > "${FILE_SAMBA_USER_MAP}" , "${DOMAIN_NETBIOS}","${DOMAIN_USER}"
     ARGS_SAMBA_TOOL+=("--option=username map = ${FILE_SAMBA_USER_MAP}")
   fi
 
@@ -282,7 +283,7 @@ appSetup () {
       {
         printf "\n"
         printf "[netlogon]"
-        printf "path = /var/lib/samba/sysvol/$LDOMAIN/scripts"
+        printf "path = /var/lib/samba/sysvol/%s/scripts" "$LDOMAIN"
         printf "read only = Yes"
         printf " "
         printf "[sysvol]"
