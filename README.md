@@ -37,11 +37,10 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `ENABLE_LAPS_SCHEMA`        | false                                         |   X   | Setup Local Administrator Password Solution  |
 | `ENABLE_LOGS`               | false                                         |       | Enable log files - disabled. log to stdout and ship docker logs |
 | `ENABLE_MSCHAPV2`           | false                                         |       | Enable MSCHAP authentication  |
-| `ENABLE_RFC2307`            | false                                         |   X   | Enable RFC2307 LDAP Extension in AD |
-| `ENABLE_WINS`               | false                                         |       | Enable WINS and also propagiate time server |
+| `ENABLE_RFC2307`            | true                                          |   X   | Enable RFC2307 LDAP Extension in AD |
+| `ENABLE_WINS`               | false                                         |   X   | Enable WINS and also propagiate time server |
 | `FEATURE_KERBEROS_TGT`      | true                                          |   X   | Feature: Only activate on PDC! Change password of krbtgt user (Kerberos Ticket Granting Ticket) to prevent Golden Ticket attacks |
 | `FEATURE_RECYCLEBIN`        | true                                          |   X   | Feature: Enable AD RecylceBin|
-| `FEATURE_WIN_GPO`           | false                                         |   X   | Feature: Install Windows GPO set. GPO level W11. |
 | `HOSTIPV6`                  | NONE                                          |   X   | Set external Host IPv6 if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
 | `HOSTIP`                    | NONE                                          |   X   | Set external Host IP if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
 | `HOSTNAME`                  | $(hostname)                                   |       | Hostname of Samba. Overrides you containers hostname. Only works while proivisioning a domain ! Samba will use HOSTNAME and HOSTIP to populate internal DNS |
@@ -50,6 +49,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `JOIN`                      | false                                         |       | Set to true if DC should join Domain  |
 | `NTPSERVERLIST`             | 0.pool.ntp.org 1.pool...                      |       | List of NTP Server  |
 | `TLS_ENABLE`                | false                                         |       | Enable TLS. Samba will autogen a cert if not provided before first start  |
+| `TZ`                        | /Etc/UTC                                      |       | Set Timezone and localtime. Case sensitiv.  |
 
 ## Add Reverse DNS Zone - IF $HOSTIP is set, DNS-Reverse-Zone gets created on first run. Additional subnets connected to the host are
 docker exec -it samba-ad-dc "samba-tool dns zonecreate <Your-AD-DNS-Server-IP-or-hostname> <NETADDR>.in-addr.arpa -U<URDOMAIN>\administrator --password=<DOMAINPASS>"
@@ -61,7 +61,7 @@ net ads leave -UAdministrator --password
 ##Root Cert in der format (.crt) is avaible in NETLOGON share of DC
 
 ## Volumes for quick start
-
+* `/etc/timezone:/etc/timezone:ro` - Sets the timezone to match the host
 * `/etc/localtime:/etc/localtime:ro` - Sets the timezone to match the host
 * `/data/docker/containers/samba/data/:/var/lib/samba` - Stores samba data so the container can be moved to another host if required.
 * `/data/docker/containers/samba/gpo/:/gpo` - Stores admx and adml GPO files which get imported to sysvol on first start.

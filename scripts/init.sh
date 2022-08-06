@@ -37,11 +37,10 @@ config() {
   ENABLE_LAPS_SCHEMA=${ENABLE_LAPS_SCHEMA:-false}
   ENABLE_LOGS=${ENABLE_LOGS:-false}
   ENABLE_MSCHAPV2=${ENABLE_MSCHAPV2:-false}
-  ENABLE_RFC2307=${ENABLE_RFC2307:-false}
+  ENABLE_RFC2307=${ENABLE_RFC2307:-true}
   ENABLE_WINS=${ENABLE_WINS:-false}
   FEATURE_KERBEROS_TGT=${FEATURE_KERBEROS_TGT:-false}
   FEATURE_RECYCLEBIN=${FEATURE_RECYCLEBIN:-true}
-  FEATURE_WIN_GPO=${FEATURE_WIN_GPO:-false}
   HOSTIP=${HOSTIP:-NONE}
   HOSTIPV6=${HOSTIPV6:-NONE}
   HOSTNAME=${HOSTNAME:-$(hostname)} # Only hostname, no FQDN
@@ -54,6 +53,7 @@ config() {
   TLS_PKI_CN=${PKI_CN:-Simple Samba Root CA}
   TLS_PKI_O=${PKI_O:-Simple Root CA}
   TLS_PKI_OU=${PKI_OU:-Samba}
+  TZ=${TZ:-/Etc/UTC}
 
   # Min Counter Values for NIS Attributes. Set in docker-compose
   # does nothing on DCs as they shall not use idmap settings.
@@ -72,6 +72,7 @@ config() {
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba
   DIR_SAMBA_ETC=/etc/samba
   FILE_KRB5=/etc/krb5.conf
+  FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
   FILE_NTP=/etc/ntp.conf
   FILE_NTP_DRIFT=/var/lib/ntp/ntp.drift
@@ -133,17 +134,41 @@ appSetup () {
   ARGS_SAMBA_TOOL+=("--option=delete user from group script=/usr/sbin/deluser %u %g")
   ARGS_SAMBA_TOOL+=("--option=delete user script=/usr/sbin/deluser %u")
   ARGS_SAMBA_TOOL+=("--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool")
+  # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#NAMERESOLVEORDER
+  ARGS_SAMBA_TOOL+=("--option=name resolve order = wins host bcast")
+
+  # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
+  ARGS_SAMBA_TOOL+=("--option=password hash userPassword schemes = CryptSHA256 CryptSHA512")
+  # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes also for idmap 
+  ARGS_SAMBA_TOOL+=("--option=template shell = /bin/false")
+  ARGS_SAMBA_TOOL+=("--option=template homedir = /dev/null")
+  # Setup ACLs correctly https://github.com/thctlo/samba4/blob/master/samba-setup-share-folders.sh
+#  if [[ ! -d "$DIR_SAMBA_DATA_PREFIX/unixhome/" ]]; then mkdir -p "$DIR_SAMBA_DATA_PREFIX/unixhome/" ; fi
+  # Test
+  ARGS_SAMBA_TOOL+=("--option=eventlog list = Application System Security SyslogLinux Webserver")
+  
   ARGS_SAMBA_TOOL+=("-d $DEBUG_LEVEL")
   NTP_DEBUG_OPTION="-D $DEBUG_LEVEL"
   SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d $DEBUG_LEVEL"
   SAMBA_DEBUG_OPTION="-d $DEBUG_LEVEL"
+  
+  if [ ! -f /etc/timezone ] && [ ! -z "$TZ" ]; then
+    echo 'Set timezone'
+    cp /usr/share/zoneinfo/$TZ /etc/localtime
+    echo $TZ >/etc/timezone
+  fi
+
   sed -e "s:{{ NTP_DEBUG_OPTION }}:$NTP_DEBUG_OPTION:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:$SAMBADAEMON_DEBUG_OPTION:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
-  sed -e "s:{{ HOSTNAME }}:$HOSTNAME:" \
-      -e "s:{{ LDOMAIN }}:$LDOMAIN:" \
-      -e "s:{{ UDOMAIN }}:$UDOMAIN:" \
-  -i "$FILE_KRB5"
+  cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
+  {
+    echo ""
+    echo "[logging]"
+    echo "admin_server = CONSOLE"
+    echo "default = CONSOLE"
+    echo "kdc = CONSOLE"
+  } >> "${FILE_KRB5}"
 
   if [[ ! -f "$FILE_NTP_DRIFT" ]]; then echo "0.0" > "$FILE_NTP_DRIFT" ; fi
   chown -r root:root "${DIR_NTP_DRIFT}"
@@ -183,7 +208,7 @@ appSetup () {
     sleep 30
   fi
   if [[ ${ENABLE_RFC2307,,} = true ]]; then
-    if [[ "$JOIN" = true ]]; then OPTION_RFC=--option='idmap_ldb:use rfc2307 = yes' ; else OPTION_RFC=--use-rfc2307 ; fi
+    if [[ "$JOIN" = true ]]; then OPTION_RFC='--option=idmap_ldb:use rfc2307 = yes' ; else OPTION_RFC='--use-rfc2307' ; fi
     ARGS_SAMBA_TOOL+=("${OPTION_RFC}")
   fi
   if [[ ${BIND_INTERFACES_ENABLE,,} = true ]]; then
@@ -208,6 +233,43 @@ appSetup () {
     ARGS_SAMBA_TOOL+=("--option=wins support = yes")
     ARGS_SAMBA_TOOL+=("--option=time server = yes")
   fi
+
+  if [ "${TLS_ENABLE,,}" = true ]; then
+    if [ ! -f "$FILE_PKI_CERT" ] && [ ! -f "$FILE_PKI_KEY" ] && [ ! -f "$FILE_PKI_CA" ]; then echo "No custom CA found. Samba will autogenerate one" ; fi
+    if [ ! -f "$FILE_PKI_DH" ]; then openssl dhparam -out "$FILE_PKI_DH" 2048 ; fi
+    ARGS_SAMBA_TOOL+=("--option=tls enabled = yes")
+	ARGS_SAMBA_TOOL+=("--option=tls keyfile = $FILE_PKI_KEY")
+	ARGS_SAMBA_TOOL+=("--option=tls certfile = $FILE_PKI_CERT")
+	ARGS_SAMBA_TOOL+=("--option=tls cafile = $FILE_PKI_CA")
+	ARGS_SAMBA_TOOL+=("--option=tls dh params file = $FILE_PKI_DH")
+	ARGS_SAMBA_TOOL+=("--option=tls crlfile = $FILE_PKI_CRL")
+	ARGS_SAMBA_TOOL+=("--option=tls verify peer = ca_and_name")
+
+  else
+	ARGS_SAMBA_TOOL+=("--option=tls enabled = no")
+  fi
+
+  if [[ ${ENABLE_LOGS,,} = true ]]; then
+    ARGS_SAMBA_TOOL+=("--option=log file = /var/log/samba/%m.log")
+    ARGS_SAMBA_TOOL+=("--option=max log size = 10000")
+    ARGS_SAMBA_TOOL+=("--option=log level = ${DEBUG_LEVEL}")
+
+    SetKeyValueFilePattern 'admin_server' 'FILE:/var/log/samba/kadmind.log' "$FILE_KRB5" '[logging]'
+    SetKeyValueFilePattern 'default' 'FILE:/var/log/samba/krb5libs.log' "$FILE_KRB5" '[logging]'
+    SetKeyValueFilePattern 'kdc' 'FILE:/var/log/samba/krb5kdc.log' "$FILE_KRB5" '[logging]'
+    sed -i '/FILE:/s/^#_//g' "$FILE_NTP"
+  fi
+  # Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
+  if [ ! -f "${FILE_SAMBA_USER_MAP}" ]; then
+    echo '!'"root = ${DOMAIN_NETBIOS}\\${DOMAIN_USER}" > "${FILE_SAMBA_USER_MAP}"
+    ARGS_SAMBA_TOOL+=("--option=username map = ${FILE_SAMBA_USER_MAP}")
+  fi
+
+  # nsswitch anpassen
+  sed -i "s,passwd:.*,passwd:         files winbind,g" "$FILE_NSSWITCH"
+  sed -i "s,group:.*,group:          files winbind,g" "$FILE_NSSWITCH"
+  sed -i "s,hosts:.*,hosts:          files dns,g" "$FILE_NSSWITCH"
+  sed -i "s,networks:.*,networks:      files dns,g" "$FILE_NSSWITCH"
 
   # If external/smb.conf doesn't exist, this is new container with empty volume, we're not just moving to a new container
   if [[ ! -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
@@ -249,8 +311,11 @@ appSetup () {
       ARGS_SAMBA_TOOL+=("--adminpass=${DOMAIN_PASS}")
       ARGS_SAMBA_TOOL+=("--realm=${UDOMAIN}")
       ARGS_SAMBA_TOOL+=("--domain=${DOMAIN_NETBIOS}")
-      
+	  
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
+	  
+	  samba-tool user setexpiry Administrator --noexpiry
+	  
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
       if [[ "$FEATURE_RECYCLEBIN" = true ]]; then
         python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
@@ -289,12 +354,6 @@ appSetup () {
       if [[ ${DOMAIN_ACC_LOCK_RST_AFTER} != 30 ]]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" ${SAMBA_DEBUG_OPTION} ; fi
     fi
 
-    #Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
-    if [ ! -f "${FILE_SAMBA_USER_MAP}" ]; then
-      echo '!'"root = ${DOMAIN_NETBIOS}\\${DOMAIN_USER}" > "${FILE_SAMBA_USER_MAP}"
-      SetKeyValueFilePattern 'username map' "${FILE_SAMBA_USER_MAP}"
-    fi
-
     if [[ ${ENABLE_CUPS,,} = true ]]; then
       SetKeyValueFilePattern 'load printers' 'yes'
       SetKeyValueFilePattern 'printing' 'cups'
@@ -320,19 +379,6 @@ appSetup () {
       SetKeyValueFilePattern 'disable spoolss' 'yes'
     fi
 
-    # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
-    SetKeyValueFilePattern 'password hash userPassword schemes' 'CryptSHA256 CryptSHA512'
-    # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes also for idmap 
-    SetKeyValueFilePattern 'template shell' '/bin/false'
-    SetKeyValueFilePattern 'template homedir' "$DIR_SAMBA_DATA_PREFIX/unixhome/%U"
-    # Setup ACLs correctly https://github.com/thctlo/samba4/blob/master/samba-setup-share-folders.sh
-    if [[ ! -d "$DIR_SAMBA_DATA_PREFIX/unixhome/" ]]; then mkdir -p "$DIR_SAMBA_DATA_PREFIX/unixhome/" ; fi
-    # nsswitch anpassen
-    sed -i "s,passwd:.*,passwd:         files winbind,g" "$FILE_NSSWITCH"
-    sed -i "s,group:.*,group:          files winbind,g" "$FILE_NSSWITCH"
-    sed -i "s,hosts:.*,hosts:          files dns,g" "$FILE_NSSWITCH"
-    sed -i "s,networks:.*,networks:      files dns,g" "$FILE_NSSWITCH"
-
     # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
     backupConfig
   else
@@ -344,36 +390,13 @@ appSetup () {
     if [[ -n "$VPNPID" ]]; then kill "$VPNPID" ; fi
     EnableOpenvpnSupervisord
   fi
-
-  if [ "${TLS_ENABLE,,}" = true ]; then
-    if [ ! -f "$FILE_PKI_CERT" ] && [ ! -f "$FILE_PKI_KEY" ] && [ ! -f "$FILE_PKI_CA" ]; then echo "No custom CA found. Samba will autogenerate one" ; fi
-    if [ ! -f "$FILE_PKI_DH" ]; then openssl dhparam -out "$FILE_PKI_DH" 2048 ; fi
-    SetKeyValueFilePattern 'tls enabled' 'yes'
-    SetKeyValueFilePattern 'tls keyfile' "$FILE_PKI_KEY"
-    SetKeyValueFilePattern 'tls certfile' "$FILE_PKI_CERT"
-    SetKeyValueFilePattern 'tls cafile' "$FILE_PKI_CA"
-    SetKeyValueFilePattern 'tls dh params file' "$FILE_PKI_DH"
-#   SetKeyValueFilePattern 'tls crlfile' "$FILE_PKI_CRL"
-#   SetKeyValueFilePattern 'tls verify peer'  'ca_and_name'
-  else
-    SetKeyValueFilePattern 'tls enabled' 'no'
-  fi
-
-  if [[ ${ENABLE_LOGS,,} = true ]]; then
-    SetKeyValueFilePattern 'log file' '/var/log/samba/%m.log'
-    SetKeyValueFilePattern 'max log size' '10000'
-    SetKeyValueFilePattern 'log level' "${DEBUG_LEVEL}"
-    SetKeyValueFilePattern 'admin_server' 'FILE:/var/log/samba/kadmind.log' "$FILE_KRB5" '[logging]'
-    SetKeyValueFilePattern 'default' 'FILE:/var/log/samba/krb5libs.log' "$FILE_KRB5" '[logging]'
-    SetKeyValueFilePattern 'kdc' 'FILE:/var/log/samba/krb5kdc.log' "$FILE_KRB5" '[logging]'
-    sed -i '/FILE:/s/^#_//g' "$FILE_NTP"
-  fi
-
   appFirstStart
 }
 
 appFirstStart () {
-  loadconfdir
+  for file in $(ls -A /etc/samba/conf.d/*.conf); do
+    SetKeyValueFilePattern 'include' "$file"
+  done
   update-ca-certificates
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}" &
 
@@ -384,9 +407,9 @@ appFirstStart () {
 	  #admxdir=$(find /tmp/ -name PolicyDefinitions)
 	  admxdir="${DIR_GPO}"
 	  # Import Samba. admx&adml gpo
-	  echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator
+	  echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator ${SAMBA_DEBUG_OPTION}
 	  # Import Windows admx&adml
-	  echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir="${admxdir}"
+	  echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir="${admxdir}" ${SAMBA_DEBUG_OPTION}
 
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
     if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ]; then
@@ -412,7 +435,7 @@ appFirstStart () {
     ARGS_NET_RPC+=("SeDiskOperatorPrivilege")
     ARGS_NET_RPC+=("-U$UDOMAIN\\${DOMAIN_USER,,}")
     ARGS_NET_RPC+=("-d $DEBUG_LEVEL")
-    echo "${DOMAIN_PASS}" | net rpc rights grant "${ARGS_NET_RPC[@]}"
+    echo "${DOMAIN_PASS}" | net rpc rights grant "${ARGS_NET_RPC[@]}" 
   # if JOIN=true
   else
   #ERROR?`{{DC_IP}}:$LDAP_SUFFIX:g {DC_DNS}}:$LDAP_SUFFIX:g
@@ -430,22 +453,7 @@ appFirstStart () {
 appStart () {
   update-ca-certificates
   config
-  loadconfdir
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}"
-}
-
-#https://gist.github.com/meetnick/fb5587d25d4174d7adbc8a1ded642d3c
-# adds includes.conf file existance to smb.conf file
-loadconfdir () {
-  if ! grep -q 'include = '"${FILE_SAMBA_INCLUDES}" "${FILE_SAMBA_CONF}" ; then
-    sed -i "/\[global\]/a \
-      \\\tinclude = ${FILE_SAMBA_INCLUDES}\
-    " "${FILE_SAMBA_CONF}"
-  fi
-  # create directory smb.conf.d to store samba .conf files
-  if [[ ! -d "$DIR_SAMBA_CONF" ]]; then mkdir -p "$DIR_SAMBA_CONF" ; fi
-  # populates includes.conf with files (type -f) in smb.conf.d directory
-  find "${DIR_SAMBA_CONF}" -maxdepth 1 -type f| sed -e 's/^/include = /' > "$FILE_SAMBA_INCLUDES"
 }
 
 ######### BEGIN MAIN function #########
