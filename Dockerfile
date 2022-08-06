@@ -32,7 +32,7 @@ RUN apt-get update \
 COPY /ldif $DIR_LDIF
 COPY /etc /etc/
 COPY /scripts $DIR_SCRIPTS
-COPY /smb.conf.d/ $DIR_SAMBA_CONF
+COPY /conf.d/ $DIR_SAMBA_CONF
 COPY /gpo /$DIR_GPO
 #COPY --from=builder ${src} /tmp/
 
