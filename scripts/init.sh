@@ -1,5 +1,11 @@
 #!/bin/bash
 
+DEBUG_ENABLE=${DEBUG_ENABLE:-false}
+if [[ "${DEBUG_ENABLE}" = true ]] ; then set -x ; fi
+#  if [ "$DEBUG_ENABLE" = "true" ] ; then set -x ; else set -e ; fi
+#Trap SIGTERM
+trap 'backupConfig' SIGTERM
+
 #Todo:
 # ID_Map replication: https://wiki.samba.org/index.php/Joining_a_Samba_DC_to_an_Existing_Active_Directory#Built-in_User_.26_Group_ID_Mappings
 # SYSVOL replication
@@ -13,10 +19,8 @@ config() {
   LDOMAIN=$(echo "$DOMAIN" | tr '[:upper:]' '[:lower:]')
   UDOMAIN=$(echo "$LDOMAIN" | tr '[:lower:]' '[:upper:]')
   URDOMAIN=$(echo "$UDOMAIN" | cut -d "." -f1)
-
   BIND_INTERFACES=${BIND_INTERFACES:-127.0.0.1} # Can be a list of interfaces seperated by spaces
   BIND_INTERFACES_ENABLE=${BIND_INTERFACES_ENABLE:-false}
-  DEBUG_ENABLE=${DEBUG_ENABLE:-false}
   DEBUG_LEVEL=${DEBUG_LEVEL:-0}
   DISABLE_DNS_WPAD_ISATAP=${DISABLE_DNS_WPAD_ISATAP:-false}
   DISABLE_MD5=${DISABLE_MD5:-true}
@@ -81,7 +85,7 @@ config() {
   FILE_OPENVPNCONF=/docker.ovpn
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
-  
+
   DIR_SAMBA_EXTERNAL="${DIR_SAMBA_ETC}/external"
   DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private"
   FILE_KRB5_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/krb5.conf"
@@ -122,7 +126,7 @@ config() {
   export LDAP_DN="${LDAP_DN}"
   export LDAP_SUFFIX="${LDAP_SUFFIX}"
   export DIR_SCRIPTS="${DIR_SCRIPTS}"
-  
+
   source /scripts/helper.sh
 }
 
@@ -148,25 +152,25 @@ appSetup () {
 #  if [[ ! -d "$DIR_SAMBA_DATA_PREFIX/unixhome/" ]]; then mkdir -p "$DIR_SAMBA_DATA_PREFIX/unixhome/" ; fi
   # Test
   ARGS_SAMBA_TOOL+=("--option=eventlog list = Application System Security SyslogLinux Webserver")
-  
+
   ARGS_SAMBA_TOOL+=("-d ${DEBUG_LEVEL}")
   NTP_DEBUG_OPTION="-D ${DEBUG_LEVEL}"
   SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d ${DEBUG_LEVEL}"
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
-  
+
   if [ ! -f /etc/timezone ] && [ ! -z "${TZ}" ]; then
     echo 'Set timezone'
     cp /usr/share/zoneinfo/$TZ /etc/localtime
-    echo $TZ >/etc/timezone
+    echo ${TZ} >/etc/timezone
   fi
 
   sed -e "s:{{ NTP_DEBUG_OPTION }}:${NTP_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:${SAMBADAEMON_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
-  if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}" ; fi
+  if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
 
   if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then echo "0.0" > "${FILE_NTP_DRIFT}" ; fi
-  chown -r root:root "${DIR_NTP_DRIFT}"
+  chown -R root:root "${DIR_NTP_DRIFT}"
   if grep "{{ NTPSERVER }}" "${FILE_NTP}"; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
     NTPSERVER=""
@@ -179,9 +183,7 @@ appSetup () {
     sed -e "s:{{ NTPSERVER }}:${NTPSERVER}:" -i "${FILE_NTP}"
     sed -e "s:{{ NTPSERVERRESTRICT }}:${NTPSERVERRESTRICT}:" -i "${FILE_NTP}"
   fi
-  if [[ ! -f "${DIR_NTP_SOCK}" ]]; then mkdir -p "$DIR_NTP_SOCK" ; fi
-  chmod 750 "${DIR_NTP_SOCK}"
-  chown root:root "$DIR_NTP_SOCK}"
+
   if [[ ! -d "${DIR_SAMBA_EXTERNAL}" ]]; then mkdir "${DIR_SAMBA_EXTERNAL}" ; fi
   #Check if DOMAIN_NETBIOS <15 chars and contains no "."
   if [[ "${#DOMAIN_NETBIOS}" -gt 15 ]]; then echo "DOMAIN_NETBIOS too long => exiting" ; exit 1 ; fi
@@ -233,15 +235,14 @@ appSetup () {
     if [ ! -f "${FILE_PKI_CERT}" ] && [ ! -f "${FILE_PKI_KEY}" ] && [ ! -f "${FILE_PKI_CA}" ]; then echo "No custom CA found. Samba will autogenerate one" ; fi
     if [ ! -f "${FILE_PKI_DH}" ]; then openssl dhparam -out "${FILE_PKI_DH}" 2048 ; fi
     ARGS_SAMBA_TOOL+=("--option=tls enabled = yes")
-	ARGS_SAMBA_TOOL+=("--option=tls keyfile = $FILE_PKI_KEY")
-	ARGS_SAMBA_TOOL+=("--option=tls certfile = $FILE_PKI_CERT")
-	ARGS_SAMBA_TOOL+=("--option=tls cafile = $FILE_PKI_CA")
-	ARGS_SAMBA_TOOL+=("--option=tls dh params file = $FILE_PKI_DH")
-	ARGS_SAMBA_TOOL+=("--option=tls crlfile = $FILE_PKI_CRL")
-	ARGS_SAMBA_TOOL+=("--option=tls verify peer = ca_and_name")
-
+    ARGS_SAMBA_TOOL+=("--option=tls keyfile = $FILE_PKI_KEY")
+    ARGS_SAMBA_TOOL+=("--option=tls certfile = $FILE_PKI_CERT")
+    ARGS_SAMBA_TOOL+=("--option=tls cafile = $FILE_PKI_CA")
+    ARGS_SAMBA_TOOL+=("--option=tls dh params file = $FILE_PKI_DH")
+    ARGS_SAMBA_TOOL+=("--option=tls crlfile = $FILE_PKI_CRL")
+    ARGS_SAMBA_TOOL+=("--option=tls verify peer = ca_and_name")
   else
-	ARGS_SAMBA_TOOL+=("--option=tls enabled = no")
+    ARGS_SAMBA_TOOL+=("--option=tls enabled = no")
   fi
 
   if [[ "${ENABLE_LOGS,,}" = true ]]; then
@@ -302,16 +303,16 @@ appSetup () {
       ARGS_SAMBA_TOOL+=("--adminpass=${DOMAIN_PASS}")
       ARGS_SAMBA_TOOL+=("--realm=${UDOMAIN}")
       ARGS_SAMBA_TOOL+=("--domain=${DOMAIN_NETBIOS}")
-	  
+      
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
-	  
-	  samba-tool user setexpiry Administrator --noexpiry
-	  
+      
+      samba-tool user setexpiry Administrator --noexpiry
+      
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
       if [[ "${FEATURE_RECYCLEBIN}" = true ]]; then
         python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
-		if grep 'CN=Recycle Bin Feature' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base \
-		-b "CN=NTDS Settings,CN=${HOSTNAME},CN=Servers,CN=${JOIN_SITE},CN=Sites,CN=Configuration${LDAP_SUFFIX}" msDS-EnabledFeature) ; then echo "Optional Feature Recycle Bin Feature OK" ; else echo "FAILED" ; exit 1 ; fi
+        if grep 'CN=Recycle Bin Feature' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base \
+        -b "CN=NTDS Settings,CN=${HOSTNAME},CN=Servers,CN=${JOIN_SITE},CN=Sites,CN=Configuration${LDAP_SUFFIX}" msDS-EnabledFeature) ; then echo "Optional Feature Recycle Bin Feature OK" ; else echo "FAILED" ; exit 1 ; fi
       fi 
 
       if [[ "${FEATURE_KERBEROS_TGT}" = true ]]; then EnableChangeKRBTGTSupervisord ; fi
@@ -376,6 +377,11 @@ appSetup () {
     restoreConfig
   fi
 
+  cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
+
+  if [[ ! -f "${DIR_NTP_SOCK}" ]]; then mkdir -p "${DIR_NTP_SOCK}" ; fi
+  chmod 750 "${DIR_NTP_SOCK}"
+  chown root:root "${DIR_NTP_SOCK}"
   # Stop VPN & write supervisor service
   if [[ "${JOIN_SITE_VPN,,}" = true ]]; then
     if [[ -n "${VPNPID}" ]]; then kill "${VPNPID}" ; fi
@@ -395,12 +401,12 @@ appFirstStart () {
     # Better check if net rpc is rdy
     sleep 30s
     RDNSZonefromCIDR
-	  #admxdir=$(find /tmp/ -name PolicyDefinitions)
-	  admxdir="${DIR_GPO}"
-	  # Import Samba. admx&adml gpo
-	  echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator ${SAMBA_DEBUG_OPTION}
-	  # Import Windows admx&adml
-	  echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir="${admxdir}" ${SAMBA_DEBUG_OPTION}
+      #admxdir=$(find /tmp/ -name PolicyDefinitions)
+      admxdir="${DIR_GPO}"
+      # Import Samba. admx&adml gpo
+      echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator ${SAMBA_DEBUG_OPTION}
+      # Import Windows admx&adml
+      echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir="${admxdir}" ${SAMBA_DEBUG_OPTION}
 
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
     if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ]; then
@@ -449,11 +455,7 @@ appStart () {
 
 ######### BEGIN MAIN function #########
 config
-#  if [ "$DEBUG_ENABLE" = "true" ] ; then set -x ; else set -e ; fi
-if [[ "${DEBUG_ENABLE}" = true ]] ; then set -x ; fi
 
-#Trap SIGTERM
-trap 'backupConfig' SIGTERM
 # If the supervisor conf isn't there, we're spinning up a new container
 if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
   restoreConfig
