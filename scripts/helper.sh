@@ -66,8 +66,8 @@ SetKeyValueFilePattern() {
   FILE=${3:-"$FILE_SAMBA_CONF"}
   ESCAPED_PATTERN=$(printf '%s\n' "$PATTERN" | sed -e 's/[]\/$*.^[]/\\&/g')
   ESCAPED_REPLACE=$(printf '%s\n' "$2" | sed -e 's/[\/&]/\\&/g')
-  echo $ESCAPED_PATTERN
-  echo $ESCAPED_REPLACE
+  echo "$ESCAPED_PATTERN"
+  echo "$ESCAPED_REPLACE"
   if ! grep -R "^[#]*\s*$1[[:space:]]=.*" "$FILE" > /dev/null; then
     echo "Key: $1 not found. APPENDING $1 = $2 after $PATTERN"
     sed -i "/^$ESCAPED_PATTERN"'/a\\t'"$1 = $ESCAPED_REPLACE" "$FILE"
@@ -111,28 +111,27 @@ RDNSZonefromCIDR () {
       MASK=$(echo "$HOSTIP" | cut -d "/" -f2)
       # https://stackoverflow.com/questions/13777387/check-for-ip-validity
       if [[ $IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then 
-	    
+        
         if ((MASK >= 1 && MASK <= 8)); then
           IP_REVERSE=$(echo "$IP" | awk -F. '{print $1}')
-		  IP_NET=$(echo "$IP" | awk -F. '{print $1".0.0.0"}')
+          IP_NET=$(echo "$IP" | awk -F. '{print $1".0.0.0"}')
         fi
         if ((MASK >= 9 && MASK <= 16)); then
           IP_REVERSE=$(echo "$IP" | awk -F. '{print $2"."$1}')
-		  IP_NET=$(echo "$IP" | awk -F. '{print $1"."$2".0.0"}')
+          IP_NET=$(echo "$IP" | awk -F. '{print $1"."$2".0.0"}')
         fi
         if ((MASK >= 17 && MASK <= 24)); then
           IP_REVERSE=$(echo "$IP" | awk -F. '{print $3"." $2"."$1}')
-		  IP_NET=$(echo "$IP" | awk -F. '{print $1"."$2"."$3".0"}')
+          IP_NET=$(echo "$IP" | awk -F. '{print $1"."$2"."$3".0"}')
         fi
-		samba-tool sites subnet create "${IP_NET}/${MASK}" "$JOIN_SITE" ${SAMBA_DEBUG_OPTION}
-        echo "${DOMAIN_PASS}" | samba-tool dns zonecreate 127.0.0.1 "$IP_REVERSE".in-addr.arpa -UAdministrator ${SAMBA_DEBUG_OPTION}
+        samba-tool sites subnet create "${IP_NET}/${MASK}" "$JOIN_SITE" "${SAMBA_DEBUG_OPTION}"
+        echo "${DOMAIN_PASS}" | samba-tool dns zonecreate 127.0.0.1 "$IP_REVERSE".in-addr.arpa -UAdministrator "${SAMBA_DEBUG_OPTION}"
       else 
-	    echo "Cant not create subnet: ${HOSTIP} for site: $JOIN_SITE. Invalid IP parameter ... exiting" ; exit 1 ; fi
+        echo "Cant not create subnet: ${HOSTIP} for site: $JOIN_SITE. Invalid IP parameter ... exiting" ; exit 1 ; fi
       fi
       #this removes all internal docker IPs from samba DNS
       #samba_dnsupdate --current-ip="${HOSTIP%/*}"
     fi
-  fi
 
   # https://stackoverflow.com/questions/5281341/get-local-network-interface-addresses-using-only-proc
   # https://stackoverflow.com/questions/50413579/bash-convert-netmask-in-cidr-notation
@@ -147,7 +146,7 @@ RDNSZonefromCIDR () {
         let c+=$((x%2)) 'x>>=1'
       done
       CIDR=$net_dec/$c
-      if [[ $net_dec =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then samba-tool sites subnet create "$CIDR" "$JOIN_SITE" ${SAMBA_DEBUG_OPTION}
+      if [[ $net_dec =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then samba-tool sites subnet create "$CIDR" "$JOIN_SITE" "${SAMBA_DEBUG_OPTION}"
       else echo "Cant not create subnet: $CIDR for site: $JOIN_SITE. Invalid parameter ... exiting" ; exit 1 ; fi
     done
   done
