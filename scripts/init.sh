@@ -321,7 +321,7 @@ appSetup () {
 	  {
 	    mkdir -p "${DIR_SAMBA_EVENTLOG}" ; fi
 		mkdir -p "${DIR_SAMBA_ADMIN}" ; fi
-		ln -s /
+		#ln -s "$DIR_SAMBA_SYSVOL" "$DIR_SAMBA_CSHARE/sysvol"
 	    {
 		  printf "\n"
 	      printf "[C$]"
