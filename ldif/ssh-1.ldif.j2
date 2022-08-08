@@ -16,20 +16,3 @@ isSingleValued: FALSE
 objectCategory: CN=Attribute-Schema,CN=Schema,CN=Configuration {{ LDAP_SUFFIX }}
 searchFlags: 8
 schemaIDGUID:: cjDAZyEXzU+/akI0EGDW+g==
-
-dn: CN=ldapPublicKey,CN=Schema,CN=Configuration {{ LDAP_SUFFIX }}
-changetype: add
-objectClass: top
-objectClass: classSchema
-governsID: 1.3.6.1.4.1.24552.500.1.1.2.0
-cn: ldapPublicKey
-name: ldapPublicKey
-description: OpenSSH LPK objectclass
-lDAPDisplayName: ldapPublicKey
-subClassOf: top
-objectClassCategory: 3
-objectCategory: CN=Class-Schema,CN=Schema,CN=Configuration {{ LDAP_SUFFIX }}
-defaultObjectCategory: CN=ldapPublicKey,CN=Schema,CN=Configuration {{ LDAP_SUFFIX }}
-mayContain: sshPublicKey
-schemaIDGUID:: +8nFQ43rpkWTOgbCCcSkqA==
--
