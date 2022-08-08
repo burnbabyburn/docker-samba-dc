@@ -87,8 +87,8 @@ config() {
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
 
-  DIR_SAMBA_SYSVOL=${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}
-  DIR_SAMBA_NETLOGON=${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts/
+  DIR_SAMBA_SYSVOL="${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}"
+  DIR_SAMBA_NETLOGON="${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts/"
   DIR_SAMBA_EVENTLOG="${DIR_SAMBA_CSHARE}/windows/system32/config/"
   DIR_SAMBA_ADMIN="${DIR_SAMBA_CSHARE}/windows/"
   DIR_SAMBA_EXTERNAL="${DIR_SAMBA_ETC}/external/"
@@ -105,7 +105,7 @@ config() {
   FILE_PKI_KEY="${DIR_SAMBA_PRIVATE}/tls/key.pem"
   FILE_SAMBA_CONF="${DIR_SAMBA_ETC}/smb.conf"
   FILE_SAMBA_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/smb.conf"
-  FILE_SAMBA_INCLUDES="${DIR_SAMBA_ETC}/includes.conf"
+#  FILE_SAMBA_INCLUDES="${DIR_SAMBA_ETC}/includes.conf"
   FILE_SAMBA_SCHEMA_LAPS1="${DIR_LDIF}/laps-1.ldif"
   FILE_SAMBA_SCHEMA_LAPS2="${DIR_LDIF}/laps-2.ldif"
   FILE_SAMBA_SCHEMA_RFC="${DIR_LDIF}/RFC_Domain_User_Group.ldif"
@@ -133,7 +133,13 @@ config() {
   export LDAP_DN="${LDAP_DN}"
   export LDAP_SUFFIX="${LDAP_SUFFIX}"
   export DIR_SCRIPTS="${DIR_SCRIPTS}"
-
+  # Export if we don't source helper.sh in the future. These vars are needed from helper script
+  export FILE_SUPERVISORD_CONF_EXTERNAL="${FILE_SUPERVISORD_CONF_EXTERNAL}"
+  export FILE_SAMBA_CONF_EXTERNAL="${FILE_SAMBA_CONF_EXTERNAL}"
+  export FILE_NTP_CONF_EXTERNAL="${FILE_NTP_CONF_EXTERNAL}"
+  export FILE_NSSWITCH_EXTERNAL="${FILE_NSSWITCH_EXTERNAL}"
+#  export FILE_SAMBA_INCLUDES="${FILE_SAMBA_INCLUDES}"
+  # shellcheck source=/scripts/helper.sh
   source /scripts/helper.sh
 }
 
@@ -274,7 +280,7 @@ appSetup () {
   # If external/smb.conf doesn't exist, this is new container with empty volume, we're not just moving to a new container
   if [[ ! -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
     if [[ -f "${FILE_SAMBA_CONF}" ]]; then mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig ; fi
-    # Optional params encased with "" will break the command
+      # Optional params encased with "" will break the command
     if [[ "${JOIN,,}" = true ]]; then
 #     if [ "$(dig +short -t srv _ldap._tcp.$LDOMAIN.)" ] && echo "got answer"
       s=1
@@ -286,7 +292,7 @@ appSetup () {
       do
         samba-tool domain join "${ARGS_SAMBA_TOOL[@]}" && s=0 && break || s=$? && sleep 60
       done; (exit $s)
-#      # Netlogon & sysvol readonly on secondary DC
+      # Netlogon & sysvol readonly on secondary DC
       if [[ ! -d "${DIR_SAMBA_NETLOGON}" ]]; then mkdir "${DIR_SAMBA_NETLOGON}" ; fi
       if [[ ! -d "${DIR_SAMBA_SYSVOL}" ]]; then mkdir "${DIR_SAMBA_SYSVOL}" ; fi
       {
@@ -296,7 +302,7 @@ appSetup () {
         printf "read only = Yes"
         printf "\n"
         printf "[sysvol]"
-        printf "path = %s" ; "${DIR_SAMBA_SYSVOL}"
+        printf "path = %s" , "${DIR_SAMBA_SYSVOL}"
         printf "read only = Yes"
       } >> "${FILE_SAMBA_CONF}"
 
@@ -318,24 +324,22 @@ appSetup () {
       
       samba-tool user setexpiry Administrator --noexpiry
       if [[ ! -d "${DIR_SAMBA_CSHARE}" ]]; then 
-      {
         mkdir -p "${DIR_SAMBA_EVENTLOG}"
         mkdir -p "${DIR_SAMBA_ADMIN}"
         #ln -s "$DIR_SAMBA_SYSVOL" "$DIR_SAMBA_CSHARE/sysvol"
       fi
-        {
-          printf "\n"
-          printf "[C$]"
-          printf "path = %s" , "${DIR_SAMBA_CSHARE}"
-          printf "read only = No"
-          printf "valid users = @Domain Admins"
-          printf "\n"
-          printf "[ADMIN$]"
-          printf "path = %s" , "${DIR_SAMBA_ADMIN}"
-          printf "read only = no"
-          printf "valid users = @\"Domain Admins\""
-        } >> "${FILE_SAMBA_CONF}"
-      }
+      {
+        printf "\n"
+        printf "[C$]"
+        printf "path = %s" , "${DIR_SAMBA_CSHARE}"
+        printf "read only = No"
+        printf "valid users = @Domain Admins"
+        printf "\n"
+        printf "[ADMIN$]"
+        printf "path = %s" , "${DIR_SAMBA_ADMIN}"
+        printf "read only = no"
+        printf "valid users = @\"Domain Admins\""
+      } >> "${FILE_SAMBA_CONF}"
 
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
       if [[ "${FEATURE_RECYCLEBIN}" = true ]]; then
@@ -349,7 +353,7 @@ appSetup () {
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
       if [[ "${ENABLE_RFC2307,,}" = true ]]; then
         setupSchemaRFC2307File
-        ldbmodify -H "${FILE_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}" ${SAMBA_DEBUG_OPTION}
+        ldbmodify -H "${FILE_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
         if grep 'returned 1 records' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base -b CN="${DOMAIN_NETBIOS}",CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System"${LDAP_SUFFIX}"); then 
           echo "Add RFC2307 Attributes for default AD users" ; else echo 'FAILED' ; exit 1 ; fi
       fi
@@ -360,19 +364,19 @@ appSetup () {
           "${FILE_SAMBA_SCHEMA_LAPS1}.j2" > "${FILE_SAMBA_SCHEMA_LAPS1}"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
           "${FILE_SAMBA_SCHEMA_LAPS2}.j2" > "${FILE_SAMBA_SCHEMA_LAPS2}"
-        ldbadd -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS1}" -U "${DOMAIN_USER}" ${SAMBA_DEBUG_OPTION}
-        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS2}" -U "${DOMAIN_USER}" ${SAMBA_DEBUG_OPTION}
+        ldbadd -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
       fi
 
-      if [[ "${DOMAIN_PWD_HISTORY_LENGTH}" != 24 ]]; then samba-tool domain passwordsettings set --history-length="$DOMAIN_PWD_HISTORY_LENGTH" ${SAMBA_DEBUG_OPTION} ; fi
-      if [[ "${DOMAIN_PWD_MAX_AGE}" != 43 ]]; then samba-tool domain passwordsettings set --max-pwd-age="$DOMAIN_PWD_MAX_AGE" ${SAMBA_DEBUG_OPTION} ; fi
-      if [[ "${DOMAIN_PWD_MIN_AGE}" != 1 ]]; then samba-tool domain passwordsettings set --min-pwd-age="$DOMAIN_PWD_MIN_AGE" ${SAMBA_DEBUG_OPTION} ; fi
-      if [[ "${DOMAIN_PWD_MIN_LENGTH}" != 7 ]]; then samba-tool domain passwordsettings set --min-pwd-length="$DOMAIN_PWD_MIN_LENGTH" ${SAMBA_DEBUG_OPTION} ; fi
-      if [[ "${DOMAIN_PWD_COMPLEXITY}" = false ]]; then samba-tool domain passwordsettings set --complexity="$DOMAIN_PWD_COMPLEXITY" ${SAMBA_DEBUG_OPTION} ; fi
+      if [[ "${DOMAIN_PWD_HISTORY_LENGTH}" != 24 ]]; then samba-tool domain passwordsettings set --history-length="$DOMAIN_PWD_HISTORY_LENGTH" "${SAMBA_DEBUG_OPTION}" ; fi
+      if [[ "${DOMAIN_PWD_MAX_AGE}" != 43 ]]; then samba-tool domain passwordsettings set --max-pwd-age="$DOMAIN_PWD_MAX_AGE" "${SAMBA_DEBUG_OPTION}" ; fi
+      if [[ "${DOMAIN_PWD_MIN_AGE}" != 1 ]]; then samba-tool domain passwordsettings set --min-pwd-age="$DOMAIN_PWD_MIN_AGE" "${SAMBA_DEBUG_OPTION}" ; fi
+      if [[ "${DOMAIN_PWD_MIN_LENGTH}" != 7 ]]; then samba-tool domain passwordsettings set --min-pwd-length="$DOMAIN_PWD_MIN_LENGTH" "${SAMBA_DEBUG_OPTION}" ; fi
+      if [[ "${DOMAIN_PWD_COMPLEXITY}" = false ]]; then samba-tool domain passwordsettings set --complexity="$DOMAIN_PWD_COMPLEXITY" "${SAMBA_DEBUG_OPTION}" ; fi
       
-      if [[ "${DOMAIN_ACC_LOCK_DURATION}" != 30 ]]; then samba-tool domain passwordsettings set --account-lockout-duration="$DOMAIN_ACC_LOCK_DURATION" ${SAMBA_DEBUG_OPTION} ; fi
-      if [[ "${DOMAIN_ACC_LOCK_THRESHOLD}" != 0 ]]; then samba-tool domain passwordsettings set --account-lockout-threshold="$DOMAIN_ACC_LOCK_THRESHOLD" ${SAMBA_DEBUG_OPTION} ; fi
-      if [[ "${DOMAIN_ACC_LOCK_RST_AFTER}" != 30 ]]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" ${SAMBA_DEBUG_OPTION} ; fi
+      if [[ "${DOMAIN_ACC_LOCK_DURATION}" != 30 ]]; then samba-tool domain passwordsettings set --account-lockout-duration="$DOMAIN_ACC_LOCK_DURATION" "${SAMBA_DEBUG_OPTION}" ; fi
+      if [[ "${DOMAIN_ACC_LOCK_THRESHOLD}" != 0 ]]; then samba-tool domain passwordsettings set --account-lockout-threshold="$DOMAIN_ACC_LOCK_THRESHOLD" "${SAMBA_DEBUG_OPTION}" ; fi
+      if [[ "${DOMAIN_ACC_LOCK_RST_AFTER}" != 30 ]]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" "${SAMBA_DEBUG_OPTION}" ; fi
     fi
 
     # https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
@@ -441,21 +445,21 @@ appFirstStart () {
       #admxdir=$(find /tmp/ -name PolicyDefinitions)
       admxdir="${DIR_GPO}"
       # Import Samba. admx&adml gpo
-      echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator ${SAMBA_DEBUG_OPTION}
+      echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator "${SAMBA_DEBUG_OPTION}"
       # Import Windows admx&adml
-      echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir="${admxdir}" ${SAMBA_DEBUG_OPTION}
+      echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir="${admxdir}" "${SAMBA_DEBUG_OPTION}"
 
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
     if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ]; then
-      samba-tool dns add "$(hostname -s)" "${LDOMAIN}" wpad A 127.0.0.1 -P ${SAMBA_DEBUG_OPTION}
-      samba-tool dns add "$(hostname -s)" "${LDOMAIN}" isatap A 127.0.0.1 -P ${SAMBA_DEBUG_OPTION}
+      samba-tool dns add "$(hostname -s)" "${LDOMAIN}" wpad A 127.0.0.1 -P "${SAMBA_DEBUG_OPTION}"
+      samba-tool dns add "$(hostname -s)" "${LDOMAIN}" isatap A 127.0.0.1 -P "${SAMBA_DEBUG_OPTION}"
     fi
     #Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
-    echo "rpcclient: Connect as ${DOMAIN_USER}" ; if rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" ${SAMBA_DEBUG_OPTION} 127.0.0.1 ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
-    echo "smbclient: Connect as anonymous user" ; if grep 'Anonymous login successful' <(smbclient -N -L LOCALHOST ${SAMBA_DEBUG_OPTION}) ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
+    echo "rpcclient: Connect as ${DOMAIN_USER}" ; if rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1 ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
+    echo "smbclient: Connect as anonymous user" ; if grep 'Anonymous login successful' <(smbclient -N -L LOCALHOST "${SAMBA_DEBUG_OPTION}") ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
     echo "smbclient: Connect as ${DOMAIN_USER}" ; if grep '[[:blank:]]session setup ok' <(smbclient --debug-stdout -d 4 -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST) ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
     echo "Kerberos: Connect as ${DOMAIN_USER}" ; if echo "${DOMAIN_PASS}" | kinit "${DOMAIN_USER}" ; then echo 'OK' ; klist ; kdestroy ; else echo 'FAILED' ; exit 1 ; fi
-    echo "Check NTP"; ntpq -c sysinfo ${SAMBA_DEBUG_OPTION}
+    echo "Check NTP"; ntpq -c sysinfo "${SAMBA_DEBUG_OPTION}"
     echo "Check DNS _ldap._tcp"; host -t SRV _ldap._tcp."${LDOMAIN}"
     echo "Check DNS _kerberos._tcp"; host -t SRV _kerberos._udp."${LDOMAIN}"
     echo "Check Host record"; host -t A "${HOSTNAME}.${LDOMAIN}"
@@ -470,7 +474,7 @@ appFirstStart () {
     ARGS_NET_RPC+=("-U${UDOMAIN}\\${DOMAIN_USER,,}")
     ARGS_NET_RPC+=("-d ${DEBUG_LEVEL}")
     echo "${DOMAIN_PASS}" | net rpc rights grant "${ARGS_NET_RPC[@]}" "SeDiskOperatorPrivilege"
-    if [[ "${ENABLE_CUPS,,}" = true ]]; then  net rpc rights grant "${ARGS_NET_RPC[@]}" "SePrintOperatorPrivilege"
+    if [[ "${ENABLE_CUPS,,}" = true ]]; then net rpc rights grant "${ARGS_NET_RPC[@]}" "SePrintOperatorPrivilege" ; fi
   # if JOIN=true
   else
   #ERROR?`{{DC_IP}}:$LDAP_SUFFIX:g {DC_DNS}}:$LDAP_SUFFIX:g
