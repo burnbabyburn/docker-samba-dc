@@ -288,7 +288,7 @@ appSetup () {
       done; (exit $s)
 #      # Netlogon & sysvol readonly on secondary DC
       if [[ ! -d "${DIR_SAMBA_NETLOGON}" ]]; then mkdir "${DIR_SAMBA_NETLOGON}" ; fi
-	  if [[ ! -d "${DIR_SAMBA_SYSVOL}" ]]; then mkdir "${DIR_SAMBA_SYSVOL}" ; fi
+      if [[ ! -d "${DIR_SAMBA_SYSVOL}" ]]; then mkdir "${DIR_SAMBA_SYSVOL}" ; fi
       {
         printf "\n"
         printf "[netlogon]"
@@ -317,24 +317,25 @@ appSetup () {
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
       
       samba-tool user setexpiry Administrator --noexpiry
-	  if [[ ! -d "${DIR_SAMBA_CSHARE}" ]]; then 
-	  {
-	    mkdir -p "${DIR_SAMBA_EVENTLOG}" ; fi
-		mkdir -p "${DIR_SAMBA_ADMIN}" ; fi
-		#ln -s "$DIR_SAMBA_SYSVOL" "$DIR_SAMBA_CSHARE/sysvol"
-	    {
-		  printf "\n"
-	      printf "[C$]"
+      if [[ ! -d "${DIR_SAMBA_CSHARE}" ]]; then 
+      {
+        mkdir -p "${DIR_SAMBA_EVENTLOG}"
+        mkdir -p "${DIR_SAMBA_ADMIN}"
+        #ln -s "$DIR_SAMBA_SYSVOL" "$DIR_SAMBA_CSHARE/sysvol"
+      fi
+        {
+          printf "\n"
+          printf "[C$]"
           printf "path = %s" , "${DIR_SAMBA_CSHARE}"
           printf "read only = No"
           printf "valid users = @Domain Admins"
-		  printf "\n"
-		  printf "[ADMIN$]"
-		  printf "path = %s" , "${DIR_SAMBA_ADMIN}"
-		  printf "read only = no"
-		  printf "valid users = @\"Domain Admins\""
+          printf "\n"
+          printf "[ADMIN$]"
+          printf "path = %s" , "${DIR_SAMBA_ADMIN}"
+          printf "read only = no"
+          printf "valid users = @\"Domain Admins\""
         } >> "${FILE_SAMBA_CONF}"
-	  }
+      }
 
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
       if [[ "${FEATURE_RECYCLEBIN}" = true ]]; then
@@ -374,8 +375,8 @@ appSetup () {
       if [[ "${DOMAIN_ACC_LOCK_RST_AFTER}" != 30 ]]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" ${SAMBA_DEBUG_OPTION} ; fi
     fi
 
-	# https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
-	# https://wiki.samba.org/index.php/Setting_up_Samba_as_a_Print_Server
+    # https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
+    # https://wiki.samba.org/index.php/Setting_up_Samba_as_a_Print_Server
     if [[ "${ENABLE_CUPS,,}" = true ]]; then
       SetKeyValueFilePattern 'load printers' 'yes'
       SetKeyValueFilePattern 'printing' 'cups'
@@ -384,7 +385,7 @@ appSetup () {
       SetKeyValueFilePattern 'cups encrypt' 'no'
       SetKeyValueFilePattern 'cups options' '\"raw media=a4\"'
       SetKeyValueFilePattern '#cups server' "${CUPS_SERVER}:${CUPS_PORT}"
-	  if [[ ! -d "${DIR_SAMBA_PRINTDRIVER}" ]]; then mkdir -p "${DIR_SAMBA_PRINTDRIVER}" ; fi
+      if [[ ! -d "${DIR_SAMBA_PRINTDRIVER}" ]]; then mkdir -p "${DIR_SAMBA_PRINTDRIVER}" ; fi
       {
         printf "\n"
         printf "[printers]"
@@ -394,11 +395,11 @@ appSetup () {
         printf "use client driver = Yes"
         printf "guest ok = Yes"
         printf "browseable = No"
-		printf "\n"
-		printf "[PRINT$]"
-		printf "path = %s" , "${DIR_SAMBA_PRINTDRIVER}"
-	    printf "read only = no"
-	    printf "write list = @\"Domain Admins\""
+        printf "\n"
+        printf "[PRINT$]"
+        printf "path = %s" , "${DIR_SAMBA_PRINTDRIVER}"
+        printf "read only = no"
+        printf "write list = @\"Domain Admins\""
       } >> "${FILE_SAMBA_CONF}"
     else
       SetKeyValueFilePattern 'load printers' 'no'
