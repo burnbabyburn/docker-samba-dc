@@ -135,7 +135,8 @@ appSetup () {
   ARGS_SAMBA_TOOL=()
   ARGS_SAMBA_TOOL+=("--dns-backend=SAMBA_INTERNAL")
   ARGS_SAMBA_TOOL+=("--option=add group script=/usr/sbin/groupadd %g")
-  ARGS_SAMBA_TOOL+=("--option=add machine script=/usr/sbin/useradd -N -M -g machines -d /dev/null -s /bin/false %u")
+  if ! grep 'Domain-Computer' /etc/group ; then /usr/sbin/groupadd Domain-Computer ; fi
+  ARGS_SAMBA_TOOL+=("--option=add machine script=/usr/sbin/useradd -N -M -g Domain-Computer -d /dev/null -s /bin/false %u")
   ARGS_SAMBA_TOOL+=("--option=add user to group script=/usr/sbin/adduser %u %g")
   ARGS_SAMBA_TOOL+=("--option=delete group script=/usr/sbin/groupdel %g")
   ARGS_SAMBA_TOOL+=("--option=delete user from group script=/usr/sbin/deluser %u %g")
@@ -462,7 +463,7 @@ if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
   restoreConfig
   appStart
 else
-  appSetup
+  appSetup || exit 1
 fi
 
 exit 0
