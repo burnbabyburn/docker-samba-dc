@@ -225,7 +225,7 @@ appSetup () {
   if [[ "${BIND_INTERFACES_ENABLE,,}" = true ]]; then
     if ! echo "${BIND_INTERFACES}" | grep "127.0.0.1\|lo\|::1" >> /dev/null; then
       printf "
-       127.0.0.1 missing from BIND_INTERFACES. \n
+       127.0.0.1 missing from BIND_INTERFACES.
        If bind interfaces only is set and the network address 127.0.0.1 is not added to the interfaces parameter list smbpasswd(8) may not work as expected due to the reasons covered below.
        To change a users SMB password, the smbpasswd by default connects to the localhost - 127.0.0.1 address as an SMB client to issue the password change request.
        If bind interfaces only is set then unless the network address 127.0.0.1 is added to the interfaces parameter list then smbpasswd will fail to connect in it's default mode.
@@ -296,14 +296,14 @@ appSetup () {
       if [[ ! -d "${DIR_SAMBA_NETLOGON}" ]]; then mkdir "${DIR_SAMBA_NETLOGON}" ; fi
       if [[ ! -d "${DIR_SAMBA_SYSVOL}" ]]; then mkdir "${DIR_SAMBA_SYSVOL}" ; fi
       {
-        printf "\n"
-        printf "[netlogon]"
-        printf "path = %s" , "${DIR_SAMBA_NETLOGON}"
-        printf "read only = Yes"
-        printf "\n"
-        printf "[sysvol]"
-        printf "path = %s" , "${DIR_SAMBA_SYSVOL}"
-        printf "read only = Yes"
+        printf '\n'
+        printf '[netlogon]\n'
+        printf 'path = %s\n' "${DIR_SAMBA_NETLOGON}"
+        printf 'read only = Yes\n'
+        printf '\n'
+        printf '[sysvol]\n'
+        printf 'path = %s\n' "${DIR_SAMBA_SYSVOL}"
+        printf 'read only = Yes\n'
       } >> "${FILE_SAMBA_CONF}"
 
       #Check if Join was successfull
@@ -329,16 +329,16 @@ appSetup () {
         #ln -s "$DIR_SAMBA_SYSVOL" "$DIR_SAMBA_CSHARE/sysvol"
       fi
       {
-        printf "\n"
-        printf "[C$]"
-        printf "path = %s" , "${DIR_SAMBA_CSHARE}"
-        printf "read only = No"
-        printf "valid users = @Domain Admins"
-        printf "\n"
-        printf "[ADMIN$]"
-        printf "path = %s" , "${DIR_SAMBA_ADMIN}"
-        printf "read only = no"
-        printf "valid users = @\"Domain Admins\""
+        printf '\n'
+        printf '[C$]\n'
+        printf 'path = %s\n' "${DIR_SAMBA_CSHARE}"
+        printf 'read only = No\n'
+        printf 'valid users = @Domain Admins\n'
+        printf '\n'
+        printf '[ADMIN$]\n'
+        printf 'path = %s\n' "${DIR_SAMBA_ADMIN}"
+        printf 'read only = no\n'
+        printf 'valid users = @\"Domain Admins\"\n'
       } >> "${FILE_SAMBA_CONF}"
 
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
@@ -391,19 +391,19 @@ appSetup () {
       SetKeyValueFilePattern '#cups server' "${CUPS_SERVER}:${CUPS_PORT}"
       if [[ ! -d "${DIR_SAMBA_PRINTDRIVER}" ]]; then mkdir -p "${DIR_SAMBA_PRINTDRIVER}" ; fi
       {
-        printf "\n"
-        printf "[printers]"
-        printf "comment = All Printers"
-        printf "path = /var/spool/samba"
-        printf "printable = yes"
-        printf "use client driver = Yes"
-        printf "guest ok = Yes"
-        printf "browseable = No"
-        printf "\n"
-        printf "[PRINT$]"
-        printf "path = %s" , "${DIR_SAMBA_PRINTDRIVER}"
-        printf "read only = no"
-        printf "write list = @\"Domain Admins\""
+        printf '\n'
+        printf '[printers]\n'
+        printf 'comment = All Printers\n'
+        printf 'path = /var/spool/samba\n'
+        printf 'printable = yes\n'
+        printf 'use client driver = Yes\n'
+        printf 'guest ok = Yes\n'
+        printf 'browseable = No\n'
+        printf '\n'
+        printf '[PRINT$]\n'
+        printf 'path = %s\n' , "${DIR_SAMBA_PRINTDRIVER}"
+        printf 'read only = no\n'
+        printf 'write list = @\"Domain Admins\"\n'
       } >> "${FILE_SAMBA_CONF}"
     else
       SetKeyValueFilePattern 'load printers' 'no'
