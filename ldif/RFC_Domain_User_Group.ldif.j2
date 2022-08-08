@@ -18,9 +18,9 @@ msSFU30NisDomain: {{ NETBIOS }}
 -
 add: msSFU30Name
 msSFU30Name: Domain Admins
--
-add: gidNumber
-gidNumber: {{ GID_DOM_ADMIN }}
+#-
+#add: gidNumber
+#gidNumber: {{ GID_DOM_ADMIN }}
 
 dn: CN=Domain Computers,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
@@ -209,12 +209,13 @@ msSFU30NisDomain: {{ NETBIOS }}
 -
 add: msSFU30Name
 msSFU30Name: Cert Publishers
+# https://wiki.samba.org/index.php/Setting_up_Samba_as_a_Domain_Member#Mapping_the_Domain_Administrator_Account_to_the_Local_root_User
 #-
 #add: uidNumber
 #uidNumber: {{ UID_ADMINISTRATOR }}
--
-add: gidNumber
-gidNumber: {{ GID_DOM_ADMIN }}
+#-
+#add: gidNumber
+#gidNumber: {{ GID_DOM_ADMIN }}
 
 dn: CN={{ NETBIOS }},CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System {{ LDAP_SUFFIX }}
 changetype: modify
@@ -226,3 +227,4 @@ msSFU30MaxUidNumber: {{ IMAP_UID_END }}
 -
 replace: msSFU30MaxGidNumber
 msSFU30MaxGidNumber: {{ IMAP_GID_END }}
+-

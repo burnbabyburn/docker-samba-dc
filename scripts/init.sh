@@ -108,6 +108,8 @@ config() {
 #  FILE_SAMBA_INCLUDES="${DIR_SAMBA_ETC}/includes.conf"
   FILE_SAMBA_SCHEMA_LAPS1="${DIR_LDIF}/laps-1.ldif"
   FILE_SAMBA_SCHEMA_LAPS2="${DIR_LDIF}/laps-2.ldif"
+  FILE_SAMBA_SCHEMA_SSH1="${DIR_LDIF}/ssh-1.ldif"
+  FILE_SAMBA_SCHEMA_SSH2="${DIR_LDIF}/ssh-2.ldif"
   FILE_SAMBA_SCHEMA_RFC="${DIR_LDIF}/RFC_Domain_User_Group.ldif"
   FILE_SAMBA_SCHEMA_WINSREPL="${DIR_LDIF}/wins.ldif"
   FILE_SAMBA_USER_MAP="${DIR_SAMBA_ETC}/user.map"
@@ -357,6 +359,14 @@ appSetup () {
         if grep 'returned 1 records' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base -b CN="${DOMAIN_NETBIOS}",CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System"${LDAP_SUFFIX}"); then 
           echo "Add RFC2307 Attributes for default AD users" ; else echo 'FAILED' ; exit 1 ; fi
       fi
+#	  if [[ true = true ]]; then
+	    sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
+        "${FILE_SAMBA_SCHEMA_SSH1}.j2" > "${FILE_SAMBA_SCHEMA_SSH1}"
+	    sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
+        "${FILE_SAMBA_SCHEMA_SSH2}.j2" > "${FILE_SAMBA_SCHEMA_SSH2}"
+		ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+		ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+#      fi
       # https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507'
       # Microsoft Local Administrator Password Solution (LAPS) https://www.microsoft.com/en-us/download/details.aspx?id=46899
       if [[ "${ENABLE_LAPS_SCHEMA,,}" = true ]]; then
