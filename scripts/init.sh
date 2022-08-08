@@ -74,9 +74,10 @@ config() {
   #DIR_SAMBA_CONF=/etc/samba/smb.conf.d/
   #DIR_GPO=/gpo
   DIR_NTP_DRIFT=/var/lib/ntp/
-  DIR_NTP_SOCK=/var/lib/samba/ntp_signd
-  DIR_SAMBA_DATA_PREFIX=/var/lib/samba
-  DIR_SAMBA_ETC=/etc/samba
+  DIR_NTP_SOCK=/var/lib/samba/ntp_signd/
+  DIR_SAMBA_DATA_PREFIX=/var/lib/samba/
+  DIR_SAMBA_ETC=/etc/samba/
+  DIR_SAMBA_CSHARE=/var/lib/samba/share_c/
   FILE_KRB5=/etc/krb5.conf
   FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
@@ -86,8 +87,13 @@ config() {
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
 
-  DIR_SAMBA_EXTERNAL="${DIR_SAMBA_ETC}/external"
-  DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private"
+  DIR_SAMBA_SYSVOL=${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}
+  DIR_SAMBA_NETLOGON=${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts/
+  DIR_SAMBA_EVENTLOG="${DIR_SAMBA_CSHARE}/windows/system32/config/"
+  DIR_SAMBA_ADMIN="${DIR_SAMBA_CSHARE}/windows/"
+  DIR_SAMBA_EXTERNAL="${DIR_SAMBA_ETC}/external/"
+  DIR_SAMBA_PRINTDRIVER="${DIR_SAMBA_CSHARE}/windows/system32/spool/drivers/"
+  DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private/"
   FILE_KRB5_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/krb5.conf"
   FILE_NSSWITCH_EXTERNAL="${DIR_SAMBA_EXTERNAL}/nsswitch.conf"
   FILE_NTP_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/ntp.conf"
@@ -281,14 +287,16 @@ appSetup () {
         samba-tool domain join "${ARGS_SAMBA_TOOL[@]}" && s=0 && break || s=$? && sleep 60
       done; (exit $s)
 #      # Netlogon & sysvol readonly on secondary DC
+      if [[ ! -d "${DIR_SAMBA_NETLOGON}" ]]; then mkdir "${DIR_SAMBA_NETLOGON}" ; fi
+	  if [[ ! -d "${DIR_SAMBA_SYSVOL}" ]]; then mkdir "${DIR_SAMBA_SYSVOL}" ; fi
       {
         printf "\n"
         printf "[netlogon]"
-        printf "path = /var/lib/samba/sysvol/%s/scripts" "$LDOMAIN"
+        printf "path = %s" , "${DIR_SAMBA_NETLOGON}"
         printf "read only = Yes"
-        printf " "
+        printf "\n"
         printf "[sysvol]"
-        printf "path = /var/lib/samba/sysvol"
+        printf "path = %s" ; "${DIR_SAMBA_SYSVOL}"
         printf "read only = Yes"
       } >> "${FILE_SAMBA_CONF}"
 
@@ -309,7 +317,25 @@ appSetup () {
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
       
       samba-tool user setexpiry Administrator --noexpiry
-      
+	  if [[ ! -d "${DIR_SAMBA_CSHARE}" ]]; then 
+	  {
+	    mkdir -p "${DIR_SAMBA_EVENTLOG}" ; fi
+		mkdir -p "${DIR_SAMBA_ADMIN}" ; fi
+		ln -s /
+	    {
+		  printf "\n"
+	      printf "[C$]"
+          printf "path = %s" , "${DIR_SAMBA_CSHARE}"
+          printf "read only = No"
+          printf "valid users = @Domain Admins"
+		  printf "\n"
+		  printf "[ADMIN$]"
+		  printf "path = %s" , "${DIR_SAMBA_ADMIN}"
+		  printf "read only = no"
+		  printf "valid users = @\"Domain Admins\""
+        } >> "${FILE_SAMBA_CONF}"
+	  }
+
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
       if [[ "${FEATURE_RECYCLEBIN}" = true ]]; then
         python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
@@ -348,6 +374,8 @@ appSetup () {
       if [[ "${DOMAIN_ACC_LOCK_RST_AFTER}" != 30 ]]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" ${SAMBA_DEBUG_OPTION} ; fi
     fi
 
+	# https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
+	# https://wiki.samba.org/index.php/Setting_up_Samba_as_a_Print_Server
     if [[ "${ENABLE_CUPS,,}" = true ]]; then
       SetKeyValueFilePattern 'load printers' 'yes'
       SetKeyValueFilePattern 'printing' 'cups'
@@ -356,15 +384,21 @@ appSetup () {
       SetKeyValueFilePattern 'cups encrypt' 'no'
       SetKeyValueFilePattern 'cups options' '\"raw media=a4\"'
       SetKeyValueFilePattern '#cups server' "${CUPS_SERVER}:${CUPS_PORT}"
+	  if [[ ! -d "${DIR_SAMBA_PRINTDRIVER}" ]]; then mkdir -p "${DIR_SAMBA_PRINTDRIVER}" ; fi
       {
-        echo ""
-        echo "[printers]"
-        echo "comment = All Printers"
-        echo "path = /var/spool/samba"
-        echo "printable = yes"
-        echo "use client driver = Yes"
-        echo "guest ok = Yes"
-        echo "browseable = No"
+        printf "\n"
+        printf "[printers]"
+        printf "comment = All Printers"
+        printf "path = /var/spool/samba"
+        printf "printable = yes"
+        printf "use client driver = Yes"
+        printf "guest ok = Yes"
+        printf "browseable = No"
+		printf "\n"
+		printf "[PRINT$]"
+		printf "path = %s" , "${DIR_SAMBA_PRINTDRIVER}"
+	    printf "read only = no"
+	    printf "write list = @\"Domain Admins\""
       } >> "${FILE_SAMBA_CONF}"
     else
       SetKeyValueFilePattern 'load printers' 'no'
@@ -431,10 +465,11 @@ appFirstStart () {
     #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
     ARGS_NET_RPC=()
     ARGS_NET_RPC+=("${UDOMAIN}\\Domain Admins")
-    ARGS_NET_RPC+=("SeDiskOperatorPrivilege")
+    #ARGS_NET_RPC+=("SeDiskOperatorPrivilege")
     ARGS_NET_RPC+=("-U${UDOMAIN}\\${DOMAIN_USER,,}")
     ARGS_NET_RPC+=("-d ${DEBUG_LEVEL}")
-    echo "${DOMAIN_PASS}" | net rpc rights grant "${ARGS_NET_RPC[@]}" 
+    echo "${DOMAIN_PASS}" | net rpc rights grant "${ARGS_NET_RPC[@]}" "SeDiskOperatorPrivilege"
+    if [[ "${ENABLE_CUPS,,}" = true ]]; then  net rpc rights grant "${ARGS_NET_RPC[@]}" "SePrintOperatorPrivilege"
   # if JOIN=true
   else
   #ERROR?`{{DC_IP}}:$LDAP_SUFFIX:g {DC_DNS}}:$LDAP_SUFFIX:g

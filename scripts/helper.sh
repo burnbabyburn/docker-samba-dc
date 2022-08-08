@@ -104,26 +104,34 @@ RDNSZonefromCIDR () {
   IP=''
   MASK=''
   IP_REVERSE=''
+  IP_NET=''
   if [[ "$HOSTIP" != "NONE" ]]; then
     if grep '/' <<< "$HOSTIP" ; then
       IP=$(echo "$HOSTIP" | cut -d "/" -f1)
       MASK=$(echo "$HOSTIP" | cut -d "/" -f2)
       # https://stackoverflow.com/questions/13777387/check-for-ip-validity
-      if [[ $IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then samba-tool sites subnet create "$HOSTIP" "$JOIN_SITE" ${SAMBA_DEBUG_OPTION}
-      else echo "Cant not create subnet: $HOSTIP for site: $JOIN_SITE. Invalid IP parameter ... exiting" ; exit 1 ; fi
-      if ((MASK >= 1 && MASK <= 8)); then
-        IP_REVERSE=$(echo "$IP" | awk -F. '{print $1}')
+      if [[ $IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then 
+	    
+        if ((MASK >= 1 && MASK <= 8)); then
+          IP_REVERSE=$(echo "$IP" | awk -F. '{print $1}')
+		  IP_NET=$(echo "$IP" | awk -F. '{print $1".0.0.0"}')
+        fi
+        if ((MASK >= 9 && MASK <= 16)); then
+          IP_REVERSE=$(echo "$IP" | awk -F. '{print $2"."$1}')
+		  IP_NET=$(echo "$IP" | awk -F. '{print $1"."$2".0.0"}')
+        fi
+        if ((MASK >= 17 && MASK <= 24)); then
+          IP_REVERSE=$(echo "$IP" | awk -F. '{print $3"." $2"."$1}')
+		  IP_NET=$(echo "$IP" | awk -F. '{print $1"."$2"."$3".0"}')
+        fi
+		samba-tool sites subnet create "${IP_NET}/${MASK}" "$JOIN_SITE" ${SAMBA_DEBUG_OPTION}
+        echo "${DOMAIN_PASS}" | samba-tool dns zonecreate 127.0.0.1 "$IP_REVERSE".in-addr.arpa -UAdministrator ${SAMBA_DEBUG_OPTION}
+      else 
+	    echo "Cant not create subnet: ${HOSTIP} for site: $JOIN_SITE. Invalid IP parameter ... exiting" ; exit 1 ; fi
       fi
-      if ((MASK >= 9 && MASK <= 16)); then
-        IP_REVERSE=$(echo "$IP" | awk -F. '{print $2"."$1}')
-      fi
-      if ((MASK >= 17 && MASK <= 24)); then
-        IP_REVERSE=$(echo "$IP" | awk -F. '{print $3"." $2"."$1}')
-      fi
-      echo "${DOMAIN_PASS}" | samba-tool dns zonecreate 127.0.0.1 "$IP_REVERSE".in-addr.arpa -UAdministrator ${SAMBA_DEBUG_OPTION}
-    fi
       #this removes all internal docker IPs from samba DNS
       #samba_dnsupdate --current-ip="${HOSTIP%/*}"
+    fi
   fi
 
   # https://stackoverflow.com/questions/5281341/get-local-network-interface-addresses-using-only-proc
