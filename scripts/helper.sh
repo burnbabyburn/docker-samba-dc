@@ -22,15 +22,22 @@ setupSchemaRFC2307File() {
 
   UID_KRBTGT=$((IMAP_UID_START))
   UID_GUEST=$((IMAP_UID_START+1))
+
   # https://wiki.samba.org/index.php/Setting_up_Samba_as_a_Domain_Member#Mapping_the_Domain_Administrator_Account_to_the_Local_root_User
   # When using the ad ID mapping back end, never set a uidNumber attribute for the domain Administrator account.
   # If the account has the attribute set, the value will override the local UID 0 of the root user on Samba AD DC's and thus the mapping fails.
   #UID_ADMINISTRATOR=$((IMAP_UID_START+2))
 
+  # https://wiki.samba.org/index.php/Setting_up_a_Share_Using_Windows_ACLs#Granting_the_SeDiskOperatorPrivilege_Privilege
+  # If you use the winbind 'ad' backend on Unix domain members and you add a gidNumber attribute to the Domain Admins group in AD,
+  # you will break the mapping in idmap.ldb. Domain Admins is mapped as ID_TYPE_BOTH in idmap.ldb, this is to allow the group to own files in Sysvol on a Samba AD DC.
+  # It is suggested you create a new AD group (Unix Admins for instance),
+  # give this group a gidNumber attribute and add it to the Administrators group and then, on Unix, use the group wherever you would normally use Domain Admins
+
   #Next Counter value uesd by ADUC for NIS Extension GID and UID
   IMAP_GID_END=$((IMAP_GID_START+15))
   IMAP_UID_END=$((IMAP_UID_START+1))
-  
+
   sed -e "s: {{ LDAP_SUFFIX }}:$LDAP_SUFFIX:g" \
     -e "s:{{ NETBIOS }}:${DOMAIN_NETBIOS,,}:g" \
     -e "s:{{ GID_DOM_USER }}:$GID_DOM_USER:g" \
@@ -60,7 +67,7 @@ setupSchemaRFC2307File() {
 # AddSetKeyValueSMBCONF workgroup MYWORKGROUPNAME
 # https://stackoverflow.com/questions/407523/escape-a-string-for-a-sed-replace-pattern
 # https://fabianlee.org/2019/10/05/bash-setting-and-replacing-values-in-a-properties-file-use-sed/
- 
+
 SetKeyValueFilePattern() {
   PATTERN=${4:-[global]}
   FILE=${3:-"$FILE_SAMBA_CONF"}
@@ -110,8 +117,8 @@ RDNSZonefromCIDR () {
       IP=$(echo "$HOSTIP" | cut -d "/" -f1)
       MASK=$(echo "$HOSTIP" | cut -d "/" -f2)
       # https://stackoverflow.com/questions/13777387/check-for-ip-validity
-      if [[ $IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then 
-        
+      if [[ $IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+
         if ((MASK >= 1 && MASK <= 8)); then
           IP_REVERSE=$(echo "$IP" | awk -F. '{print $1}')
           IP_NET=$(echo "$IP" | awk -F. '{print $1".0.0.0"}')
@@ -126,7 +133,7 @@ RDNSZonefromCIDR () {
         fi
         samba-tool sites subnet create "${IP_NET}/${MASK}" "$JOIN_SITE" "${SAMBA_DEBUG_OPTION}"
         echo "${DOMAIN_PASS}" | samba-tool dns zonecreate 127.0.0.1 "$IP_REVERSE".in-addr.arpa -UAdministrator "${SAMBA_DEBUG_OPTION}"
-      else 
+      else
         echo "Cant not create subnet: ${HOSTIP} for site: $JOIN_SITE. Invalid IP parameter ... exiting" ; exit 1 ; fi
       fi
       #this removes all internal docker IPs from samba DNS

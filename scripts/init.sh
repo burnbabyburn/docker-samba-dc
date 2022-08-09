@@ -24,15 +24,15 @@ config() {
   DEBUG_LEVEL=${DEBUG_LEVEL:-0}
   DISABLE_DNS_WPAD_ISATAP=${DISABLE_DNS_WPAD_ISATAP:-false}
   DISABLE_MD5=${DISABLE_MD5:-true}
-  DOMAIN_ACC_LOCK_DURATION=${DOMAIN_ACC_LOCK_DURATION:-30} 
-  DOMAIN_ACC_LOCK_RST_AFTER=${DOMAIN_ACC_LOCK_RST_AFTER:-30} 
-  DOMAIN_ACC_LOCK_THRESHOLD=${DOMAIN_ACC_LOCK_THRESHOLD:-0} 
+  DOMAIN_ACC_LOCK_DURATION=${DOMAIN_ACC_LOCK_DURATION:-30}
+  DOMAIN_ACC_LOCK_RST_AFTER=${DOMAIN_ACC_LOCK_RST_AFTER:-30}
+  DOMAIN_ACC_LOCK_THRESHOLD=${DOMAIN_ACC_LOCK_THRESHOLD:-0}
   DOMAIN_NETBIOS=${DOMAIN_NETBIOS:-$URDOMAIN}
   DOMAIN_PASS=${DOMAIN_PASS:-youshouldsetapassword}
-  DOMAIN_PWD_COMPLEXITY=${DOMAIN_PWD_COMPLEXITY:-true} 
-  DOMAIN_PWD_HISTORY_LENGTH=${DOMAIN_PWD_HISTORY_LENGTH:-24} 
-  DOMAIN_PWD_MAX_AGE=${DOMAIN_PWD_MAX_AGE:-43} 
-  DOMAIN_PWD_MIN_AGE=${DOMAIN_PWD_MIN_AGE:-1} 
+  DOMAIN_PWD_COMPLEXITY=${DOMAIN_PWD_COMPLEXITY:-true}
+  DOMAIN_PWD_HISTORY_LENGTH=${DOMAIN_PWD_HISTORY_LENGTH:-24}
+  DOMAIN_PWD_MAX_AGE=${DOMAIN_PWD_MAX_AGE:-43}
+  DOMAIN_PWD_MIN_AGE=${DOMAIN_PWD_MIN_AGE:-1}
   DOMAIN_PWD_MIN_LENGTH=${DOMAIN_PWD_MIN_LENGTH:-7}
   DOMAIN_USER=${DOMAIN_USER:-Administrator}
   ENABLE_CUPS=${ENABLE_CUPS:-false}
@@ -78,6 +78,7 @@ config() {
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba/
   DIR_SAMBA_ETC=/etc/samba/
   DIR_SAMBA_CSHARE=/var/lib/samba/share_c/
+  FILE_SAMBA_LOG=/var/log/samba/%m.log
   FILE_KRB5=/etc/krb5.conf
   FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
@@ -144,7 +145,7 @@ config() {
   export FILE_NSSWITCH_EXTERNAL="${FILE_NSSWITCH_EXTERNAL}"
 #  export FILE_SAMBA_INCLUDES="${FILE_SAMBA_INCLUDES}"
   # shellcheck source=/scripts/helper.sh
-  source /scripts/helper.sh
+  source /"${DIR_SCRIPTS}"/helper.sh
 }
 
 appSetup () {
@@ -163,7 +164,7 @@ appSetup () {
 
   # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
   ARGS_SAMBA_TOOL+=("--option=password hash userPassword schemes = CryptSHA256 CryptSHA512")
-  # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes also for idmap 
+  # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes also for idmap
   ARGS_SAMBA_TOOL+=("--option=template shell = /bin/false")
   ARGS_SAMBA_TOOL+=("--option=template homedir = /dev/null")
   # Setup ACLs correctly https://github.com/thctlo/samba4/blob/master/samba-setup-share-folders.sh
@@ -264,15 +265,10 @@ appSetup () {
   fi
 
   if [[ "${ENABLE_LOGS,,}" = true ]]; then
-    ARGS_SAMBA_TOOL+=("--option=log file = /var/log/samba/%m.log")
+    ARGS_SAMBA_TOOL+=("--option=log file = ${FILE_SAMBA_LOG}")
     ARGS_SAMBA_TOOL+=("--option=max log size = 10000")
     ARGS_SAMBA_TOOL+=("--option=log level = ${DEBUG_LEVEL}")
     sed -i '/FILE:/s/^#_//g' "$FILE_NTP"
-  fi
-  # Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
-  if [ ! -f "${FILE_SAMBA_USER_MAP}" ]; then
-    printf '!'"root = %s\\%s" > "${FILE_SAMBA_USER_MAP}" , "${DOMAIN_NETBIOS}","${DOMAIN_USER}"
-    ARGS_SAMBA_TOOL+=("--option=username map = ${FILE_SAMBA_USER_MAP}")
   fi
 
   # nsswitch anpassen
@@ -296,6 +292,11 @@ appSetup () {
       do
         samba-tool domain join "${ARGS_SAMBA_TOOL[@]}" && s=0 && break || s=$? && sleep 60
       done; (exit $s)
+      # Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
+      if [ ! -f "${FILE_SAMBA_USER_MAP}" ]; then
+        printf '!'"root = %s\\%s" > "${FILE_SAMBA_USER_MAP}" , "${DOMAIN_NETBIOS}","${DOMAIN_USER}"
+        ARGS_SAMBA_TOOL+=("--option=username map = ${FILE_SAMBA_USER_MAP}")
+      fi
       # Netlogon & sysvol readonly on secondary DC
       if [[ ! -d "${DIR_SAMBA_NETLOGON}" ]]; then mkdir "${DIR_SAMBA_NETLOGON}" ; fi
       if [[ ! -d "${DIR_SAMBA_SYSVOL}" ]]; then mkdir "${DIR_SAMBA_SYSVOL}" ; fi
@@ -323,11 +324,11 @@ appSetup () {
       ARGS_SAMBA_TOOL+=("--adminpass=${DOMAIN_PASS}")
       ARGS_SAMBA_TOOL+=("--realm=${UDOMAIN}")
       ARGS_SAMBA_TOOL+=("--domain=${DOMAIN_NETBIOS}")
-      
+
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
-      
+
       samba-tool user setexpiry Administrator --noexpiry
-      if [[ ! -d "${DIR_SAMBA_CSHARE}" ]]; then 
+      if [[ ! -d "${DIR_SAMBA_CSHARE}" ]]; then
         mkdir -p "${DIR_SAMBA_EVENTLOG}"
         mkdir -p "${DIR_SAMBA_ADMIN}"
         #ln -s "$DIR_SAMBA_SYSVOL" "$DIR_SAMBA_CSHARE/sysvol"
@@ -347,10 +348,10 @@ appSetup () {
 
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
       if [[ "${FEATURE_RECYCLEBIN}" = true ]]; then
-        python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
+        python3 /"${DIR_SCRIPTS}"/enablerecyclebin.py "${FILE_SAMLDB}"
         if grep 'CN=Recycle Bin Feature' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base \
         -b "CN=NTDS Settings,CN=${HOSTNAME},CN=Servers,CN=${JOIN_SITE},CN=Sites,CN=Configuration${LDAP_SUFFIX}" msDS-EnabledFeature) ; then echo "Optional Feature Recycle Bin Feature OK" ; else echo "FAILED" ; exit 1 ; fi
-      fi 
+      fi
 
       if [[ "${FEATURE_KERBEROS_TGT}" = true ]]; then EnableChangeKRBTGTSupervisord ; fi
 
@@ -358,24 +359,27 @@ appSetup () {
       if [[ "${ENABLE_RFC2307,,}" = true ]]; then
         setupSchemaRFC2307File
         ldbmodify -H "${FILE_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
-        if grep 'returned 1 records' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base -b CN="${DOMAIN_NETBIOS}",CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System"${LDAP_SUFFIX}"); then 
+        if grep 'returned 1 records' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base -b CN="${DOMAIN_NETBIOS}",CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System"${LDAP_SUFFIX}"); then
           echo "Add RFC2307 Attributes for default AD users" ; else echo 'FAILED' ; exit 1 ; fi
       fi
-#	  if [[ true = true ]]; then
-	    sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
+      # https://fy.blackhats.net.au/blog/html/2018/04/18/making_samba_4_the_default_ldap_server.html?highlight=samba
+      # https://blog.laslabs.com/2016/08/storing-ssh-keys-in-active-directory/
+      # https://wiki.samba.org/index.php/Samba_AD_schema_extensions
+#     if [[ true = true ]]; then
+        sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SSH1}.j2" > "${FILE_SAMBA_SCHEMA_SSH1}"
-	    sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
+        sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SSH2}.j2" > "${FILE_SAMBA_SCHEMA_SSH2}"
-		ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
-		ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
 #      fi
 
-	    sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
+        sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SUDO1}.j2" > "${FILE_SAMBA_SCHEMA_SUDO1}"
-	    sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
+        sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SUDO2}.j2" > "${FILE_SAMBA_SCHEMA_SUDO2}"
-		ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SUDO1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
-		ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SUDO2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SUDO1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SUDO2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
 
       # https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507'
       # Microsoft Local Administrator Password Solution (LAPS) https://www.microsoft.com/en-us/download/details.aspx?id=46899
@@ -393,7 +397,7 @@ appSetup () {
       if [[ "${DOMAIN_PWD_MIN_AGE}" != 1 ]]; then samba-tool domain passwordsettings set --min-pwd-age="$DOMAIN_PWD_MIN_AGE" "${SAMBA_DEBUG_OPTION}" ; fi
       if [[ "${DOMAIN_PWD_MIN_LENGTH}" != 7 ]]; then samba-tool domain passwordsettings set --min-pwd-length="$DOMAIN_PWD_MIN_LENGTH" "${SAMBA_DEBUG_OPTION}" ; fi
       if [[ "${DOMAIN_PWD_COMPLEXITY}" = false ]]; then samba-tool domain passwordsettings set --complexity="$DOMAIN_PWD_COMPLEXITY" "${SAMBA_DEBUG_OPTION}" ; fi
-      
+
       if [[ "${DOMAIN_ACC_LOCK_DURATION}" != 30 ]]; then samba-tool domain passwordsettings set --account-lockout-duration="$DOMAIN_ACC_LOCK_DURATION" "${SAMBA_DEBUG_OPTION}" ; fi
       if [[ "${DOMAIN_ACC_LOCK_THRESHOLD}" != 0 ]]; then samba-tool domain passwordsettings set --account-lockout-threshold="$DOMAIN_ACC_LOCK_THRESHOLD" "${SAMBA_DEBUG_OPTION}" ; fi
       if [[ "${DOMAIN_ACC_LOCK_RST_AFTER}" != 30 ]]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" "${SAMBA_DEBUG_OPTION}" ; fi
@@ -484,15 +488,15 @@ appFirstStart () {
     echo "Check DNS _kerberos._tcp"; host -t SRV _kerberos._udp."${LDOMAIN}"
     echo "Check Host record"; host -t A "${HOSTNAME}.${LDOMAIN}"
     echo "Check Reverse DNS resolution"; dig -x "${IP}"
-    
+
     #Copy root cert as der to netlogon
     #openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
     #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
     ARGS_NET_RPC=()
     ARGS_NET_RPC+=("${UDOMAIN}\\Domain Admins")
     #ARGS_NET_RPC+=("SeDiskOperatorPrivilege")
-    ARGS_NET_RPC+=("-U${UDOMAIN}\\${DOMAIN_USER,,}")
     ARGS_NET_RPC+=("-d ${DEBUG_LEVEL}")
+    ARGS_NET_RPC+=("-U${UDOMAIN}\\${DOMAIN_USER,,}")
     echo "${DOMAIN_PASS}" | net rpc rights grant "${ARGS_NET_RPC[@]}" "SeDiskOperatorPrivilege"
     if [[ "${ENABLE_CUPS,,}" = true ]]; then net rpc rights grant "${ARGS_NET_RPC[@]}" "SePrintOperatorPrivilege" ; fi
   # if JOIN=true
@@ -500,7 +504,7 @@ appFirstStart () {
   #ERROR?`{{DC_IP}}:$LDAP_SUFFIX:g {DC_DNS}}:$LDAP_SUFFIX:g
     if [ -f "${FILE_SAMBA_WINSLDB}" ] && [ "${ENABLE_WINS}" = true ];then
       sed -e "s: {{DC_IP}}:${LDAP_SUFFIX}:g" \
-          -e "s: {{DC_DNS}}:${LDAP_SUFFIX}:g" \
+          -e "s: {{DC_DNS}}:${HOSTNAME}:g" \
           "${FILE_SAMBA_SCHEMA_WINSREPL}.j2" > "${FILE_SAMBA_SCHEMA_WINSREPL}"
     ldbadd -H "${FILE_SAMBA_WINSLDB}" "${FILE_SAMBA_SCHEMA_WINSREPL}"
     fi
