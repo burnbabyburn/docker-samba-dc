@@ -1,6 +1,7 @@
 # FORKED
 ![Githubg Workflow Image CI](https://img.shields.io/github/workflow/status/burnbabyburn/docker-ubuntu-samba-dc/Docker%20Image%20CI)
 * No OpenVPN testing
+* Build test via docker actions
 * Mount custom Samba [global] parameters to files in /etc/samba/smb.conf.d
 
 # Samba Active Directory Domain Controller for Docker
