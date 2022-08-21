@@ -2,7 +2,7 @@ name: ci Build and push
 
 on:
   push:
-    branches: [ my ]
+    branches: [ My ]
 
 jobs:
   docker:
