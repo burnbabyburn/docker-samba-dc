@@ -188,6 +188,9 @@ appSetup () {
 
   if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
 
+  mkdir "/var/log/ntpsec/"
+  chown -R root:root "/var/log/ntpsec/"
+
   if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then echo "0.0" > "${FILE_NTP_DRIFT}" ; fi
   if [[ ! -d "${DIR_NTP_DRIFT}" ]]; then mkdir "${DIR_NTP_DRIFT}";else chown -R root:root "${DIR_NTP_DRIFT}"; fi
 
