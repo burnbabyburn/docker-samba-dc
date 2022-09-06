@@ -260,8 +260,8 @@ appSetup () {
     ARGS_SAMBA_TOOL+=("--option=tls certfile = $FILE_PKI_CERT")
     ARGS_SAMBA_TOOL+=("--option=tls cafile = $FILE_PKI_CA")
     ARGS_SAMBA_TOOL+=("--option=tls dh params file = $FILE_PKI_DH")
-    ARGS_SAMBA_TOOL+=("--option=tls crlfile = $FILE_PKI_CRL")
-    ARGS_SAMBA_TOOL+=("--option=tls verify peer = ca_and_name")
+#    ARGS_SAMBA_TOOL+=("--option=tls crlfile = $FILE_PKI_CRL")
+#    ARGS_SAMBA_TOOL+=("--option=tls verify peer = ca_and_name")
   else
     ARGS_SAMBA_TOOL+=("--option=tls enabled = no")
   fi
