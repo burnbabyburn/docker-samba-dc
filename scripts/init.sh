@@ -252,20 +252,6 @@ appSetup () {
     ARGS_SAMBA_TOOL+=("--option=time server = yes")
   fi
 
-  if [ "${TLS_ENABLE,,}" = true ]; then
-    if [ ! -f "${FILE_PKI_CERT}" ] && [ ! -f "${FILE_PKI_KEY}" ] && [ ! -f "${FILE_PKI_CA}" ]; then echo "No custom CA found. Samba will autogenerate one" ; fi
-    if [ ! -f "${FILE_PKI_DH}" ]; then openssl dhparam -out "${FILE_PKI_DH}" 2048 ; fi
-    ARGS_SAMBA_TOOL+=("--option=tls enabled = yes")
-    ARGS_SAMBA_TOOL+=("--option=tls keyfile = $FILE_PKI_KEY")
-    ARGS_SAMBA_TOOL+=("--option=tls certfile = $FILE_PKI_CERT")
-    ARGS_SAMBA_TOOL+=("--option=tls cafile = $FILE_PKI_CA")
-    ARGS_SAMBA_TOOL+=("--option=tls dh params file = $FILE_PKI_DH")
-#    ARGS_SAMBA_TOOL+=("--option=tls crlfile = $FILE_PKI_CRL")
-#    ARGS_SAMBA_TOOL+=("--option=tls verify peer = ca_and_name")
-  else
-    ARGS_SAMBA_TOOL+=("--option=tls enabled = no")
-  fi
-
   if [[ "${ENABLE_LOGS,,}" = true ]]; then
     ARGS_SAMBA_TOOL+=("--option=log file = ${FILE_SAMBA_LOG}")
     ARGS_SAMBA_TOOL+=("--option=max log size = 10000")
@@ -437,6 +423,20 @@ appSetup () {
       SetKeyValueFilePattern 'printcap name' '/dev/null'
       SetKeyValueFilePattern 'disable spoolss' 'yes'
     fi
+
+  if [ "${TLS_ENABLE,,}" = true ]; then
+    if [ ! -f "${FILE_PKI_CERT}" ] && [ ! -f "${FILE_PKI_KEY}" ] && [ ! -f "${FILE_PKI_CA}" ]; then echo "No custom CA found. Samba will autogenerate one" ; fi
+    if [ ! -f "${FILE_PKI_DH}" ]; then openssl dhparam -out "${FILE_PKI_DH}" 2048 ; fi
+    ARGS_SAMBA_TOOL+=("--option=tls enabled = yes")
+    ARGS_SAMBA_TOOL+=("--option=tls keyfile = $FILE_PKI_KEY")
+    ARGS_SAMBA_TOOL+=("--option=tls certfile = $FILE_PKI_CERT")
+    ARGS_SAMBA_TOOL+=("--option=tls cafile = $FILE_PKI_CA")
+    ARGS_SAMBA_TOOL+=("--option=tls dh params file = $FILE_PKI_DH")
+#    ARGS_SAMBA_TOOL+=("--option=tls crlfile = $FILE_PKI_CRL")
+#    ARGS_SAMBA_TOOL+=("--option=tls verify peer = ca_and_name")
+  else
+    ARGS_SAMBA_TOOL+=("--option=tls enabled = no")
+  fi
 
     # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
     backupConfig
