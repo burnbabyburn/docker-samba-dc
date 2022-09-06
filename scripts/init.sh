@@ -189,6 +189,8 @@ appSetup () {
   if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
 
   if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then echo "0.0" > "${FILE_NTP_DRIFT}" ; fi
+  if [[ ! -d "${DIR_NTP_DRIFT}" ]]; then mkdir "${DIR_NTP_DRIFT}";else chown -R root:root "${DIR_NTP_DRIFT}"; fi
+
   chown -R root:root "${DIR_NTP_DRIFT}"
   if grep "{{ NTPSERVER }}" "${FILE_NTP}"; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
@@ -337,8 +339,8 @@ appSetup () {
         printf '\n'
         printf '[C$]\n'
         printf 'path = %s\n' "${DIR_SAMBA_CSHARE}"
-        printf 'read only = No\n'
-        printf 'valid users = @Domain Admins\n'
+        printf 'read only = no\n'
+        printf 'valid users = @\"Domain Admins\"\n'
         printf '\n'
         printf '[ADMIN$]\n'
         printf 'path = %s\n' "${DIR_SAMBA_ADMIN}"
@@ -515,7 +517,7 @@ appFirstStart () {
 
 appStart () {
   update-ca-certificates
-  config
+  restoreConfig
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}"
 }
 
@@ -524,7 +526,6 @@ config
 
 # If the supervisor conf isn't there, we're spinning up a new container
 if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
-  restoreConfig
   appStart
 else
   appSetup || exit 1
