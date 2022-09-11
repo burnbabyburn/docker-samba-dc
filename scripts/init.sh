@@ -75,6 +75,7 @@ config() {
   #DIR_GPO=/gpo
   DIR_NTP_DRIFT=/var/lib/ntp/
   DIR_NTP_SOCK=/var/lib/samba/ntp_signd/
+  DIR_NTP_STAT=/var/log/ntpstats/
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba/
   DIR_SAMBA_ETC=/etc/samba/
   DIR_SAMBA_CSHARE=/var/lib/samba/share_c/
@@ -190,6 +191,7 @@ appSetup () {
 
   if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then echo "0.0" > "${FILE_NTP_DRIFT}" ; fi
   if [[ ! -d "${DIR_NTP_DRIFT}" ]]; then mkdir "${DIR_NTP_DRIFT}";else chown -R root:root "${DIR_NTP_DRIFT}"; fi
+  if [[ ! -d "${DIR_NTP_STAT}" ]]; then mkdir "${DIR_NTP_STAT}";else chown -R root:root "${DIR_NTP_STAT}"; fi
 
   chown -R root:root "${DIR_NTP_DRIFT}"
   if grep "{{ NTPSERVER }}" "${FILE_NTP}"; then
@@ -485,7 +487,7 @@ appFirstStart () {
     echo "smbclient: Connect as anonymous user" ; if grep 'Anonymous login successful' <(smbclient -N -L LOCALHOST "${SAMBA_DEBUG_OPTION}") ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
     echo "smbclient: Connect as ${DOMAIN_USER}" ; if grep '[[:blank:]]session setup ok' <(smbclient --debug-stdout -d 4 -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST) ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
     echo "Kerberos: Connect as ${DOMAIN_USER}" ; if echo "${DOMAIN_PASS}" | kinit "${DOMAIN_USER}" ; then echo 'OK' ; klist ; kdestroy ; else echo 'FAILED' ; exit 1 ; fi
-    echo "Check NTP"; ntpq -c sysinfo "${SAMBA_DEBUG_OPTION}"
+    echo "Check NTP"; ntpq -c sysinfo ${SAMBA_DEBUG_OPTION}
     echo "Check DNS _ldap._tcp"; host -t SRV _ldap._tcp."${LDOMAIN}"
     echo "Check DNS _kerberos._tcp"; host -t SRV _kerberos._udp."${LDOMAIN}"
     echo "Check Host record"; host -t A "${HOSTNAME}.${LDOMAIN}"
