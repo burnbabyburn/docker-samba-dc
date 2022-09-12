@@ -1,6 +1,11 @@
-name: Build and publish on release
+name: Build and publish on tag or release
 
 on:
+  push:
+    # Push events to every tag including hierarchical tags like v1.0/beta
+    # '*' # Push events to every tag not containing /
+    tags:
+      - '**'
   release:
     types: [published]
 
