@@ -32,13 +32,6 @@ jobs:
           tags: |
             latest
             type=ref,event=tag
-#      -
-#        name: get history
-#        run: git fetch --prune --unshallow
-#      -
-#        name: Get tag
-#        id: repository
-#        run: echo  "::set-output name=tag::$(git describe --tags --abbrev=0)"
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2
