@@ -1,9 +1,8 @@
 name: Build and publish on tag
 
 on:
-  push:
-    tags:        
-      - '*'
+  release:
+    types: [published]
 
 jobs:
   docker:
