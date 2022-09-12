@@ -75,7 +75,8 @@ config() {
   #DIR_GPO=/gpo
   DIR_NTP_DRIFT=/var/lib/ntp/
   DIR_NTP_SOCK=/var/lib/samba/ntp_signd/
-  DIR_NTP_STAT=/var/log/ntpstats/
+  DIR_NTP_STATS=/var/log/ntpstats/
+  DIR_NTP_LOG=/var/log/ntp/
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba/
   DIR_SAMBA_ETC=/etc/samba/
   DIR_SAMBA_CSHARE=/var/lib/samba/share_c/
@@ -191,9 +192,15 @@ appSetup () {
 
   if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then echo "0.0" > "${FILE_NTP_DRIFT}" ; fi
   if [[ ! -d "${DIR_NTP_DRIFT}" ]]; then mkdir "${DIR_NTP_DRIFT}";else chown -R root:root "${DIR_NTP_DRIFT}"; fi
-  if [[ ! -d "${DIR_NTP_STAT}" ]]; then mkdir "${DIR_NTP_STAT}";else chown -R root:root "${DIR_NTP_STAT}"; fi
+  if [[ ! -d "${DIR_NTP_STATS}" ]]; then mkdir "${DIR_NTP_STATS}";else chown -R root:root "${DIR_NTP_STATS}"; fi
 
-  chown -R root:root "${DIR_NTP_DRIFT}"
+  #see line 193 doublet
+  #chown -R root:root "${DIR_NTP_DRIFT}"
+  
+  if grep "{{ DIR_NTP_STATS }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_STATS }}:${DIR_NTP_STATS}:" -i "${FILE_NTP}"; fi
+  if grep "{{ DIR_NTP_SOCK }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_SOCK }}:${DIR_NTP_SOCK}:" -i "${FILE_NTP}"; fi
+  if grep "{{ DIR_NTP_LOG }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_LOG }}:${DIR_NTP_LOG}:" -i "${FILE_NTP}"; fi
+
   if grep "{{ NTPSERVER }}" "${FILE_NTP}"; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
     NTPSERVER=""
