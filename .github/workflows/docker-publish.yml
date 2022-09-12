@@ -38,7 +38,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
+            ghcr.io/${{ github.actor }}/docker-ubuntu-samba-dc:latest
             ghcr.io/${{ github.repository }}:${{ steps.repository.outputs.tag }}
-            ghcr.io/${{ github.repository }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
