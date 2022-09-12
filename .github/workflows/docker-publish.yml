@@ -18,19 +18,6 @@ jobs:
         name: Checkout
         uses: actions/checkout@v3
         
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ghcr.io/burnbabyburn/docker-ubuntu-samba-dc
-          flavor: latest=true
-          labels: |
-            maintainer=Burnbabyburn
-            org.opencontainers.image.title=docker-ubuntu-samba-dc
-            org.opencontainers.image.description=Samba Active Directory Domain Controller for Docker built from scratch using internal DNS and NTP.
-          tags: |
-            type=ref,event=tag
-            type=semver,pattern={{raw}}
 #      -
 #        name: get history
 #        run: git fetch --prune --unshallow
@@ -59,6 +46,20 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - 
+        name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/burnbabyburn/docker-ubuntu-samba-dc
+          flavor: latest=true
+          labels: |
+            maintainer=Burnbabyburn
+            org.opencontainers.image.title=docker-ubuntu-samba-dc
+            org.opencontainers.image.description=Samba Active Directory Domain Controller for Docker built from scratch using internal DNS and NTP.
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{raw}}
       -
         name: Build and push
         uses: docker/build-push-action@v3.1.0
