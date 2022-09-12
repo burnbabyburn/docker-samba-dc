@@ -113,6 +113,7 @@ config() {
   FILE_SAMBA_SCHEMA_LAPS2="${DIR_LDIF}/laps-2.ldif"
   FILE_SAMBA_SCHEMA_SSH1="${DIR_LDIF}/ssh-1.ldif"
   FILE_SAMBA_SCHEMA_SSH2="${DIR_LDIF}/ssh-2.ldif"
+  FILE_SAMBA_SCHEMA_SSH3=="${DIR_LDIF}/ssh-3.ldif"
   FILE_SAMBA_SCHEMA_SUDO1="${DIR_LDIF}/sudo-1.ldif"
   FILE_SAMBA_SCHEMA_SUDO2="${DIR_LDIF}/sudo-2.ldif"
   FILE_SAMBA_SCHEMA_RFC="${DIR_LDIF}/RFC_Domain_User_Group.ldif"
@@ -362,13 +363,17 @@ appSetup () {
       # https://fy.blackhats.net.au/blog/html/2018/04/18/making_samba_4_the_default_ldap_server.html?highlight=samba
       # https://blog.laslabs.com/2016/08/storing-ssh-keys-in-active-directory/
       # https://wiki.samba.org/index.php/Samba_AD_schema_extensions
+	  # https://gist.github.com/hsw0/5132d5dabd4384108b48
 #     if [[ true = true ]]; then
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SSH1}.j2" > "${FILE_SAMBA_SCHEMA_SSH1}"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SSH2}.j2" > "${FILE_SAMBA_SCHEMA_SSH2}"
+        sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
+        "${FILE_SAMBA_SCHEMA_SSH3}.j2" > "${FILE_SAMBA_SCHEMA_SSH3}"
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+		ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH3}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
 #      fi
 
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
