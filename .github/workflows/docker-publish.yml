@@ -2,9 +2,9 @@ name: ci Build and push
 
 on:
   push:
-    # Pattern matched against refs/tags
+    branches: [ tags ]
     tags:        
-      - '*'           # Push events to every tag not containing /
+      - '*'
 
 jobs:
   docker:
