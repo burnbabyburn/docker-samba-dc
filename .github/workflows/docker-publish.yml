@@ -22,7 +22,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ghcr.io/${{ github.repository }} 
+          images: |
+            ghcr.io/${{ github.repository }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/docker-ubuntu-samba-dc
           labels: |
             maintainer=Burnbabyburn
             org.opencontainers.image.title=docker-ubuntu-samba-dc
