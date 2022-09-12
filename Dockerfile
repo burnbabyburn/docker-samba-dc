@@ -9,8 +9,6 @@
 #    && msiextract -C /tmp/ admx.msi
 
 FROM ubuntu:devel
-#ARG src="/tmp/Program Files/Microsoft Group Policy/"
-LABEL maintainer="Fmstrat <fmstrat@NOSPAM.NO>"
 
 ENV DEBIAN_FRONTEND=noninteractive \
     DIR_SAMBA_CONF=/etc/samba/conf.d/ \
