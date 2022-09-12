@@ -1,4 +1,4 @@
-name: ci Build and push
+name: Build and publish on push
 
 on:
   push:
