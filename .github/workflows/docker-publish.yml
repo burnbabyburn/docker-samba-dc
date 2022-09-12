@@ -13,6 +13,8 @@ jobs:
       -
         name: Checkout
         uses: actions/checkout@v3
+      -
+        name: get history
         run: git fetch --prune --unshallow
       -
         name: Get tag
