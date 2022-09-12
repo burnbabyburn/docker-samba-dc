@@ -12,13 +12,13 @@ jobs:
       -
         name: Checkout
         uses: actions/checkout@v3
-      -
-        name: get history
-        run: git fetch --prune --unshallow
-      -
-        name: Get tag
-        id: repository
-        run: echo  "::set-output name=tag::$(git describe --tags --abbrev=0)"
+#      -
+#        name: get history
+#        run: git fetch --prune --unshallow
+#      -
+#        name: Get tag
+#        id: repository
+#        run: echo  "::set-output name=tag::$(git describe --tags --abbrev=0)"
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -46,7 +46,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/docker-ubuntu-samba-dc:${{ steps.repository.outputs.tag }}
-            ghcr.io/${{ github.repository }}:${{ steps.repository.outputs.tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/docker-ubuntu-samba-dc:v0.1
+            ghcr.io/${{ github.repository }}:v0.1
+#            ${{ secrets.DOCKERHUB_USERNAME }}/docker-ubuntu-samba-dc:${{ steps.repository.outputs.tag }}
+#            ghcr.io/${{ github.repository }}:${{ steps.repository.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
