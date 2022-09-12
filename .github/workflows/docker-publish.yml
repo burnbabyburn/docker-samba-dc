@@ -56,7 +56,8 @@ jobs:
             org.opencontainers.image.description=Samba Active Directory Domain Controller for Docker built from scratch using internal DNS and NTP.
           tags: |
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'My') }}
-            type=ref,event=tag
+            type=ref,event=branch
+            type=semver,pattern={{raw}}
       -
         name: Build and push
         uses: docker/build-push-action@v3.1.0
