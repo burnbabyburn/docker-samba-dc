@@ -1,8 +1,8 @@
 name: ci Build and push
 
 on:
-  push:
-    branches: [ tags ]
+  release:
+    types: [published]
 
 jobs:
   docker:
