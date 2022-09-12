@@ -1,8 +1,10 @@
 name: ci Build and push
 
 on:
-  release:
-    types: [published]
+  push:
+    # Pattern matched against refs/tags
+    tags:        
+      - '*'           # Push events to every tag not containing /
 
 jobs:
   docker:
