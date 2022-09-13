@@ -60,6 +60,7 @@ config() {
   TLS_PKI_O=${PKI_O:-Simple Root CA}
   TLS_PKI_OU=${PKI_OU:-Samba}
   TZ=${TZ:-/Etc/UTC}
+  BIND9_VALIDATE_EXCEPT=${BIND9_VALIDATE_EXCEPT:-NONE}
 
   # Min Counter Values for NIS Attributes. Set in docker-compose
   # does nothing on DCs as they shall not use idmap settings.
@@ -93,8 +94,6 @@ config() {
   FILE_OPENVPNCONF=/docker.ovpn
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
-  FILE_BIND9_OPTIONS=${DIR_BIND9}/named.conf.options
-  FILE_BIND9_LOCAL=${DIR_BIND9}/named.conf.local
 
   DIR_SAMBA_SYSVOL="${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}"
   DIR_SAMBA_NETLOGON="${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts/"
@@ -103,15 +102,21 @@ config() {
   DIR_SAMBA_EXTERNAL="${DIR_SAMBA_ETC}/external/"
   DIR_SAMBA_PRINTDRIVER="${DIR_SAMBA_CSHARE}/windows/system32/spool/drivers/"
   DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private/"
+
+  FILE_BIND9_CONF="${DIR_BIND9}/named.conf"
+  FILE_BIND9_OPTIONS="${DIR_BIND9}/named.conf.options"
+  FILE_BIND9_LOCAL="${DIR_BIND9}/named.conf.local"
+  FILE_BIND9_SAMBA_CONF="${DIR_BIND9}/samba-named.conf"
+  FILE_BIND9_SAMBA_GENCONF="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
+
   FILE_PKI_CA="${DIR_SAMBA_PRIVATE}/tls/ca.pem"
   FILE_PKI_CERT="${DIR_SAMBA_PRIVATE}/tls/cert.pem"
   FILE_PKI_CRL="${DIR_SAMBA_PRIVATE}/tls/crl.pem"
   FILE_PKI_DH="${DIR_SAMBA_PRIVATE}/tls/dh.key"
   FILE_PKI_INT="${DIR_SAMBA_PRIVATE}/tls/intermediate.pem"
   FILE_PKI_KEY="${DIR_SAMBA_PRIVATE}/tls/key.pem"
+
   FILE_SAMBA_CONF="${DIR_SAMBA_ETC}/smb.conf"
-  FILE_BIND9_SAMBA_CONF="/etc/bind/samba-named.conf"
-  FILE_BIND9_SAMBA_GENCONF="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
 #  FILE_SAMBA_INCLUDES="${DIR_SAMBA_ETC}/includes.conf"
   FILE_SAMBA_SCHEMA_LAPS1="${DIR_LDIF}/laps-1.ldif"
   FILE_SAMBA_SCHEMA_LAPS2="${DIR_LDIF}/laps-2.ldif"
@@ -124,6 +129,7 @@ config() {
   FILE_SAMBA_SCHEMA_WINSREPL="${DIR_LDIF}/wins.ldif"
   FILE_SAMBA_USER_MAP="${DIR_SAMBA_ETC}/user.map"
   FILE_SAMBA_WINSLDB="${DIR_SAMBA_PRIVATE}/wins_config.ldb"
+
   FILE_SAMLDB="${DIR_SAMBA_PRIVATE}/sam.ldb"
 
   FILE_EXTERNAL_SUPERVISORD_CONF="${DIR_SAMBA_EXTERNAL}/supervisord.conf"
@@ -131,9 +137,20 @@ config() {
   FILE_EXTERNAL_NSSWITCH="${DIR_SAMBA_EXTERNAL}/nsswitch.conf"
   FILE_EXTERNAL_NTP_CONF="${DIR_SAMBA_EXTERNAL}/ntp.conf"
   FILE_EXTERNAL_SAMBA_CONF="${DIR_SAMBA_EXTERNAL}/smb.conf"
-  
+  FILE_EXTERNAL_BIND9_SAMBA_CONF="${DIR_SAMBA_EXTERNAL}/smb.conf"
+  FILE_EXTERNAL_BIND9_LOCAL="${DIR_SAMBA_EXTERNAL}/named.conf.local"
+  FILE_EXTERNAL_BIND9_OPTIONS="${DIR_SAMBA_EXTERNAL}/named.conf.options"
   # if hostname contains FQDN cut the rest
   if [[ "${HOSTNAME}" == *"."* ]]; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
+
+  if [[ ! $(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then 
+    printf "Missing last semicolon on ENABLE_DNSFORWARDER - fixed it"
+    ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER};"
+  fi
+  if [[ ! $(printf "%s" "${BIND9_VALIDATE_EXCEPT}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then 
+    printf "Missing last semicolon on BIND9_VALIDATE_EXCEPT - fixed it"
+    BIND9_VALIDATE_EXCEPT="${BIND9_VALIDATE_EXCEPT};"
+  fi
 
   #DN for LDIF
   LDAP_SUFFIX=""
@@ -162,15 +179,15 @@ config() {
 }
 
 appSetup () {
-  NTPUSERGROUP="ntp"
+#  NTPUSERGROUP="ntp"
+  NTPUSERGROUP="root"
   # github action likes to use ntpsec user. debian:unstable-slim also. -w exakt match
-  if grep -wq "ntpsec" "/etc/passwd"; then NTPUSERGROUP=ntpsec; fi
+#  if grep -wq "ntpsec" "/etc/passwd"; then NTPUSERGROUP=ntpsec; fi
 
   # if user not exists create user
-  if ! grep -q "ntp" "/etc/passwd"; then adduser --home /nonexistent --system --no-create-home --group ntp; fi
-  if ! grep -q "bind" "/etc/passwd"; then adduser --home /nonexistent --system --no-create-home --group bind; fi
-
-  printf "check users"; cat /etc/passwd; printf "check groups"; cat /etc/group;
+#  if ! grep -q "ntp" "/etc/passwd"; then adduser --home /nonexistent --system --no-create-home --group ntp; fi
+#  if ! grep -q "bind" "/etc/passwd"; then adduser --home /nonexistent --system --no-create-home --group bind; fi
+#  printf "check users"; cat /etc/passwd; printf "check groups"; cat /etc/group;
   ARGS_SAMBA_TOOL=()
   ARGS_SAMBA_TOOL+=("--dns-backend=BIND9_DLZ")
   ARGS_SAMBA_TOOL+=("--option=server services=-dns")
@@ -217,9 +234,9 @@ appSetup () {
   if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then printf "0.0" > "${FILE_NTP_DRIFT}";chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${FILE_NTP_DRIFT}";else chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${FILE_NTP_DRIFT}"; fi
   
   if [[ ! -d "${DIR_BIND9_RUN}" ]]; then mkdir "${DIR_BIND9_RUN}";chown -R bind:bind "${DIR_BIND9_RUN}";else chown -R bind:bind "${DIR_BIND9_RUN}"; fi
-  if [[ ! $(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then printf "Missing semicolon - fixing it for you"; ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER};"; fi
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
-
+  if [[ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]]; then printf "validate-except { \"%s\" };" "${BIND9_VALIDATE_EXCEPT}" > "${FILE_BIND9_LOCAL}"; fi  
+  
   if grep -q "{{ DIR_NTP_STATS }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_STATS }}:${DIR_NTP_STATS}:" -i "${FILE_NTP}"; fi
   if grep -q "{{ DIR_NTP_SOCK }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_SOCK }}:${DIR_NTP_SOCK}:" -i "${FILE_NTP}"; fi
   if grep -q "{{ DIR_NTP_LOG }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_LOG }}:${DIR_NTP_LOG}:" -i "${FILE_NTP}"; fi
@@ -347,11 +364,6 @@ appSetup () {
       ARGS_SAMBA_TOOL+=("--domain=${DOMAIN_NETBIOS}")
 
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
-	  
-	  #Add Debug to dynamically loadable zones (DLZ) - file exists after join/provision
-	  cp "${FILE_BIND9_SAMBA_GENCONF}" "${FILE_BIND9_SAMBA_CONF}"
-	  printf "include "\"%s\"";" "${FILE_BIND9_SAMBA_CONF}" > "${FILE_BIND9_LOCAL}"
-	  sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_SAMBA_CONF}"
 
       samba-tool user setexpiry Administrator --noexpiry
       if [[ ! -d "${DIR_SAMBA_CSHARE}" ]]; then
@@ -391,7 +403,7 @@ appSetup () {
       # https://fy.blackhats.net.au/blog/html/2018/04/18/making_samba_4_the_default_ldap_server.html?highlight=samba
       # https://blog.laslabs.com/2016/08/storing-ssh-keys-in-active-directory/
       # https://wiki.samba.org/index.php/Samba_AD_schema_extensions
-	  # https://gist.github.com/hsw0/5132d5dabd4384108b48
+      # https://gist.github.com/hsw0/5132d5dabd4384108b48
 #     if [[ true = true ]]; then
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SSH1}.j2" > "${FILE_SAMBA_SCHEMA_SSH1}"
@@ -401,7 +413,7 @@ appSetup () {
         "${FILE_SAMBA_SCHEMA_SSH3}.j2" > "${FILE_SAMBA_SCHEMA_SSH3}"
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
-		ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH3}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH3}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
 #      fi
 
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
@@ -432,6 +444,11 @@ appSetup () {
       if [[ "${DOMAIN_ACC_LOCK_THRESHOLD}" != 0 ]]; then samba-tool domain passwordsettings set --account-lockout-threshold="$DOMAIN_ACC_LOCK_THRESHOLD" "${SAMBA_DEBUG_OPTION}" ; fi
       if [[ "${DOMAIN_ACC_LOCK_RST_AFTER}" != 30 ]]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" "${SAMBA_DEBUG_OPTION}" ; fi
     fi
+    
+      #Add Debug to dynamically loadable zones (DLZ) - file exists after join/provision
+      cp "${FILE_BIND9_SAMBA_GENCONF}" "${FILE_BIND9_SAMBA_CONF}"
+      printf "include \"%s\";" "${FILE_BIND9_SAMBA_CONF}" > "${FILE_BIND9_LOCAL}"
+      sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_SAMBA_CONF}"
 
     # https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
     # https://wiki.samba.org/index.php/Setting_up_Samba_as_a_Print_Server

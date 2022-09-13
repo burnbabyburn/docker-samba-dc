@@ -11,13 +11,8 @@ options {
       forwarders { ENABLE_DNSFORWARDER };
       allow-transfer { none; };
 
-      #obsolete since bind 4.16
-      #dnssec-validation no;
-      #dnssec-enable no;
-      #dnssec-lookaside no;
-
       // If you only use IPv4.
-      listen-on-v6 { none; };
+      listen-on-v6 { any; };
       // listen on these ipnumbers.
       listen-on port 53 { any; };
       #listen-on port 53 { 192.168.0.6; 127.0.0.1; ::1; };
