@@ -143,8 +143,9 @@ config() {
   # if hostname contains FQDN cut the rest
   if [[ "${HOSTNAME}" == *"."* ]]; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
 
-  if [[ ! $(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER};"; fi
-  if [[ ! $(printf "%s" "${BIND9_VALIDATE_EXCEPT}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then BIND9_VALIDATE_EXCEPT="${BIND9_VALIDATE_EXCEPT};"; fi
+  # Check if strings end with semicolon. if not append it
+  if [[ ! $(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then export ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER};"; fi
+  if [[ ! $(printf "%s" "${BIND9_VALIDATE_EXCEPT}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then export BIND9_VALIDATE_EXCEPT="${BIND9_VALIDATE_EXCEPT};"; fi
 
   #DN for LDIF
   LDAP_SUFFIX=""
@@ -161,6 +162,7 @@ config() {
   export LDAP_DN="${LDAP_DN}"
   export LDAP_SUFFIX="${LDAP_SUFFIX}"
   export DIR_SCRIPTS="${DIR_SCRIPTS}"
+
   # Export if we don't source helper.sh in the future. These vars are needed from helper script
   export FILE_EXTERNAL_SUPERVISORD_CONF="${FILE_EXTERNAL_SUPERVISORD_CONF}"
   export FILE_EXTERNAL_KRB5_CONF="${FILE_EXTERNAL_KRB5_CONF}"
@@ -257,7 +259,6 @@ appSetup () {
   if [[ "${HOSTIP}" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--host-ip=${HOSTIP%/*}") ; fi
   if [[ "${HOSTIPV6}" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--host-ip6=${HOSTIPV6}") ;  fi
   if [[ "${JOIN_SITE}" != "Default-First-Site-Name" ]]; then ARGS_SAMBA_TOOL+=("--site=${JOIN_SITE}") ; fi
-  #if [[ "${ENABLE_DNSFORWARDER}" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--option=dns forwarder=${ENABLE_DNSFORWARDER}") ; fi
   if [[ "${ENABLE_DYNAMIC_PORTRANGE}" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--option=rpc server dynamic port range=${ENABLE_DYNAMIC_PORTRANGE}") ; fi
   if [[ "${ENABLE_MSCHAPV2,,}" = true ]]; then ARGS_SAMBA_TOOL+=("--option=ntlm auth=mschapv2-and-ntlmv2-only") ; fi
   if [ "${ENABLE_INSECURE_DNSUPDATE,,}" = true ]; then ARGS_SAMBA_TOOL+=("--option=allow dns updates  = nonsecure") ; fi
