@@ -143,14 +143,8 @@ config() {
   # if hostname contains FQDN cut the rest
   if [[ "${HOSTNAME}" == *"."* ]]; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
 
-  if [[ ! $(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then 
-    printf "Missing last semicolon on ENABLE_DNSFORWARDER - fixed it"
-    ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER};"
-  fi
-  if [[ ! $(printf "%s" "${BIND9_VALIDATE_EXCEPT}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then 
-    printf "Missing last semicolon on BIND9_VALIDATE_EXCEPT - fixed it"
-    BIND9_VALIDATE_EXCEPT="${BIND9_VALIDATE_EXCEPT};"
-  fi
+  if [[ ! $(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER};"; fi
+  if [[ ! $(printf "%s" "${BIND9_VALIDATE_EXCEPT}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then BIND9_VALIDATE_EXCEPT="${BIND9_VALIDATE_EXCEPT};"; fi
 
   #DN for LDIF
   LDAP_SUFFIX=""
@@ -235,6 +229,7 @@ appSetup () {
   
   if [[ ! -d "${DIR_BIND9_RUN}" ]]; then mkdir "${DIR_BIND9_RUN}";chown -R bind:bind "${DIR_BIND9_RUN}";else chown -R bind:bind "${DIR_BIND9_RUN}"; fi
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
+  # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
   if [[ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]]; then printf "validate-except { \"%s\" };" "${BIND9_VALIDATE_EXCEPT}" > "${FILE_BIND9_LOCAL}"; fi  
   
   if grep -q "{{ DIR_NTP_STATS }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_STATS }}:${DIR_NTP_STATS}:" -i "${FILE_NTP}"; fi
@@ -316,7 +311,7 @@ appSetup () {
   sed -i "s,networks:.*,networks:      files dns,g" "${FILE_NSSWITCH}"
 
   # If external/smb.conf doesn't exist, this is new container with empty volume, we're not just moving to a new container
-  if [[ ! -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
+  if [[ ! -f "${FILE_EXTERNAL_SAMBA_CONF}" ]]; then
     if [[ -f "${FILE_SAMBA_CONF}" ]]; then mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig ; fi
       # Optional params encased with "" will break the command
     if [[ "${JOIN,,}" = true ]]; then
@@ -584,7 +579,7 @@ appStart () {
 config
 
 # If the supervisor conf isn't there, we're spinning up a new container
-if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
+if [[ -f "${FILE_EXTERNAL_SAMBA_CONF}" ]]; then
   appStart
 else
   appSetup || exit 1

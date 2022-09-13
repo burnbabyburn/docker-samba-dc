@@ -52,6 +52,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `NTPSERVERLIST`             | 0.pool.ntp.org 1.pool...                      |       | List of NTP Server  |
 | `TLS_ENABLE`                | false                                         |       | Enable TLS. Samba will autogen a cert if not provided before first start  |
 | `TZ`                        | /Etc/UTC                                      |       | Set Timezone and localtime. Case sensitiv.  |
+| `BIND9_VALIDATE_EXCEPT`     | NONE                                          |       | TLD or semicolon seperated list of TLD to not validate DNSSEC for. TLD 'home' has a default exceptiuon from BIND9. Useful if forwarding to an internal dns server without dnssec |
 
 ## Add Reverse DNS Zone - IF $HOSTIP is set, DNS-Reverse-Zone gets created on first run. Additional subnets connected to the host are
 docker exec -it samba-ad-dc "samba-tool dns zonecreate <Your-AD-DNS-Server-IP-or-hostname> <NETADDR>.in-addr.arpa -U<URDOMAIN>\administrator --password=<DOMAINPASS>"
