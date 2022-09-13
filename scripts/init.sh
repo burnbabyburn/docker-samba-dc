@@ -206,6 +206,7 @@ appSetup () {
   if grep -q "{{ DIR_NTP_STATS }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_STATS }}:${DIR_NTP_STATS}:" -i "${FILE_NTP}"; fi
   if grep -q "{{ DIR_NTP_SOCK }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_SOCK }}:${DIR_NTP_SOCK}:" -i "${FILE_NTP}"; fi
   if grep -q "{{ DIR_NTP_LOG }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_LOG }}:${DIR_NTP_LOG}:" -i "${FILE_NTP}"; fi
+  if grep -q "{{ FILE_NTP_DRIFT }}" "${FILE_NTP}"; then sed -e "s:{{ FILE_NTP_DRIFT }}:${FILE_NTP_DRIFT}:" -i "${FILE_NTP}"; fi
 
   if grep "{{ NTPSERVER }}" "${FILE_NTP}"; then
     DCs=$(printf "%s" "$NTPSERVERLIST" | tr " " "\n")
