@@ -107,6 +107,7 @@ config() {
   FILE_PKI_INT="${DIR_SAMBA_PRIVATE}/tls/intermediate.pem"
   FILE_PKI_KEY="${DIR_SAMBA_PRIVATE}/tls/key.pem"
   FILE_SAMBA_CONF="${DIR_SAMBA_ETC}/smb.conf"
+  FILE_SAMBA_NAMED_CONF="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
   FILE_SAMBA_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/smb.conf"
 #  FILE_SAMBA_INCLUDES="${DIR_SAMBA_ETC}/includes.conf"
   FILE_SAMBA_SCHEMA_LAPS1="${DIR_LDIF}/laps-1.ldif"
@@ -194,6 +195,7 @@ appSetup () {
   if [[ ! -d "${DIR_NTP_STATS}" ]]; then mkdir "${DIR_NTP_STATS}";else chown -R root:root "${DIR_NTP_STATS}"; fi
   if [[ ! -f "${FILE_KRB5}" ]] ; then rm -f "${FILE_KRB5}" ; fi
   if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then echo "0.0" > "${FILE_NTP_DRIFT}";else chown -R root:root "${FILE_NTP_DRIFT}"; fi
+  if [[ ! -d "/run/named" ]]; then mkdir "/run/named";chown -R bind:bind "/run/named";else chown -R bind:bind "/run/named"; fi
   
   if grep "{{ DIR_NTP_STATS }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_STATS }}:${DIR_NTP_STATS}:" -i "${FILE_NTP}"; fi
   if grep "{{ DIR_NTP_SOCK }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_SOCK }}:${DIR_NTP_SOCK}:" -i "${FILE_NTP}"; fi
@@ -322,8 +324,8 @@ appSetup () {
 
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
 	  
-	  #Add Debug to dynamically loadable zones (DLZ)
-	  sed -e "s:\.so: ${SAMBA_DEBUG_OPTION}:" /var/lib/samba/bind-dns/named.conf
+	  #Add Debug to dynamically loadable zones (DLZ) - file exists after join/provision
+	  sed -e "s:\.so: ${SAMBA_DEBUG_OPTION}:" -i "${FILE_SAMBA_NAMED_CONF}"
 
       samba-tool user setexpiry Administrator --noexpiry
       if [[ ! -d "${DIR_SAMBA_CSHARE}" ]]; then
