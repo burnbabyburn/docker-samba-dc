@@ -16,9 +16,9 @@ trap 'backupConfig' SIGTERM
 config() {
   # Set variables
   DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
-  LDOMAIN=$(echo "$DOMAIN" | tr '[:upper:]' '[:lower:]')
-  UDOMAIN=$(echo "$LDOMAIN" | tr '[:lower:]' '[:upper:]')
-  URDOMAIN=$(echo "$UDOMAIN" | cut -d "." -f1)
+  LDOMAIN=$(printf "%s" "$DOMAIN" | tr '[:upper:]' '[:lower:]')
+  UDOMAIN=$(printf "%s" "$LDOMAIN" | tr '[:lower:]' '[:upper:]')
+  URDOMAIN=$(printf "%s" "$UDOMAIN" | cut -d "." -f1)
   BIND_INTERFACES=${BIND_INTERFACES:-127.0.0.1} # Can be a list of interfaces seperated by spaces
   BIND_INTERFACES_ENABLE=${BIND_INTERFACES_ENABLE:-false}
   DEBUG_LEVEL=${DEBUG_LEVEL:-0}
@@ -127,7 +127,7 @@ config() {
   FILE_SUPERVISORD_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/supervisord.conf"
 
   # if hostname contains FQDN cut the rest
-  if [[ "${HOSTNAME}" == *"."* ]]; then HOSTNAME=$(echo "${HOSTNAME}" | cut -d "." -f1) ; fi
+  if [[ "${HOSTNAME}" == *"."* ]]; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
 
   #DN for LDIF
   LDAP_SUFFIX=""
@@ -150,7 +150,8 @@ config() {
   export FILE_NTP_CONF_EXTERNAL="${FILE_NTP_CONF_EXTERNAL}"
   export FILE_NSSWITCH_EXTERNAL="${FILE_NSSWITCH_EXTERNAL}"
 #  export FILE_SAMBA_INCLUDES="${FILE_SAMBA_INCLUDES}"
-  # shellcheck source=/scripts/helper.sh
+
+  # shellcheck source=/dev/null
   source /"${DIR_SCRIPTS}"/helper.sh
 }
 
@@ -184,9 +185,9 @@ appSetup () {
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
 
   if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
-    echo 'Set timezone'
+    printf 'Set timezone'
     cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
-    echo "${TZ}" >/etc/timezone
+    printf "%s" "${TZ}" >/etc/timezone
   fi
 
   sed -e "s:{{ NTP_DEBUG_OPTION }}:${NTP_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
@@ -214,8 +215,8 @@ appSetup () {
 
   if [[ ! -d "${DIR_SAMBA_EXTERNAL}" ]]; then mkdir "${DIR_SAMBA_EXTERNAL}" ; fi
   #Check if DOMAIN_NETBIOS <15 chars and contains no "."
-  if [[ "${#DOMAIN_NETBIOS}" -gt 15 ]]; then echo "DOMAIN_NETBIOS too long => exiting" ; exit 1 ; fi
-  if [[ "${DOMAIN_NETBIOS}" == *"."* ]]; then echo "DOMAIN_NETBIOS contains forbiden char    .     => exiting" ; exit 1 ; fi
+  if [[ "${#DOMAIN_NETBIOS}" -gt 15 ]]; then printf "DOMAIN_NETBIOS too long => exiting" ; exit 1 ; fi
+  if [[ "${DOMAIN_NETBIOS}" == *"."* ]]; then printf "DOMAIN_NETBIOS contains forbiden char    .     => exiting" ; exit 1 ; fi
   if [[ "${HOSTIP}" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--host-ip=${HOSTIP%/*}") ; fi
   if [[ "${HOSTIPV6}" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--host-ip6=${HOSTIPV6}") ;  fi
   if [[ "${JOIN_SITE}" != "Default-First-Site-Name" ]]; then ARGS_SAMBA_TOOL+=("--site=${JOIN_SITE}") ; fi
@@ -229,7 +230,7 @@ appSetup () {
   if [[ "${JOIN_SITE_VPN,,}" = true ]]; then
     /usr/sbin/openvpn --config ${FILE_OPENVPNCONF} &
     VPNPID=$!
-    echo "Sleeping 30s to ensure VPN connects ($VPNPID)";
+    printf "Sleeping 30s to ensure VPN connects %s" "($VPNPID)";
     sleep 30
   fi
   if [[ "${ENABLE_RFC2307,,}" = true ]]; then
@@ -237,7 +238,7 @@ appSetup () {
     ARGS_SAMBA_TOOL+=("${OPTION_RFC}")
   fi
   if [[ "${BIND_INTERFACES_ENABLE,,}" = true ]]; then
-    if ! echo "${BIND_INTERFACES}" | grep "127.0.0.1\|lo\|::1" >> /dev/null; then
+    if ! printf "%s" "${BIND_INTERFACES}" | grep "127.0.0.1\|lo\|::1" >> /dev/null; then
       printf "
        127.0.0.1 missing from BIND_INTERFACES.
        If bind interfaces only is set and the network address 127.0.0.1 is not added to the interfaces parameter list smbpasswd(8) may not work as expected due to the reasons covered below.
@@ -277,7 +278,7 @@ appSetup () {
     if [[ -f "${FILE_SAMBA_CONF}" ]]; then mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig ; fi
       # Optional params encased with "" will break the command
     if [[ "${JOIN,,}" = true ]]; then
-#     if [ "$(dig +short -t srv _ldap._tcp.$LDOMAIN.)" ] && echo "got answer"
+#     if [ "$(dig +short -t srv _ldap._tcp.$LDOMAIN.)" ] && printf "got answer"
       s=1
       ARGS_SAMBA_TOOL+=("${LDOMAIN}")
       ARGS_SAMBA_TOOL+=("DC")
@@ -308,9 +309,9 @@ appSetup () {
 
       #Check if Join was successfull
       if host -t A "$HOSTNAME"."$LDOMAIN".;then
-        echo "found DNS host record"
+        printf "found DNS host record"
       else
-        echo "no DNS host record found. Pls see https://wiki.samba.org/index.php/Verifying_and_Creating_a_DC_DNS_Record#Verifying_and_Creating_the_objectGUID_Record"
+        printf "no DNS host record found. Pls see https://wiki.samba.org/index.php/Verifying_and_Creating_a_DC_DNS_Record#Verifying_and_Creating_the_objectGUID_Record"
       fi
     # domain provision
     else
@@ -345,7 +346,7 @@ appSetup () {
       if [[ "${FEATURE_RECYCLEBIN}" = true ]]; then
         python3 /"${DIR_SCRIPTS}"/enablerecyclebin.py "${FILE_SAMLDB}"
         if grep 'CN=Recycle Bin Feature' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base \
-        -b "CN=NTDS Settings,CN=${HOSTNAME},CN=Servers,CN=${JOIN_SITE},CN=Sites,CN=Configuration${LDAP_SUFFIX}" msDS-EnabledFeature) ; then echo "Optional Feature Recycle Bin Feature OK" ; else echo "FAILED" ; exit 1 ; fi
+        -b "CN=NTDS Settings,CN=${HOSTNAME},CN=Servers,CN=${JOIN_SITE},CN=Sites,CN=Configuration${LDAP_SUFFIX}" msDS-EnabledFeature) ; then printf "Optional Feature Recycle Bin Feature OK" ; else printf "FAILED" ; exit 1 ; fi
       fi
 
       if [[ "${FEATURE_KERBEROS_TGT}" = true ]]; then EnableChangeKRBTGTSupervisord ; fi
@@ -355,7 +356,7 @@ appSetup () {
         setupSchemaRFC2307File
         ldbmodify -H "${FILE_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
         if grep 'returned 1 records' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base -b CN="${DOMAIN_NETBIOS}",CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System"${LDAP_SUFFIX}"); then
-          echo "Add RFC2307 Attributes for default AD users" ; else echo 'FAILED' ; exit 1 ; fi
+          printf "Add RFC2307 Attributes for default AD users" ; else printf 'FAILED' ; exit 1 ; fi
       fi
       # https://fy.blackhats.net.au/blog/html/2018/04/18/making_samba_4_the_default_ldap_server.html?highlight=samba
       # https://blog.laslabs.com/2016/08/storing-ssh-keys-in-active-directory/
@@ -436,7 +437,7 @@ appSetup () {
     fi
 
   if [ "${TLS_ENABLE,,}" = true ]; then
-    if [ ! -f "${FILE_PKI_CERT}" ] && [ ! -f "${FILE_PKI_KEY}" ] && [ ! -f "${FILE_PKI_CA}" ]; then echo "No custom CA found. Samba will autogenerate one" ; fi
+    if [ ! -f "${FILE_PKI_CERT}" ] && [ ! -f "${FILE_PKI_KEY}" ] && [ ! -f "${FILE_PKI_CA}" ]; then printf "No custom CA found. Samba will autogenerate one" ; fi
     if [ ! -f "${FILE_PKI_DH}" ]; then openssl dhparam -out "${FILE_PKI_DH}" 2048 ; fi
     ARGS_SAMBA_TOOL+=("--option=tls enabled = yes")
     ARGS_SAMBA_TOOL+=("--option=tls keyfile = $FILE_PKI_KEY")
@@ -469,7 +470,7 @@ appSetup () {
 }
 
 appFirstStart () {
-  for file in $(ls -A /etc/samba/conf.d/*.conf); do
+  for file in /etc/samba/conf.d/*.conf; do
     SetKeyValueFilePattern 'include' "$file"
   done
   update-ca-certificates
@@ -482,9 +483,9 @@ appFirstStart () {
       #admxdir=$(find /tmp/ -name PolicyDefinitions)
       admxdir="${DIR_GPO}"
       # Import Samba. admx&adml gpo
-      echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator "${SAMBA_DEBUG_OPTION}"
+      printf "%s" "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator "${SAMBA_DEBUG_OPTION}"
       # Import Windows admx&adml
-      echo "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir="${admxdir}" "${SAMBA_DEBUG_OPTION}"
+      printf "%s" "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir="${admxdir}" "${SAMBA_DEBUG_OPTION}"
 
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
     if [ "${DISABLE_DNS_WPAD_ISATAP,,}" = true ]; then
@@ -492,15 +493,15 @@ appFirstStart () {
       samba-tool dns add "$(hostname -s)" "${LDOMAIN}" isatap A 127.0.0.1 -P "${SAMBA_DEBUG_OPTION}"
     fi
     #Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
-    echo "rpcclient: Connect as ${DOMAIN_USER}" ; if rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1 ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
-    echo "smbclient: Connect as anonymous user" ; if grep 'Anonymous login successful' <(smbclient -N -L LOCALHOST "${SAMBA_DEBUG_OPTION}") ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
-    echo "smbclient: Connect as ${DOMAIN_USER}" ; if grep '[[:blank:]]session setup ok' <(smbclient --debug-stdout -d 4 -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST) ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
-    echo "Kerberos: Connect as ${DOMAIN_USER}" ; if echo "${DOMAIN_PASS}" | kinit "${DOMAIN_USER}" ; then echo 'OK' ; klist ; kdestroy ; else echo 'FAILED' ; exit 1 ; fi
-    #echo "Check NTP"; ntpq -c sysinfo ${SAMBA_DEBUG_OPTION}
-    echo "Check DNS _ldap._tcp"; host -t SRV _ldap._tcp."${LDOMAIN}"
-    echo "Check DNS _kerberos._tcp"; host -t SRV _kerberos._udp."${LDOMAIN}"
-    echo "Check Host record"; host -t A "${HOSTNAME}.${LDOMAIN}"
-    echo "Check Reverse DNS resolution"; dig -x "${IP}"
+    printf "rpcclient: Connect as %s" "${DOMAIN_USER}" ; if rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1 ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
+    printf "smbclient: Connect as anonymous user" ; if grep 'Anonymous login successful' <(smbclient -N -L LOCALHOST "${SAMBA_DEBUG_OPTION}") ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
+    printf "smbclient: Connect as %s" "${DOMAIN_USER}" ; if grep '[[:blank:]]session setup ok' <(smbclient --debug-stdout -d 4 -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST) ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
+    printf "Kerberos: Connect as %s" "${DOMAIN_USER}" ; if printf "%s" "${DOMAIN_PASS}" | kinit "${DOMAIN_USER}" ; then printf 'OK' ; klist ; kdestroy ; else printf 'FAILED' ; exit 1 ; fi
+    printf "Check NTP"; ntpq -c sysinfo ${SAMBA_DEBUG_OPTION}
+    printf "Check DNS _ldap._tcp"; host -t SRV _ldap._tcp."${LDOMAIN}"
+    printf "Check DNS _kerberos._tcp"; host -t SRV _kerberos._udp."${LDOMAIN}"
+    printf "Check Host record"; host -t A "${HOSTNAME}.${LDOMAIN}"
+    printf "Check Reverse DNS resolution"; dig -x "${IP}"
 
     #Copy root cert as der to netlogon
     #openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
@@ -510,7 +511,7 @@ appFirstStart () {
     #ARGS_NET_RPC+=("SeDiskOperatorPrivilege")
     ARGS_NET_RPC+=("-d ${DEBUG_LEVEL}")
     ARGS_NET_RPC+=("-U${UDOMAIN}\\${DOMAIN_USER,,}")
-    echo "${DOMAIN_PASS}" | net rpc rights grant "${ARGS_NET_RPC[@]}" "SeDiskOperatorPrivilege"
+    printf "%s" "${DOMAIN_PASS}" | net rpc rights grant "${ARGS_NET_RPC[@]}" "SeDiskOperatorPrivilege"
     if [[ "${ENABLE_CUPS,,}" = true ]]; then net rpc rights grant "${ARGS_NET_RPC[@]}" "SePrintOperatorPrivilege" ; fi
   # if JOIN=true
   else
