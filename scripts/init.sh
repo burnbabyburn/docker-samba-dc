@@ -87,7 +87,7 @@ config() {
   FILE_NSSWITCH=/etc/nsswitch.conf
   FILE_CHRONY_DRIFT=/var/lib/chrony/chrony.drift
   FILE_CHRONY=/etc/chrony/chrony.conf
-  FILE_CHRONY_RTC=/var/lib/chrony/rtc
+  #FILE_CHRONY_RTC=/var/lib/chrony/rtc
   FILE_CHRONY_KEY=/etc/chrony/chrony.keys
   FILE_OPENVPNCONF=/docker.ovpn
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
@@ -102,7 +102,7 @@ config() {
   DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private/"
   FILE_KRB5_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/krb5.conf"
   FILE_NSSWITCH_EXTERNAL="${DIR_SAMBA_EXTERNAL}/nsswitch.conf"
-  FILE_NTP_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/ntp.conf"
+  FILE_CHRONY_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/ntp.conf"
   FILE_PKI_CA="${DIR_SAMBA_PRIVATE}/tls/ca.pem"
   FILE_PKI_CERT="${DIR_SAMBA_PRIVATE}/tls/cert.pem"
   FILE_PKI_CRL="${DIR_SAMBA_PRIVATE}/tls/crl.pem"
@@ -147,7 +147,7 @@ config() {
   # Export if we don't source helper.sh in the future. These vars are needed from helper script
   export FILE_SUPERVISORD_CONF_EXTERNAL="${FILE_SUPERVISORD_CONF_EXTERNAL}"
   export FILE_SAMBA_CONF_EXTERNAL="${FILE_SAMBA_CONF_EXTERNAL}"
-  export FILE_NTP_CONF_EXTERNAL="${FILE_NTP_CONF_EXTERNAL}"
+  export FILE_CHRONY_CONF_EXTERNAL="${FILE_CHRONY_CONF_EXTERNAL}"
   export FILE_NSSWITCH_EXTERNAL="${FILE_NSSWITCH_EXTERNAL}"
 #  export FILE_SAMBA_INCLUDES="${FILE_SAMBA_INCLUDES}"
 
@@ -202,14 +202,15 @@ appSetup () {
   if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_NTSDUMP }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_NTSDUMP }}:${DIR_CHRONY_NTSDUMP}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_RTC }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_RTC }}:${FILE_CHRONY_RTC}:" -i "${FILE_CHRONY}"; fi
+  #if grep -q "{{ FILE_CHRONY_RTC }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_RTC }}:${FILE_CHRONY_RTC}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
 
   if  [[ ! -f "${DIR_CHRONY_SRC}/my.sources" ]]; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
     for DC in $DCs
     do
-      printf "server %s iburst" "${DC}" >> "${DIR_CHRONY_SRC}/my.sources"
+	  # valid entries need to end with newline (\n)
+      printf "server %s iburst\n" "${DC}" >> "${DIR_CHRONY_SRC}/my.sources"
     done
   fi
 
@@ -264,7 +265,7 @@ appSetup () {
     ARGS_SAMBA_TOOL+=("--option=log file = ${FILE_SAMBA_LOG}")
     ARGS_SAMBA_TOOL+=("--option=max log size = 10000")
     ARGS_SAMBA_TOOL+=("--option=log level = ${DEBUG_LEVEL}")
-    sed -i '/FILE:/s/^#_//g' "$FILE_NTP"
+    sed -i '//log[[:space:]]/s/^#//g' "$FILE_CHRONY"
   fi
 
   # nsswitch anpassen

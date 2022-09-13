@@ -88,7 +88,7 @@ SetKeyValueFilePattern() {
 backupConfig () {
   cp -f "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF_EXTERNAL}"
   cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_SUPERVISORD_CONF_EXTERNAL}"
-  cp -f "${FILE_NTP}" "${FILE_NTP_CONF_EXTERNAL}"
+  cp -f "${FILE_CHRONY}" "${FILE_CHRONY_CONF_EXTERNAL}"
   cp -f "${FILE_KRB5}" "${FILE_KRB5_CONF_EXTERNAL}"
   cp -f "${FILE_NSSWITCH}" "${FILE_NSSWITCH_EXTERNAL}"
   cp -f "/etc/passwd" "${DIR_SAMBA_EXTERNAL}/passwd"
