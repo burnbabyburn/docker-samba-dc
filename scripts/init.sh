@@ -73,10 +73,11 @@ config() {
   #DIR_SCRIPTS=/scripts
   #DIR_SAMBA_CONF=/etc/samba/smb.conf.d/
   #DIR_GPO=/gpo
-  DIR_NTP_DRIFT=/var/lib/ntp/
-  DIR_NTP_SOCK=/var/lib/samba/ntp_signd/
-  DIR_NTP_STATS=/var/log/ntpstats/
-  DIR_NTP_LOG=/var/log/ntp/
+  DIR_CHRONY_LOG=/var/log/chrony
+  DIR_CHRONY_NTSDUMP=/var/lib/chrony
+  DIR_CHRONY_SRC=/etc/chrony/sources.d
+  DIR_CHRONY_CONF=/etc/chrony/conf.d
+  DIR_CHRONY_SOCK=/var/lib/samba/ntp_signd/
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba/
   DIR_SAMBA_ETC=/etc/samba/
   DIR_SAMBA_CSHARE=/var/lib/samba/share_c/
@@ -84,8 +85,10 @@ config() {
   FILE_KRB5=/etc/krb5.conf
   FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
-  FILE_NTP=/etc/ntp.conf
-  FILE_NTP_DRIFT=/var/lib/ntp/ntp.drift
+  FILE_CHRONY_DRIFT=/var/lib/chrony/chrony.drift
+  FILE_CHRONY=/etc/chrony/chrony.conf
+  FILE_CHRONY_RTC=/var/lib/chrony/rtc
+  FILE_CHRONY_KEY=/etc/chrony/chrony.keys
   FILE_OPENVPNCONF=/docker.ovpn
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
@@ -191,28 +194,22 @@ appSetup () {
 
   if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
 
-  if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then echo "0.0" > "${FILE_NTP_DRIFT}" ; fi
-  if [[ ! -d "${DIR_NTP_DRIFT}" ]]; then mkdir "${DIR_NTP_DRIFT}";else chown -R root:root "${DIR_NTP_DRIFT}"; fi
-  if [[ ! -d "${DIR_NTP_STATS}" ]]; then mkdir "${DIR_NTP_STATS}";else chown -R root:root "${DIR_NTP_STATS}"; fi
-
-  #see line 193 doublet
-  #chown -R root:root "${DIR_NTP_DRIFT}"
+  if grep -q "{{ DIR_CHRONY_CONF }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONF }}:${DIR_CHRONY_CONF}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" -i "${FILE_CHRONY}"; fi
   
-  if grep "{{ DIR_NTP_STATS }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_STATS }}:${DIR_NTP_STATS}:" -i "${FILE_NTP}"; fi
-  if grep "{{ DIR_NTP_SOCK }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_SOCK }}:${DIR_NTP_SOCK}:" -i "${FILE_NTP}"; fi
-  if grep "{{ DIR_NTP_LOG }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_LOG }}:${DIR_NTP_LOG}:" -i "${FILE_NTP}"; fi
+  if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_NTSDUMP }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_NTSDUMP }}:${DIR_CHRONY_NTSDUMP}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_RTCFILE }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_RTCFILE }}:${FILE_CHRONY_RTCFILE}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
 
   if grep "{{ NTPSERVER }}" "${FILE_NTP}"; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
-    NTPSERVER=""
-    NTPSERVERRESTRICT=""
     for DC in $DCs
     do
-      NTPSERVER="$NTPSERVER server ${DC}    iburst prefer\n"
-      NTPSERVERRESTRICT="$NTPSERVERRESTRICT restrict ${DC} mask 255.255.255.255    nomodify notrap nopeer noquery\n"
+      printf "server %s iburst" "${DC}" >> "${DIR_CHRONY_SRC}/my.sources"
     done
-    sed -e "s:{{ NTPSERVER }}:${NTPSERVER}:" -i "${FILE_NTP}"
-    sed -e "s:{{ NTPSERVERRESTRICT }}:${NTPSERVERRESTRICT}:" -i "${FILE_NTP}"
   fi
 
   if [[ ! -d "${DIR_SAMBA_EXTERNAL}" ]]; then mkdir "${DIR_SAMBA_EXTERNAL}" ; fi
@@ -499,7 +496,7 @@ appFirstStart () {
     echo "smbclient: Connect as anonymous user" ; if grep 'Anonymous login successful' <(smbclient -N -L LOCALHOST "${SAMBA_DEBUG_OPTION}") ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
     echo "smbclient: Connect as ${DOMAIN_USER}" ; if grep '[[:blank:]]session setup ok' <(smbclient --debug-stdout -d 4 -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST) ; then echo 'OK' ; else echo 'FAILED' ; exit 1 ; fi
     echo "Kerberos: Connect as ${DOMAIN_USER}" ; if echo "${DOMAIN_PASS}" | kinit "${DOMAIN_USER}" ; then echo 'OK' ; klist ; kdestroy ; else echo 'FAILED' ; exit 1 ; fi
-    echo "Check NTP"; ntpq -c sysinfo ${SAMBA_DEBUG_OPTION}
+    #echo "Check NTP"; ntpq -c sysinfo ${SAMBA_DEBUG_OPTION}
     echo "Check DNS _ldap._tcp"; host -t SRV _ldap._tcp."${LDOMAIN}"
     echo "Check DNS _kerberos._tcp"; host -t SRV _kerberos._udp."${LDOMAIN}"
     echo "Check Host record"; host -t A "${HOSTNAME}.${LDOMAIN}"
