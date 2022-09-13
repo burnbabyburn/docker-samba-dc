@@ -1,7 +1,8 @@
 # FORKED
 ![Githubg Workflow Image CI](https://img.shields.io/github/workflow/status/burnbabyburn/docker-ubuntu-samba-dc/Docker%20Image%20CI)
-* No OpenVPN testing
-* Build test via docker actions
+
+* No OpenVPN/Site support and testing
+* Build, publish (to docker.io/ghcr.io) and test via github-actions
 * Mount custom Samba [global] parameters to files in /etc/samba/smb.conf.d
 
 # Samba Active Directory Domain Controller for Docker
@@ -36,7 +37,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `ENABLE_INSECURE_DNSUPDATE` | false                                         |       | Enable insecure dns updates (no packet signing)  |
 | `ENABLE_INSECURE_LDAP`      | false                                         |       | Enable insecure ldap connections  |
 | `ENABLE_LAPS_SCHEMA`        | false                                         |   X   | Setup Local Administrator Password Solution  |
-| `ENABLE_LOGS`               | false                                         |       | Enable log files - disabled. log to stdout and ship docker logs |
+| `ENABLE_LOGS`               | false                                         |       | Enable log files. default is to log to stdout only|
 | `ENABLE_MSCHAPV2`           | false                                         |       | Enable MSCHAP authentication  |
 | `ENABLE_RFC2307`            | true                                          |   X   | Enable RFC2307 LDAP Extension in AD |
 | `ENABLE_WINS`               | false                                         |   X   | Enable WINS and also propagiate time server |

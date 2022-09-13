@@ -33,6 +33,7 @@ jobs:
           tags: |
             latest
             type=ref,event=tag
+            type=ref,event=branch
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2
