@@ -457,9 +457,9 @@ appSetup () {
 
   cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
 
-  if [[ ! -f "${DIR_NTP_SOCK}" ]]; then mkdir -p "${DIR_NTP_SOCK}" ; fi
-  chmod 750 "${DIR_NTP_SOCK}"
-  chown root:root "${DIR_NTP_SOCK}"
+  if [[ ! -f "${DIR_CHRONY_SOCK}" ]]; then mkdir -p "${DIR_CHRONY_SOCK}" ; fi
+  chmod 750 "${DIR_CHRONY_SOCK}"
+  chown root:root "${DIR_CHRONY_SOCK}"
   # Stop VPN & write supervisor service
   if [[ "${JOIN_SITE_VPN,,}" = true ]]; then
     if [[ -n "${VPNPID}" ]]; then kill "${VPNPID}" ; fi
