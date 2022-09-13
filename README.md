@@ -32,7 +32,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `DOMAIN_USER`               | Administrator                                 |       | Best leave at default. unknown consequences  |
 | `DOMAIN`                    | SAMDOM.LOCAL                                  |       | Your Domain Name            |
 | `ENABLE_CUPS`               | false                                         |       | Enable CUPS - cups is not installed but setup in smb.conf modify Dockerfile  |
-| `ENABLE_DNSFORWARDER`       | NONE                                          |       | With BIND9 add single IP or a semicolon seperated list e.g. 8.8.8.8;1.1.1.1  |
+| `ENABLE_DNSFORWARDER`       | NONE                                          |       | With BIND9 add single IP or a semicolon seperated list. Always end string with a semicolon e.g. 8.8.8.8;1.1.1.1;  |
 | `ENABLE_DYNAMIC_PORTRANGE`  | NONE                                          |       | Set range of [dynamic rpc ports](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#RPCSERVERDYNAMICPORTRANGE). Can be usefull to limit on smaller systems, especially if behind reverse proxy (default 49152-65535) |
 | `ENABLE_INSECURE_DNSUPDATE` | false                                         |       | Enable insecure dns updates (no packet signing)  |
 | `ENABLE_INSECURE_LDAP`      | false                                         |       | Enable insecure ldap connections  |
