@@ -144,7 +144,7 @@ config() {
   if [[ "${HOSTNAME}" == *"."* ]]; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
 
   # Check if strings end with semicolon. if not append it
-  if [[ ! $(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then 
+  if [[ ! $(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then
     ENABLE_DNSFORWARDER_FORMATED=""
     for dnsserver in ${ENABLE_DNSFORWARDER}; do
       ENABLE_DNSFORWARDER_FORMATED="$ENABLE_DNSFORWARDER_FORMATED$dnsserver;"
@@ -241,7 +241,7 @@ appSetup () {
   if [[ ! -d "${DIR_NTP_STATS}" ]]; then mkdir "${DIR_NTP_STATS}";chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${DIR_NTP_STATS}";else chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${DIR_NTP_STATS}"; fi
   if [[ ! -f "${FILE_KRB5}" ]] ; then rm -f "${FILE_KRB5}" ; fi
   if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then printf "0.0" > "${FILE_NTP_DRIFT}";chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${FILE_NTP_DRIFT}";else chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${FILE_NTP_DRIFT}"; fi
-  
+
   if [[ ! -d "${DIR_BIND9_RUN}" ]]; then mkdir "${DIR_BIND9_RUN}";chown -R bind:bind "${DIR_BIND9_RUN}";else chown -R bind:bind "${DIR_BIND9_RUN}"; fi
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
@@ -453,7 +453,7 @@ appSetup () {
       if [[ "${DOMAIN_ACC_LOCK_THRESHOLD}" != 0 ]]; then samba-tool domain passwordsettings set --account-lockout-threshold="$DOMAIN_ACC_LOCK_THRESHOLD" "${SAMBA_DEBUG_OPTION}" ; fi
       if [[ "${DOMAIN_ACC_LOCK_RST_AFTER}" != 30 ]]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" "${SAMBA_DEBUG_OPTION}" ; fi
     fi
-    
+
       #Add Debug to dynamically loadable zones (DLZ) - file exists after join/provision
       cp "${FILE_BIND9_SAMBA_GENCONF}" "${FILE_BIND9_SAMBA_CONF}"
       printf "include \"%s\";" "${FILE_BIND9_SAMBA_CONF}" > "${FILE_BIND9_LOCAL}"
