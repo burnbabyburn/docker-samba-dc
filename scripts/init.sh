@@ -323,7 +323,7 @@ appSetup () {
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
 	  
 	  #Add Debug to dynamically loadable zones (DLZ)
-	  sed -e "s:\.so: ${SAMBADAEMON_DEBUG_OPTION}:" /var/lib/samba/bind-dns/named.conf
+	  sed -e "s:\.so: ${SAMBA_DEBUG_OPTION}:" /var/lib/samba/bind-dns/named.conf
 
       samba-tool user setexpiry Administrator --noexpiry
       if [[ ! -d "${DIR_SAMBA_CSHARE}" ]]; then
