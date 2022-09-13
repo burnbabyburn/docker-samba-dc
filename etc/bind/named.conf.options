@@ -8,7 +8,7 @@ options {
       notify no;
       empty-zones-enable no;
       auth-nxdomain yes;
-      forwarders { 8.8.8.8; 8.8.4.4; };
+      forwarders { ENABLE_DNSFORWARDER };
       allow-transfer { none; };
 
       #obsolete since bind 4.16

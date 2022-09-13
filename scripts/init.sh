@@ -80,6 +80,9 @@ config() {
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba/
   DIR_SAMBA_ETC=/etc/samba/
   DIR_SAMBA_CSHARE=/var/lib/samba/share_c/
+  DIR_BIND9=/etc/bind/
+  DIR_BIND9_RUN=/run/named/
+
   FILE_SAMBA_LOG=/var/log/samba/%m.log
   FILE_KRB5=/etc/krb5.conf
   FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
@@ -89,6 +92,8 @@ config() {
   FILE_OPENVPNCONF=/docker.ovpn
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
+  FILE_BIND9_OPTIONS=${DIR_BIND9}/named.conf.options
+  FILE_BIND9_LOCAL=${DIR_BIND9}/named.conf.local
 
   DIR_SAMBA_SYSVOL="${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}"
   DIR_SAMBA_NETLOGON="${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts/"
@@ -104,8 +109,8 @@ config() {
   FILE_PKI_INT="${DIR_SAMBA_PRIVATE}/tls/intermediate.pem"
   FILE_PKI_KEY="${DIR_SAMBA_PRIVATE}/tls/key.pem"
   FILE_SAMBA_CONF="${DIR_SAMBA_ETC}/smb.conf"
-  FILE_SAMBA_NAMED_CONF=/etc/bind/samba-named.conf
-  FILE_SAMBA_NAMED_GENCONF="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
+  FILE_BIND9_SAMBA_CONF=/etc/bind/samba-named.conf
+  FILE_BIND9_SAMBA_GENCONF="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
 #  FILE_SAMBA_INCLUDES="${DIR_SAMBA_ETC}/includes.conf"
   FILE_SAMBA_SCHEMA_LAPS1="${DIR_LDIF}/laps-1.ldif"
   FILE_SAMBA_SCHEMA_LAPS2="${DIR_LDIF}/laps-2.ldif"
@@ -203,7 +208,9 @@ appSetup () {
   if [[ ! -d "${DIR_NTP_STATS}" ]]; then mkdir "${DIR_NTP_STATS}";chown -R ntp:ntp "${DIR_NTP_STATS}";else chown -R ntp:ntp "${DIR_NTP_STATS}"; fi
   if [[ ! -f "${FILE_KRB5}" ]] ; then rm -f "${FILE_KRB5}" ; fi
   if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then printf "0.0" > "${FILE_NTP_DRIFT}";chown -R ntp:ntp "${FILE_NTP_DRIFT}";else chown -R ntp:ntp "${FILE_NTP_DRIFT}"; fi
-  if [[ ! -d "/run/named" ]]; then mkdir "/run/named";chown -R bind:bind "/run/named";else chown -R bind:bind "/run/named"; fi
+  
+  if [[ ! -d "${DIR_BIND9_RUN}" ]]; then mkdir "${DIR_BIND9_RUN}";chown -R bind:bind "${DIR_BIND9_RUN}";else chown -R bind:bind "${DIR_BIND9_RUN}"; fi
+  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_NTP}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_NTP}"; fi
   
   if grep -q "{{ DIR_NTP_STATS }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_STATS }}:${DIR_NTP_STATS}:" -i "${FILE_NTP}"; fi
   if grep -q "{{ DIR_NTP_SOCK }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_SOCK }}:${DIR_NTP_SOCK}:" -i "${FILE_NTP}"; fi
@@ -230,7 +237,7 @@ appSetup () {
   if [[ "${HOSTIP}" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--host-ip=${HOSTIP%/*}") ; fi
   if [[ "${HOSTIPV6}" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--host-ip6=${HOSTIPV6}") ;  fi
   if [[ "${JOIN_SITE}" != "Default-First-Site-Name" ]]; then ARGS_SAMBA_TOOL+=("--site=${JOIN_SITE}") ; fi
-  if [[ "${ENABLE_DNSFORWARDER}" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--option=dns forwarder=${ENABLE_DNSFORWARDER}") ; fi
+  #if [[ "${ENABLE_DNSFORWARDER}" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--option=dns forwarder=${ENABLE_DNSFORWARDER}") ; fi
   if [[ "${ENABLE_DYNAMIC_PORTRANGE}" != "NONE" ]]; then ARGS_SAMBA_TOOL+=("--option=rpc server dynamic port range=${ENABLE_DYNAMIC_PORTRANGE}") ; fi
   if [[ "${ENABLE_MSCHAPV2,,}" = true ]]; then ARGS_SAMBA_TOOL+=("--option=ntlm auth=mschapv2-and-ntlmv2-only") ; fi
   if [ "${ENABLE_INSECURE_DNSUPDATE,,}" = true ]; then ARGS_SAMBA_TOOL+=("--option=allow dns updates  = nonsecure") ; fi
@@ -334,8 +341,8 @@ appSetup () {
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
 	  
 	  #Add Debug to dynamically loadable zones (DLZ) - file exists after join/provision
-	  cp "${FILE_SAMBA_NAMED_GENCONF}" "${FILE_SAMBA_NAMED_GENCONF}"
-	  sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_SAMBA_NAMED_GENCONF}"
+	  cp "${FILE_BIND9_SAMBA_GENCONF}" "${FILE_BIND9_SAMBA_CONF}"
+	  sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_SAMBA_GENCONF}"
 
       samba-tool user setexpiry Administrator --noexpiry
       if [[ ! -d "${DIR_SAMBA_CSHARE}" ]]; then
