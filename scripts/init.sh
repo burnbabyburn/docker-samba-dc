@@ -73,6 +73,7 @@ config() {
   #DIR_SCRIPTS=/scripts
   #DIR_SAMBA_CONF=/etc/samba/smb.conf.d/
   #DIR_GPO=/gpo
+
   DIR_NTP_DRIFT=/var/lib/ntp/
   DIR_NTP_SOCK=/var/lib/samba/ntp_signd/
   DIR_NTP_STATS=/var/log/ntpstats/
@@ -125,11 +126,11 @@ config() {
   FILE_SAMBA_WINSLDB="${DIR_SAMBA_PRIVATE}/wins_config.ldb"
   FILE_SAMLDB="${DIR_SAMBA_PRIVATE}/sam.ldb"
 
-  FILE_SUPERVISORD_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/supervisord.conf"
-  FILE_KRB5_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/krb5.conf"
-  FILE_NSSWITCH_EXTERNAL="${DIR_SAMBA_EXTERNAL}/nsswitch.conf"
-  FILE_NTP_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/ntp.conf"
-  FILE_SAMBA_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/smb.conf"
+  FILE_EXTERNAL_SUPERVISORD_CONF="${DIR_SAMBA_EXTERNAL}/supervisord.conf"
+  FILE_EXTERNAL_KRB5_CONF="${DIR_SAMBA_EXTERNAL}/krb5.conf"
+  FILE_EXTERNAL_NSSWITCH="${DIR_SAMBA_EXTERNAL}/nsswitch.conf"
+  FILE_EXTERNAL_NTP_CONF="${DIR_SAMBA_EXTERNAL}/ntp.conf"
+  FILE_EXTERNAL_SAMBA_CONF="${DIR_SAMBA_EXTERNAL}/smb.conf"
   
   # if hostname contains FQDN cut the rest
   if [[ "${HOSTNAME}" == *"."* ]]; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
@@ -150,11 +151,11 @@ config() {
   export LDAP_SUFFIX="${LDAP_SUFFIX}"
   export DIR_SCRIPTS="${DIR_SCRIPTS}"
   # Export if we don't source helper.sh in the future. These vars are needed from helper script
-  export FILE_SUPERVISORD_CONF_EXTERNAL="${FILE_SUPERVISORD_CONF_EXTERNAL}"
-  export FILE_SAMBA_CONF_EXTERNAL="${FILE_SAMBA_CONF_EXTERNAL}"
-  export FILE_NTP_CONF_EXTERNAL="${FILE_NTP_CONF_EXTERNAL}"
-  export FILE_NSSWITCH_EXTERNAL="${FILE_NSSWITCH_EXTERNAL}"
-#  export FILE_SAMBA_INCLUDES="${FILE_SAMBA_INCLUDES}"
+  export FILE_EXTERNAL_SUPERVISORD_CONF="${FILE_EXTERNAL_SUPERVISORD_CONF}"
+  export FILE_EXTERNAL_KRB5_CONF="${FILE_EXTERNAL_KRB5_CONF}"
+  export FILE_EXTERNAL_NSSWITCH="${FILE_EXTERNAL_NSSWITCH}"
+  export FILE_EXTERNAL_NTP_CONF="${FILE_EXTERNAL_NTP_CONF}"
+  export FILE_EXTERNAL_SAMBA_CONF="${FILE_EXTERNAL_SAMBA_CONF}"
 
   # shellcheck source=/dev/null
   source /"${DIR_SCRIPTS}"/helper.sh
@@ -162,10 +163,10 @@ config() {
 
 appSetup () {
   NTPUSERGROUP="ntp"
-  # github action likes to use ntpsec user. debian:unstable-slim also
+  # github action likes to use ntpsec user. debian:unstable-slim also. -w exakt match
   if grep -wq "ntpsec" "/etc/passwd"; then NTPUSERGROUP=ntpsec; fi
 
-  # if no ntp user exists create ntp user
+  # if user not exists create user
   if ! grep -q "ntp" "/etc/passwd"; then adduser --home /nonexistent --system --no-create-home --group ntp; fi
   if ! grep -q "bind" "/etc/passwd"; then adduser --home /nonexistent --system --no-create-home --group bind; fi
 
