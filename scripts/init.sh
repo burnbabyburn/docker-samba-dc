@@ -153,7 +153,8 @@ config() {
 
 appSetup () {
   ARGS_SAMBA_TOOL=()
-  ARGS_SAMBA_TOOL+=("--dns-backend=SAMBA_INTERNAL")
+  ARGS_SAMBA_TOOL+=("--dns-backend=BIND9_DLZ")
+  ARGS_SAMBA_TOOL+=("--option=server services=-dns")
   ARGS_SAMBA_TOOL+=("--option=add group script=/usr/sbin/groupadd %g")
   if ! grep 'Domain-Computer' /etc/group ; then /usr/sbin/groupadd Domain-Computer ; fi
   ARGS_SAMBA_TOOL+=("--option=add machine script=/usr/sbin/useradd -N -M -g Domain-Computer -d /dev/null -s /bin/false %u")
@@ -189,14 +190,10 @@ appSetup () {
   sed -e "s:{{ NTP_DEBUG_OPTION }}:${NTP_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:${SAMBADAEMON_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
-  if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
-
-  if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then echo "0.0" > "${FILE_NTP_DRIFT}" ; fi
   if [[ ! -d "${DIR_NTP_DRIFT}" ]]; then mkdir "${DIR_NTP_DRIFT}";else chown -R root:root "${DIR_NTP_DRIFT}"; fi
   if [[ ! -d "${DIR_NTP_STATS}" ]]; then mkdir "${DIR_NTP_STATS}";else chown -R root:root "${DIR_NTP_STATS}"; fi
-
-  #see line 193 doublet
-  #chown -R root:root "${DIR_NTP_DRIFT}"
+  if [[ ! -f "${FILE_KRB5}" ]] ; then rm -f "${FILE_KRB5}" ; fi
+  if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then echo "0.0" > "${FILE_NTP_DRIFT}";else chown -R root:root "${FILE_NTP_DRIFT}"; fi
   
   if grep "{{ DIR_NTP_STATS }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_STATS }}:${DIR_NTP_STATS}:" -i "${FILE_NTP}"; fi
   if grep "{{ DIR_NTP_SOCK }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_SOCK }}:${DIR_NTP_SOCK}:" -i "${FILE_NTP}"; fi
