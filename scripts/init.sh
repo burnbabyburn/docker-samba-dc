@@ -97,9 +97,6 @@ config() {
   DIR_SAMBA_EXTERNAL="${DIR_SAMBA_ETC}/external/"
   DIR_SAMBA_PRINTDRIVER="${DIR_SAMBA_CSHARE}/windows/system32/spool/drivers/"
   DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private/"
-  FILE_KRB5_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/krb5.conf"
-  FILE_NSSWITCH_EXTERNAL="${DIR_SAMBA_EXTERNAL}/nsswitch.conf"
-  FILE_NTP_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/ntp.conf"
   FILE_PKI_CA="${DIR_SAMBA_PRIVATE}/tls/ca.pem"
   FILE_PKI_CERT="${DIR_SAMBA_PRIVATE}/tls/cert.pem"
   FILE_PKI_CRL="${DIR_SAMBA_PRIVATE}/tls/crl.pem"
@@ -107,8 +104,8 @@ config() {
   FILE_PKI_INT="${DIR_SAMBA_PRIVATE}/tls/intermediate.pem"
   FILE_PKI_KEY="${DIR_SAMBA_PRIVATE}/tls/key.pem"
   FILE_SAMBA_CONF="${DIR_SAMBA_ETC}/smb.conf"
-  FILE_SAMBA_NAMED_CONF="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
-  FILE_SAMBA_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/smb.conf"
+  FILE_SAMBA_NAMED_CONF=/etc/bind/samba-named.conf
+  FILE_SAMBA_NAMED_GENCONF="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
 #  FILE_SAMBA_INCLUDES="${DIR_SAMBA_ETC}/includes.conf"
   FILE_SAMBA_SCHEMA_LAPS1="${DIR_LDIF}/laps-1.ldif"
   FILE_SAMBA_SCHEMA_LAPS2="${DIR_LDIF}/laps-2.ldif"
@@ -122,8 +119,13 @@ config() {
   FILE_SAMBA_USER_MAP="${DIR_SAMBA_ETC}/user.map"
   FILE_SAMBA_WINSLDB="${DIR_SAMBA_PRIVATE}/wins_config.ldb"
   FILE_SAMLDB="${DIR_SAMBA_PRIVATE}/sam.ldb"
-  FILE_SUPERVISORD_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/supervisord.conf"
 
+  FILE_SUPERVISORD_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/supervisord.conf"
+  FILE_KRB5_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/krb5.conf"
+  FILE_NSSWITCH_EXTERNAL="${DIR_SAMBA_EXTERNAL}/nsswitch.conf"
+  FILE_NTP_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/ntp.conf"
+  FILE_SAMBA_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/smb.conf"
+  
   # if hostname contains FQDN cut the rest
   if [[ "${HOSTNAME}" == *"."* ]]; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
 
@@ -332,7 +334,8 @@ appSetup () {
       samba-tool domain provision "${ARGS_SAMBA_TOOL[@]}"
 	  
 	  #Add Debug to dynamically loadable zones (DLZ) - file exists after join/provision
-	  sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_SAMBA_NAMED_CONF}"
+	  cp "${FILE_SAMBA_NAMED_GENCONF}" "${FILE_SAMBA_NAMED_GENCONF}"
+	  sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_SAMBA_NAMED_GENCONF}"
 
       samba-tool user setexpiry Administrator --noexpiry
       if [[ ! -d "${DIR_SAMBA_CSHARE}" ]]; then
