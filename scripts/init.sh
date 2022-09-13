@@ -161,6 +161,11 @@ config() {
 }
 
 appSetup () {
+  ntpusergroup="ntp"
+  # github action likes to use ntpsec user. debian:unstable-slim also
+  if grep -wq "ntpsec" "/etc/passwd"; then ntpusergroup=ntpsec; fi
+
+  # if no ntp user exists create ntp user
   if ! grep -q "ntp" "/etc/passwd"; then adduser --home /nonexistent --system --no-create-home --group ntp; fi
   if ! grep -q "bind" "/etc/passwd"; then adduser --home /nonexistent --system --no-create-home --group bind; fi
 
@@ -203,11 +208,12 @@ appSetup () {
   sed -e "s:{{ NTP_DEBUG_OPTION }}:${NTP_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:${SAMBADAEMON_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ SAMBA_DEBUG_OPTION }}:${SAMBA_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  
-  if [[ ! -d "${DIR_NTP_DRIFT}" ]]; then mkdir "${DIR_NTP_DRIFT}";chown -R ntp:ntp "${DIR_NTP_DRIFT}";else chown -R ntp:ntp "${DIR_NTP_DRIFT}"; fi
-  if [[ ! -d "${DIR_NTP_STATS}" ]]; then mkdir "${DIR_NTP_STATS}";chown -R ntp:ntp "${DIR_NTP_STATS}";else chown -R ntp:ntp "${DIR_NTP_STATS}"; fi
+  sed -e "s:{{ ntpusergroup }}:${ntpusergroup}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+
+  if [[ ! -d "${DIR_NTP_DRIFT}" ]]; then mkdir "${DIR_NTP_DRIFT}";chown -R "${ntpusergroup}":"${ntpusergroup}" "${DIR_NTP_DRIFT}";else chown -R "${ntpusergroup}":"${ntpusergroup}" "${DIR_NTP_DRIFT}"; fi
+  if [[ ! -d "${DIR_NTP_STATS}" ]]; then mkdir "${DIR_NTP_STATS}";chown -R "${ntpusergroup}":"${ntpusergroup}" "${DIR_NTP_STATS}";else chown -R "${ntpusergroup}":"${ntpusergroup}" "${DIR_NTP_STATS}"; fi
   if [[ ! -f "${FILE_KRB5}" ]] ; then rm -f "${FILE_KRB5}" ; fi
-  if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then printf "0.0" > "${FILE_NTP_DRIFT}";chown -R ntp:ntp "${FILE_NTP_DRIFT}";else chown -R ntp:ntp "${FILE_NTP_DRIFT}"; fi
+  if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then printf "0.0" > "${FILE_NTP_DRIFT}";chown -R "${ntpusergroup}":"${ntpusergroup}" "${FILE_NTP_DRIFT}";else chown -R "${ntpusergroup}":"${ntpusergroup}" "${FILE_NTP_DRIFT}"; fi
   
   if [[ ! -d "${DIR_BIND9_RUN}" ]]; then mkdir "${DIR_BIND9_RUN}";chown -R bind:bind "${DIR_BIND9_RUN}";else chown -R bind:bind "${DIR_BIND9_RUN}"; fi
   if [[ ! $(printf "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then printf "Missing semicolon - fixing it for you"; ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER};"; fi
