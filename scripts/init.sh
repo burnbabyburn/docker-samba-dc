@@ -73,10 +73,10 @@ config() {
   #DIR_SCRIPTS=/scripts
   #DIR_SAMBA_CONF=/etc/samba/smb.conf.d/
   #DIR_GPO=/gpo
-  DIR_CHRONY_LOG=/var/log/chrony
-  DIR_CHRONY_NTSDUMP=/var/lib/chrony
-  DIR_CHRONY_SRC=/etc/chrony/sources.d
-  DIR_CHRONY_CONF=/etc/chrony/conf.d
+  DIR_CHRONY_LOG=/var/log/chrony/
+  DIR_CHRONY_NTSDUMP=/var/lib/chrony/
+  DIR_CHRONY_SRC=/etc/chrony/sources.d/
+  DIR_CHRONY_CONF=/etc/chrony/conf.d/
   DIR_CHRONY_SOCK=/var/lib/samba/ntp_signd/
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba/
   DIR_SAMBA_ETC=/etc/samba/
@@ -192,7 +192,7 @@ appSetup () {
   sed -e "s:{{ NTP_DEBUG_OPTION }}:${NTP_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:${SAMBADAEMON_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
-  if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
+  if [[ ! -f "${FILE_KRB5}" ]] ; then rm -f "${FILE_KRB5}" ; fi
 
   if grep -q "{{ DIR_CHRONY_CONF }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONF }}:${DIR_CHRONY_CONF}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" -i "${FILE_CHRONY}"; fi
@@ -201,10 +201,10 @@ appSetup () {
   if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_NTSDUMP }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_NTSDUMP }}:${DIR_CHRONY_NTSDUMP}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_RTCFILE }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_RTCFILE }}:${FILE_CHRONY_RTCFILE}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_RTC }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_RTC }}:${FILE_CHRONY_RTC}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
 
-  if grep "{{ NTPSERVER }}" "${FILE_NTP}"; then
+  if  [[ ! -f "${DIR_CHRONY_SRC}/my.sources" ]]; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
     for DC in $DCs
     do
