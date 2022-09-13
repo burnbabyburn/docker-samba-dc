@@ -110,7 +110,7 @@ config() {
   FILE_PKI_INT="${DIR_SAMBA_PRIVATE}/tls/intermediate.pem"
   FILE_PKI_KEY="${DIR_SAMBA_PRIVATE}/tls/key.pem"
   FILE_SAMBA_CONF="${DIR_SAMBA_ETC}/smb.conf"
-  FILE_BIND9_SAMBA_CONF=/etc/bind/samba-named.conf
+  FILE_BIND9_SAMBA_CONF="/etc/bind/samba-named.conf"
   FILE_BIND9_SAMBA_GENCONF="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
 #  FILE_SAMBA_INCLUDES="${DIR_SAMBA_ETC}/includes.conf"
   FILE_SAMBA_SCHEMA_LAPS1="${DIR_LDIF}/laps-1.ldif"
@@ -217,7 +217,7 @@ appSetup () {
   if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then printf "0.0" > "${FILE_NTP_DRIFT}";chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${FILE_NTP_DRIFT}";else chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${FILE_NTP_DRIFT}"; fi
   
   if [[ ! -d "${DIR_BIND9_RUN}" ]]; then mkdir "${DIR_BIND9_RUN}";chown -R bind:bind "${DIR_BIND9_RUN}";else chown -R bind:bind "${DIR_BIND9_RUN}"; fi
-  if [[ ! $(printf "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then printf "Missing semicolon - fixing it for you"; ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER};"; fi
+  if [[ ! $(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then printf "Missing semicolon - fixing it for you"; ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER};"; fi
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
 
   if grep -q "{{ DIR_NTP_STATS }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_STATS }}:${DIR_NTP_STATS}:" -i "${FILE_NTP}"; fi
@@ -350,7 +350,8 @@ appSetup () {
 	  
 	  #Add Debug to dynamically loadable zones (DLZ) - file exists after join/provision
 	  cp "${FILE_BIND9_SAMBA_GENCONF}" "${FILE_BIND9_SAMBA_CONF}"
-	  sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_SAMBA_GENCONF}"
+	  printf "include "\"%s\"";" "${FILE_BIND9_SAMBA_CONF}" > "${FILE_BIND9_LOCAL}"
+	  sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_SAMBA_CONF}"
 
       samba-tool user setexpiry Administrator --noexpiry
       if [[ ! -d "${DIR_SAMBA_CSHARE}" ]]; then

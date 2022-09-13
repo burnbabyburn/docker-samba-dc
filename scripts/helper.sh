@@ -91,9 +91,9 @@ backupConfig () {
   cp -f "${FILE_NTP}" "${FILE_EXTERNAL_NTP_CONF}"
   cp -f "${FILE_KRB5}" "${FILE_EXTERNAL_KRB5_CONF}"
   cp -f "${FILE_NSSWITCH}" "${FILE_EXTERNAL_NSSWITCH}"
-#  cp -f "/etc/passwd" "${DIR_SAMBA_EXTERNAL}/passwd"
-#  cp -f "/etc/group" "${DIR_SAMBA_EXTERNAL}/group"
-#  cp -f "/etc/shadow" "${DIR_SAMBA_EXTERNAL}/shadow"
+  cp -f "/etc/passwd" "${DIR_SAMBA_EXTERNAL}/passwd"
+  cp -f "/etc/group" "${DIR_SAMBA_EXTERNAL}/group"
+  cp -f "/etc/shadow" "${DIR_SAMBA_EXTERNAL}/shadow"
 }
 restoreConfig () {
   cp -f "${FILE_EXTERNAL_SAMBA_CONF}" "${FILE_SAMBA_CONF}"
@@ -101,9 +101,9 @@ restoreConfig () {
   cp -f "${FILE_EXTERNAL_NTP_CONF}" "${FILE_NTP}"
   cp -f "${FILE_EXTERNAL_KRB5_CONF}" "${FILE_KRB5}"
   cp -f "${FILE_EXTERNAL_NSSWITCH}" "${FILE_NSSWITCH}"
-#  cp -f "${DIR_SAMBA_EXTERNAL}/passwd" "/etc/passwd"
-#  cp -f "${DIR_SAMBA_EXTERNAL}/group" "/etc/group"
-#  cp -f "${DIR_SAMBA_EXTERNAL}/shadow" "/etc/shadow"
+  cp -f "${DIR_SAMBA_EXTERNAL}/passwd" "/etc/passwd"
+  cp -f "${DIR_SAMBA_EXTERNAL}/group" "/etc/group"
+  cp -f "${DIR_SAMBA_EXTERNAL}/shadow" "/etc/shadow"
 }
 
 # If Hostname is in CIDR notaion, create a reverse DNS zone and a subnet in $JOIN_SITE (default-First-Site-Name)
