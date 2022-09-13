@@ -191,10 +191,10 @@ appSetup () {
   sed -e "s:{{ NTP_DEBUG_OPTION }}:${NTP_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:${SAMBADAEMON_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
-  if [[ ! -d "${DIR_NTP_DRIFT}" ]]; then mkdir "${DIR_NTP_DRIFT}";else chown -R root:root "${DIR_NTP_DRIFT}"; fi
-  if [[ ! -d "${DIR_NTP_STATS}" ]]; then mkdir "${DIR_NTP_STATS}";else chown -R root:root "${DIR_NTP_STATS}"; fi
+  if [[ ! -d "${DIR_NTP_DRIFT}" ]]; then mkdir "${DIR_NTP_DRIFT}";chown -R ntp:ntp "${DIR_NTP_DRIFT}";else chown -R ntp:ntp "${DIR_NTP_DRIFT}"; fi
+  if [[ ! -d "${DIR_NTP_STATS}" ]]; then mkdir "${DIR_NTP_STATS}";chown -R ntp:ntp "${DIR_NTP_STATS}";else chown -R ntp:ntp "${DIR_NTP_STATS}"; fi
   if [[ ! -f "${FILE_KRB5}" ]] ; then rm -f "${FILE_KRB5}" ; fi
-  if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then echo "0.0" > "${FILE_NTP_DRIFT}";else chown -R root:root "${FILE_NTP_DRIFT}"; fi
+  if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then echo "0.0" > "${FILE_NTP_DRIFT}";chown -R ntp:ntp "${FILE_NTP_DRIFT}";else chown -R ntp:ntp "${FILE_NTP_DRIFT}"; fi
   if [[ ! -d "/run/named" ]]; then mkdir "/run/named";chown -R bind:bind "/run/named";else chown -R bind:bind "/run/named"; fi
   
   if grep "{{ DIR_NTP_STATS }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_STATS }}:${DIR_NTP_STATS}:" -i "${FILE_NTP}"; fi
