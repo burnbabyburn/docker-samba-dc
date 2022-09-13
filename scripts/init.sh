@@ -144,8 +144,21 @@ config() {
   if [[ "${HOSTNAME}" == *"."* ]]; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
 
   # Check if strings end with semicolon. if not append it
-  if [[ ! $(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then export ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER};"; fi
-  if [[ ! $(printf "%s" "${BIND9_VALIDATE_EXCEPT}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then export BIND9_VALIDATE_EXCEPT="${BIND9_VALIDATE_EXCEPT};"; fi
+  if [[ ! $(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then 
+    ENABLE_DNSFORWARDER_FORMATED=""
+    for dnsserver in ${ENABLE_DNSFORWARDER}; do
+      ENABLE_DNSFORWARDER_FORMATED="$ENABLE_DNSFORWARDER_FORMATED$dnsserver;"
+    done
+    export ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER_FORMATED}"
+  fi
+  if [[ ! $(printf "%s" "${BIND9_VALIDATE_EXCEPT}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then
+    BIND9_VALIDATE_EXCEPT_FORMATED=""
+    for except in ${BIND9_VALIDATE_EXCEPT}; do
+	  # each substring needs to be in "" and seperated by ;
+      BIND9_VALIDATE_EXCEPT_FORMATED="$BIND9_VALIDATE_EXCEPT_FORMATED\"$except\";"
+    done
+    export BIND9_VALIDATE_EXCEPT="${BIND9_VALIDATE_EXCEPT_FORMATED}"
+  fi
 
   #DN for LDIF
   LDAP_SUFFIX=""
@@ -232,7 +245,7 @@ appSetup () {
   if [[ ! -d "${DIR_BIND9_RUN}" ]]; then mkdir "${DIR_BIND9_RUN}";chown -R bind:bind "${DIR_BIND9_RUN}";else chown -R bind:bind "${DIR_BIND9_RUN}"; fi
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
-  if [[ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]]; then sed '/^[[:space:]]*}/i validate-except { \"${BIND9_VALIDATE_EXCEPT}\" };' -i "${FILE_BIND9_OPTIONS}"; fi  
+  if [[ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]]; then sed '/^[[:space:]]*}/i      validate-except { \"${BIND9_VALIDATE_EXCEPT}\" };' -i "${FILE_BIND9_OPTIONS}"; fi  
 
   if grep -q "{{ DIR_NTP_STATS }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_STATS }}:${DIR_NTP_STATS}:" -i "${FILE_NTP}"; fi
   if grep -q "{{ DIR_NTP_SOCK }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_SOCK }}:${DIR_NTP_SOCK}:" -i "${FILE_NTP}"; fi

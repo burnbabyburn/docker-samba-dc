@@ -32,7 +32,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `DOMAIN_USER`               | Administrator                                 |       | Best leave at default. unknown consequences  |
 | `DOMAIN`                    | SAMDOM.LOCAL                                  |       | Your Domain Name            |
 | `ENABLE_CUPS`               | false                                         |       | Enable CUPS - cups is not installed but setup in smb.conf modify Dockerfile  |
-| `ENABLE_DNSFORWARDER`       | NONE                                          |       | With BIND9 add single IP or a semicolon seperated list. Always end string with a semicolon e.g. 8.8.8.8;1.1.1.1;  |
+| `ENABLE_DNSFORWARDER`       | NONE                                          |       | With BIND9 add single IP or a space seperated list. Always end string with a semicolon e.g. 8.8.8.8;1.1.1.1;  |
 | `ENABLE_DYNAMIC_PORTRANGE`  | NONE                                          |       | Set range of [dynamic rpc ports](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#RPCSERVERDYNAMICPORTRANGE). Can be usefull to limit on smaller systems, especially if behind reverse proxy (default 49152-65535) |
 | `ENABLE_INSECURE_DNSUPDATE` | false                                         |       | Enable insecure dns updates (no packet signing)  |
 | `ENABLE_INSECURE_LDAP`      | false                                         |       | Enable insecure ldap connections  |
@@ -49,10 +49,10 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `JOIN_SITE_VPN`             | false                                         |       | Use openvpn config before connection to DC is possible  |
 | `JOIN_SITE`                 | Default-First-Site-Name                       |       | Sitename to join to  |
 | `JOIN`                      | false                                         |       | Set to true if DC should join Domain  |
-| `NTPSERVERLIST`             | 0.pool.ntp.org 1.pool...                      |       | List of NTP Server  |
+| `NTPSERVERLIST`             | 0.pool.ntp.org 1.pool...                      |       | List of NTP Server separated by spaces  |
 | `TLS_ENABLE`                | false                                         |       | Enable TLS. Samba will autogen a cert if not provided before first start  |
 | `TZ`                        | /Etc/UTC                                      |       | Set Timezone and localtime. Case sensitiv.  |
-| `BIND9_VALIDATE_EXCEPT`     | NONE                                          |       | TLD or semicolon seperated list of TLD to not validate DNSSEC for. TLD 'home' has a default exceptiuon from BIND9. Useful if forwarding to an internal dns server without dnssec |
+| `BIND9_VALIDATE_EXCEPT`     | NONE                                          |       | TLD or a space separated list of TLD to not validate DNSSEC for. TLD 'home' has a default exception from BIND9. Useful if forwarding to an internal dns server without dnssec |
 
 ## Add Reverse DNS Zone - IF $HOSTIP is set, DNS-Reverse-Zone gets created on first run. Additional subnets connected to the host are
 docker exec -it samba-ad-dc "samba-tool dns zonecreate <Your-AD-DNS-Server-IP-or-hostname> <NETADDR>.in-addr.arpa -U<URDOMAIN>\administrator --password=<DOMAINPASS>"
