@@ -156,6 +156,7 @@ config() {
 appSetup () {
   if ! grep -q "ntp" "/etc/passwd"; then adduser --home /nonexistent --system --no-create-home --group ntp; fi
   if ! grep -q "bind" "/etc/passwd"; then adduser --home /nonexistent --system --no-create-home --group bind; fi
+  printf "check users"; cat /etc/passwd;
 
   ARGS_SAMBA_TOOL=()
   ARGS_SAMBA_TOOL+=("--dns-backend=BIND9_DLZ")
