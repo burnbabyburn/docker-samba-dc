@@ -19,7 +19,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update \
     && apt-get upgrade -y \
 	#openssl for dh key
-    && apt-get install -y ntp pkg-config attr acl samba smbclient tdb-tools ldb-tools ldap-utils winbind libnss-winbind libpam-winbind libpam-krb5 krb5-user supervisor dnsutils bind \
+    && apt-get install -y ntp pkg-config attr acl samba smbclient tdb-tools ldb-tools ldap-utils winbind libnss-winbind libpam-winbind libpam-krb5 krb5-user supervisor dnsutils bind9 \
     # line below is for multi-site config (ping is for testing later) \
     #&& apt-get install -y openvpn inetutils-ping \   
     && apt-get clean autoclean \
