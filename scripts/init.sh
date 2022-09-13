@@ -202,7 +202,6 @@ appSetup () {
   if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_NTSDUMP }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_NTSDUMP }}:${DIR_CHRONY_NTSDUMP}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
-  #if grep -q "{{ FILE_CHRONY_RTC }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_RTC }}:${FILE_CHRONY_RTC}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
 
   if  [[ ! -f "${DIR_CHRONY_SRC}/my.sources" ]]; then
@@ -498,7 +497,7 @@ appFirstStart () {
     printf "smbclient: Connect as anonymous user" ; if grep 'Anonymous login successful' <(smbclient -N -L LOCALHOST "${SAMBA_DEBUG_OPTION}") ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
     printf "smbclient: Connect as %s" "${DOMAIN_USER}" ; if grep '[[:blank:]]session setup ok' <(smbclient --debug-stdout -d 4 -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST) ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
     printf "Kerberos: Connect as %s" "${DOMAIN_USER}" ; if printf "%s" "${DOMAIN_PASS}" | kinit "${DOMAIN_USER}" ; then printf 'OK' ; klist ; kdestroy ; else printf 'FAILED' ; exit 1 ; fi
-    printf "Check NTP"; ntpq -c sysinfo ${SAMBA_DEBUG_OPTION}
+    echo "check chrony"; chrony sources; chrony tracking
     printf "Check DNS _ldap._tcp"; host -t SRV _ldap._tcp."${LDOMAIN}"
     printf "Check DNS _kerberos._tcp"; host -t SRV _kerberos._udp."${LDOMAIN}"
     printf "Check Host record"; host -t A "${HOSTNAME}.${LDOMAIN}"
