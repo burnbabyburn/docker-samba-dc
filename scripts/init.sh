@@ -188,16 +188,6 @@ config() {
 }
 
 appSetup () {
-#  NTPUSERGROUP="ntp"
-  NTPUSERGROUP="root"
-  BINDUSERGROUP="bind"
-  # github action likes to use ntpsec user. debian:unstable-slim also. -w exakt match
-#  if grep -wq "ntpsec" "/etc/passwd"; then NTPUSERGROUP=ntpsec; fi
-
-  # if user not exists create user
-#  if ! grep -q "ntp" "/etc/passwd"; then adduser --home /nonexistent --system --no-create-home --group ntp; fi
-#  if ! grep -q "bind" "/etc/passwd"; then adduser --home /nonexistent --system --no-create-home --group bind; fi
-#  printf "check users"; cat /etc/passwd; printf "check groups"; cat /etc/group;
   ARGS_SAMBA_TOOL=()
   ARGS_SAMBA_TOOL+=("--dns-backend=BIND9_DLZ")
   ARGS_SAMBA_TOOL+=("--option=server services=-dns")
@@ -221,39 +211,50 @@ appSetup () {
 #  if [[ ! -d "$DIR_SAMBA_DATA_PREFIX/unixhome/" ]]; then mkdir -p "$DIR_SAMBA_DATA_PREFIX/unixhome/" ; fi
   # Test
   ARGS_SAMBA_TOOL+=("--option=eventlog list = Application System Security SyslogLinux Webserver")
-
   ARGS_SAMBA_TOOL+=("-d ${DEBUG_LEVEL}")
-  NTP_DEBUG_OPTION="-D ${DEBUG_LEVEL}"
-  SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d ${DEBUG_LEVEL}"
-  SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
 
   if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
     printf 'Set timezone'
     cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
     printf "%s" "${TZ}" >/etc/timezone
   fi
-
+  
+  # Debug options
+  NTP_DEBUG_OPTION="-D ${DEBUG_LEVEL}"
+  SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d ${DEBUG_LEVEL}"
+  SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
   sed -e "s:{{ NTP_DEBUG_OPTION }}:${NTP_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:${SAMBADAEMON_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ SAMBA_DEBUG_OPTION }}:${SAMBA_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  
+  #  NTPUSERGROUP="ntp"
+  NTPUSERGROUP="root"
+  BINDUSERGROUP="bind"
+  # github action likes to use ntpsec user. debian:unstable-slim also. -w exakt match
+  #if grep -wq "ntpsec" "/etc/passwd"; then NTPUSERGROUP=ntpsec; fi
+  # if user not exists create user
+  #if ! grep -q "ntp" "/etc/passwd"; then adduser --home /nonexistent --system --no-create-home --group ntp; fi
+  #if ! grep -q "bind" "/etc/passwd"; then adduser --home /nonexistent --system --no-create-home --group bind; fi
+  #printf "check users"; cat /etc/passwd; printf "check groups"; cat /etc/group;
   sed -e "s:{{ NTPUSERGROUP }}:${NTPUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ BINDUSERGROUP }}:${BINDUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-
-  if [[ ! -d "${DIR_NTP_DRIFT}" ]]; then mkdir "${DIR_NTP_DRIFT}";chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${DIR_NTP_DRIFT}";else chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${DIR_NTP_DRIFT}"; fi
-  if [[ ! -d "${DIR_NTP_STATS}" ]]; then mkdir "${DIR_NTP_STATS}";chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${DIR_NTP_STATS}";else chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${DIR_NTP_STATS}"; fi
-  if [[ ! -f "${FILE_KRB5}" ]] ; then rm -f "${FILE_KRB5}" ; fi
-  if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then printf "0.0" > "${FILE_NTP_DRIFT}";chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${FILE_NTP_DRIFT}";else chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${FILE_NTP_DRIFT}"; fi
-
+  
+  # BIND9
   if [[ ! -d "${DIR_BIND9_RUN}" ]]; then mkdir "${DIR_BIND9_RUN}";chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}";else chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"; fi
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
   if [[ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]]; then sed "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_OPTIONS}"; fi
+  if ! grep -q "/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi  
 
+  if [[ ! -f "${FILE_KRB5}" ]] ; then rm -f "${FILE_KRB5}" ; fi
+
+  if [[ ! -d "${DIR_NTP_DRIFT}" ]]; then mkdir "${DIR_NTP_DRIFT}";chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${DIR_NTP_DRIFT}";else chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${DIR_NTP_DRIFT}"; fi
+  if [[ ! -d "${DIR_NTP_STATS}" ]]; then mkdir "${DIR_NTP_STATS}";chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${DIR_NTP_STATS}";else chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${DIR_NTP_STATS}"; fi
+  if [[ ! -f "${FILE_NTP_DRIFT}" ]]; then printf "0.0" > "${FILE_NTP_DRIFT}";chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${FILE_NTP_DRIFT}";else chown -R "${NTPUSERGROUP}":"${NTPUSERGROUP}" "${FILE_NTP_DRIFT}"; fi
   if grep -q "{{ DIR_NTP_STATS }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_STATS }}:${DIR_NTP_STATS}:" -i "${FILE_NTP}"; fi
   if grep -q "{{ DIR_NTP_SOCK }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_SOCK }}:${DIR_NTP_SOCK}:" -i "${FILE_NTP}"; fi
   if grep -q "{{ DIR_NTP_LOG }}" "${FILE_NTP}"; then sed -e "s:{{ DIR_NTP_LOG }}:${DIR_NTP_LOG}:" -i "${FILE_NTP}"; fi
   if grep -q "{{ FILE_NTP_DRIFT }}" "${FILE_NTP}"; then sed -e "s:{{ FILE_NTP_DRIFT }}:${FILE_NTP_DRIFT}:" -i "${FILE_NTP}"; fi
-
   if grep "{{ NTPSERVER }}" "${FILE_NTP}"; then
     DCs=$(printf "%s" "$NTPSERVERLIST" | tr " " "\n")
     NTPSERVER=""
