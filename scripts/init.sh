@@ -190,7 +190,7 @@ config() {
 appSetup () {
 #  NTPUSERGROUP="ntp"
   NTPUSERGROUP="root"
-  BINDUSERGROUP="root"
+  BINDUSERGROUP="bind"
   # github action likes to use ntpsec user. debian:unstable-slim also. -w exakt match
 #  if grep -wq "ntpsec" "/etc/passwd"; then NTPUSERGROUP=ntpsec; fi
 
@@ -460,7 +460,7 @@ appSetup () {
       cp "${FILE_BIND9_SAMBA_GENCONF}" "${FILE_BIND9_SAMBA_CONF}"
       printf "include \"%s\";" "${FILE_BIND9_SAMBA_CONF}" > "${FILE_BIND9_LOCAL}"
       sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_SAMBA_CONF}"
-	  chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9}"
+	  #chown -R "${BINDUSERGROUP}":"bind" "${DIR_BIND9}"
 
     # https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
     # https://wiki.samba.org/index.php/Setting_up_Samba_as_a_Print_Server
