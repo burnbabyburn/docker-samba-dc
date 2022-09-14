@@ -34,7 +34,7 @@ jobs:
       - name: Check DC01 RDNS
         run: docker exec --tty samba-dc01 /usr/bin/dig -x 172.101.1.100
       - name: Check DC01 Host record
-        run: docker exec --tty samba-dc01 /usr/bin/host -t A dockersamba01.sam.dom
+        run: docker exec --tty samba-dc01 /usr/bin/host -t A DC01.sam.dom
       - name: Start DC02
         run: docker-compose -f docker-compose.yml up -d samba-join
       - name: Sleep for 30 seconds
@@ -56,8 +56,10 @@ jobs:
       - name: Check DC02 RDNS
         run: docker exec --tty samba-dc01 /usr/bin/dig -x 172.101.2.200
       - name: Check DC02 Host record
-        run: docker exec --tty samba-dc01 /usr/bin/host -t A dockersamba02.sam.dom
+        run: docker exec --tty samba-dc01 /usr/bin/host -t A DC02.sam.dom
       - name: Check DC02 Host record of DC01
-        run: docker exec --tty samba-dc02 /usr/bin/dig +short -t srv dockersamba02.sam.dom
+        run: docker exec --tty samba-dc02 /usr/bin/dig +short -t srv DC01.sam.dom
+      - name: Check DC02 Host record of DC02
+        run: docker exec --tty samba-dc02 /usr/bin/dig +short -t srv DC02.sam.dom
             
     
