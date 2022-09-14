@@ -155,7 +155,7 @@ config() {
     BIND9_VALIDATE_EXCEPT_FORMATED=""
     for except in ${BIND9_VALIDATE_EXCEPT}; do
       # each substring needs to be in "" and seperated by ;
-      BIND9_VALIDATE_EXCEPT_FORMATED="$BIND9_VALIDATE_EXCEPT_FORMATED\"$except\";"
+      BIND9_VALIDATE_EXCEPT_FORMATED="${BIND9_VALIDATE_EXCEPT_FORMATED}${except};"
     done
     export BIND9_VALIDATE_EXCEPT="${BIND9_VALIDATE_EXCEPT_FORMATED}"
   fi
