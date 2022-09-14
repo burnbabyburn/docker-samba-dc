@@ -244,6 +244,7 @@ appSetup () {
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
   if [[ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]]; then sed "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_OPTIONS}"; fi
+  # https://www.elastic2ls.com/blog/loading-from-master-file-managed-keys-bind-failed/
   if ! grep -q "/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi  
 
   if [[ ! -f "${FILE_KRB5}" ]] ; then rm -f "${FILE_KRB5}" ; fi
