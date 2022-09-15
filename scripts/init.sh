@@ -205,8 +205,12 @@ appSetup () {
   ls -ahl /run/
   ls -ahl "${DIR_CHRONY_RUN}"
   chmod 750 "${DIR_CHRONY_RUN}";
+  cat /etc/passwd
+  #samba-ad-dc      | 2022-09-15T18:35:00Z Wrong owner of /run/chrony (UID != 102)
   chown _chrony:_chrony "${DIR_CHRONY_RUN}"
-
+  ls -ahl /run/
+  ls -ahl "${DIR_CHRONY_RUN}"
+  
   if grep -q "{{ DIR_CHRONY_CONF }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONF }}:${DIR_CHRONY_CONF}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_NTSDUMP }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_NTSDUMP }}:${DIR_CHRONY_NTSDUMP}:" -i "${FILE_CHRONY}"; fi
