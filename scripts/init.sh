@@ -98,13 +98,13 @@ config() {
   DIR_SAMBA_NETLOGON="${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts"
   DIR_SAMBA_EVENTLOG="${DIR_SAMBA_CSHARE}/windows/system32/config"
   DIR_SAMBA_ADMIN="${DIR_SAMBA_CSHARE}/windows"
-  DIR_SAMBA_EXTERNAL="${DIR_SAMBA_ETC}/external"
+  DIR_EXTERNAL="${DIR_SAMBA_ETC}/external"
   DIR_SAMBA_PRINTDRIVER="${DIR_SAMBA_CSHARE}/windows/system32/spool/drivers"
   DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private"
   FILE_CHRONY_PID="${DIR_CHRONY_RUN}/chronyd.pid"
-  FILE_KRB5_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/krb5.conf"
-  FILE_NSSWITCH_EXTERNAL="${DIR_SAMBA_EXTERNAL}/nsswitch.conf"
-  FILE_CHRONY_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/chrony.conf"
+  FILE_EXTERNAL_KRB5_CONF="${DIR_EXTERNAL}/krb5.conf"
+  FILE_EXTERNAL_NSSWITCH="${DIR_EXTERNAL}/nsswitch.conf"
+  FILE_EXTERNAL_CHRONY_CONF="${DIR_EXTERNAL}/chrony.conf"
   FILE_PKI_CA="${DIR_SAMBA_PRIVATE}/tls/ca.pem"
   FILE_PKI_CERT="${DIR_SAMBA_PRIVATE}/tls/cert.pem"
   FILE_PKI_CRL="${DIR_SAMBA_PRIVATE}/tls/crl.pem"
@@ -112,7 +112,7 @@ config() {
   FILE_PKI_INT="${DIR_SAMBA_PRIVATE}/tls/intermediate.pem"
   FILE_PKI_KEY="${DIR_SAMBA_PRIVATE}/tls/key.pem"
   FILE_SAMBA_CONF="${DIR_SAMBA_ETC}/smb.conf"
-  FILE_SAMBA_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/smb.conf"
+  FILE_EXTERNAL_SAMBA_CONF="${DIR_EXTERNAL}/smb.conf"
 #  FILE_SAMBA_INCLUDES="${DIR_SAMBA_ETC}/includes.conf"
   FILE_SAMBA_SCHEMA_LAPS1="${DIR_LDIF}/laps-1.ldif"
   FILE_SAMBA_SCHEMA_LAPS2="${DIR_LDIF}/laps-2.ldif"
@@ -126,7 +126,7 @@ config() {
   FILE_SAMBA_USER_MAP="${DIR_SAMBA_ETC}/user.map"
   FILE_SAMBA_WINSLDB="${DIR_SAMBA_PRIVATE}/wins_config.ldb"
   FILE_SAMLDB="${DIR_SAMBA_PRIVATE}/sam.ldb"
-  FILE_SUPERVISORD_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/supervisord.conf"
+  FILE_EXTERNAL_SUPERVISORD_CONF="${DIR_EXTERNAL}/supervisord.conf"
 
   # if hostname contains FQDN cut the rest
   if [[ "${HOSTNAME}" == *"."* ]]; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
@@ -147,10 +147,10 @@ config() {
   export LDAP_SUFFIX="${LDAP_SUFFIX}"
   export DIR_SCRIPTS="${DIR_SCRIPTS}"
   # Export if we don't source helper.sh in the future. These vars are needed from helper script
-  export FILE_SUPERVISORD_CONF_EXTERNAL="${FILE_SUPERVISORD_CONF_EXTERNAL}"
-  export FILE_SAMBA_CONF_EXTERNAL="${FILE_SAMBA_CONF_EXTERNAL}"
-  export FILE_CHRONY_CONF_EXTERNAL="${FILE_CHRONY_CONF_EXTERNAL}"
-  export FILE_NSSWITCH_EXTERNAL="${FILE_NSSWITCH_EXTERNAL}"
+  export FILE_EXTERNAL_SUPERVISORD_CONF="${FILE_EXTERNAL_SUPERVISORD_CONF}"
+  export FILE_EXTERNAL_SAMBA_CONF="${FILE_EXTERNAL_SAMBA_CONF}"
+  export FILE_EXTERNAL_CHRONY_CONF="${FILE_EXTERNAL_CHRONY_CONF}"
+  export FILE_EXTERNAL_NSSWITCH="${FILE_EXTERNAL_NSSWITCH}"
 #  export FILE_SAMBA_INCLUDES="${FILE_SAMBA_INCLUDES}"
 
   # shellcheck source=/dev/null
@@ -227,7 +227,7 @@ appSetup () {
     done
   fi
 
-  if [[ ! -d "${DIR_SAMBA_EXTERNAL}" ]]; then mkdir "${DIR_SAMBA_EXTERNAL}" ; fi
+  if [[ ! -d "${DIR_EXTERNAL}" ]]; then mkdir "${DIR_EXTERNAL}" ; fi
   #Check if DOMAIN_NETBIOS <15 chars and contains no "."
   if [[ "${#DOMAIN_NETBIOS}" -gt 15 ]]; then printf "DOMAIN_NETBIOS too long => exiting" ; exit 1 ; fi
   if [[ "${DOMAIN_NETBIOS}" == *"."* ]]; then printf "DOMAIN_NETBIOS contains forbiden char    .     => exiting" ; exit 1 ; fi
@@ -288,7 +288,7 @@ appSetup () {
   sed -i "s,networks:.*,networks:      files dns,g" "${FILE_NSSWITCH}"
 
   # If external/smb.conf doesn't exist, this is new container with empty volume, we're not just moving to a new container
-  if [[ ! -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
+  if [[ ! -f "${FILE_EXTERNAL_SAMBA_CONF}" ]]; then
     if [[ -f "${FILE_SAMBA_CONF}" ]]; then mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig ; fi
       # Optional params encased with "" will break the command
     if [[ "${JOIN,,}" = true ]]; then
@@ -551,7 +551,7 @@ appStart () {
 config
 
 # If the supervisor conf isn't there, we're spinning up a new container
-if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
+if [[ -f "${FILE_EXTERNAL_SAMBA_CONF}" ]]; then
   appStart
 else
   appSetup || exit 1
