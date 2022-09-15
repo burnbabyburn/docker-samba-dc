@@ -202,7 +202,7 @@ appSetup () {
   if [[ ! -d "${DIR_CHRONY_LOG}" ]]; then mkdir "${DIR_CHRONY_LOG}"; fi
   chown _chrony:_chrony "${DIR_CHRONY_LOG}"
   if [[ ! -d "${DIR_CHRONY_RUN}" ]]; then mkdir "${DIR_CHRONY_RUN}"; fi
-  if [[ $(uname -m) != x86_64 ]]; then
+  if [[ $(uname -m) == x86_64 ]]; then
     chmod 750 "${DIR_CHRONY_RUN}";
     #samba-ad-dc      | 2022-09-15T18:35:00Z Wrong owner of /run/chrony (UID != 102)
     chown _chrony:_chrony "${DIR_CHRONY_RUN}"
