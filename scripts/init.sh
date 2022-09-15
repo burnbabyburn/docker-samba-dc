@@ -268,7 +268,7 @@ appSetup () {
     ARGS_SAMBA_TOOL+=("--option=log file = ${FILE_SAMBA_LOG}")
     ARGS_SAMBA_TOOL+=("--option=max log size = 10000")
     ARGS_SAMBA_TOOL+=("--option=log level = ${DEBUG_LEVEL}")
-    sed -i '//log[[:space:]]/s/^#//g' "$FILE_CHRONY"
+    sed -i '/log[[:space:]]/s/^#//g' "$FILE_CHRONY"
   fi
 
   # nsswitch anpassen
