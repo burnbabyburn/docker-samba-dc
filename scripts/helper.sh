@@ -86,24 +86,26 @@ SetKeyValueFilePattern() {
 
 # https://stackoverflow.com/questions/41451159/how-to-execute-a-script-when-i-terminate-a-docker-container
 backupConfig () {
-  cp -f "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF_EXTERNAL}"
-  cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_SUPERVISORD_CONF_EXTERNAL}"
   cp -f "${FILE_CHRONY}" "${FILE_CHRONY_CONF_EXTERNAL}"
   cp -f "${FILE_KRB5}" "${FILE_KRB5_CONF_EXTERNAL}"
   cp -f "${FILE_NSSWITCH}" "${FILE_NSSWITCH_EXTERNAL}"
-  cp -f "/etc/passwd" "${DIR_SAMBA_EXTERNAL}/passwd"
+  cp -f "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF_EXTERNAL}"
+  cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_SUPERVISORD_CONF_EXTERNAL}"
   cp -f "/etc/group" "${DIR_SAMBA_EXTERNAL}/group"
+  cp -f "/etc/passwd" "${DIR_SAMBA_EXTERNAL}/passwd"
   cp -f "/etc/shadow" "${DIR_SAMBA_EXTERNAL}/shadow"
+
 }
 restoreConfig () {
-  cp -f "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
-  cp -f "${FILE_SUPERVISORD_CONF_EXTERNAL}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  cp -f "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
+  cp -f "${DIR_SAMBA_EXTERNAL}/group" "/etc/group"
+  cp -f "${DIR_SAMBA_EXTERNAL}/passwd" "/etc/passwd"
+  cp -f "${DIR_SAMBA_EXTERNAL}/shadow" "/etc/shadow"
+  cp -f "${FILE_CHRONY_CONF_EXTERNAL}" "${FILE_CHRONY}" 
   cp -f "${FILE_KRB5_CONF_EXTERNAL}" "${FILE_KRB5}"
   cp -f "${FILE_NSSWITCH_EXTERNAL}" "${FILE_NSSWITCH}"
-  cp -f "${DIR_SAMBA_EXTERNAL}/passwd" "/etc/passwd"
-  cp -f "${DIR_SAMBA_EXTERNAL}/group" "/etc/group"
-  cp -f "${DIR_SAMBA_EXTERNAL}/shadow" "/etc/shadow"
+  cp -f "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
+  cp -f "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
+  cp -f "${FILE_SUPERVISORD_CONF_EXTERNAL}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
 }
 
 # If Hostname is in CIDR notaion, create a reverse DNS zone and a subnet in $JOIN_SITE (default-First-Site-Name)

@@ -73,14 +73,15 @@ config() {
   #DIR_SCRIPTS=/scripts
   #DIR_SAMBA_CONF=/etc/samba/smb.conf.d/
   #DIR_GPO=/gpo
-  DIR_CHRONY_LOG=/var/log/chrony/
-  DIR_CHRONY_NTSDUMP=/var/lib/chrony/
-  DIR_CHRONY_SRC=/etc/chrony/sources.d/
-  DIR_CHRONY_CONF=/etc/chrony/conf.d/
-  DIR_CHRONY_SOCK=/var/lib/samba/ntp_signd/
-  DIR_SAMBA_DATA_PREFIX=/var/lib/samba/
-  DIR_SAMBA_ETC=/etc/samba/
-  DIR_SAMBA_CSHARE=/var/lib/samba/share_c/
+  DIR_CHRONY_LOG=/var/log/chrony
+  DIR_CHRONY_NTSDUMP=/var/lib/chrony
+  DIR_CHRONY_SRC=/etc/chrony/sources.d
+  DIR_CHRONY_CONF=/etc/chrony/conf.d
+  DIR_CHRONY_SOCK=/var/lib/samba/ntp_signd
+  DIR_CHRONY_RUN=/run/chrony
+  DIR_SAMBA_DATA_PREFIX=/var/lib/samba
+  DIR_SAMBA_ETC=/etc/samba
+  DIR_SAMBA_CSHARE=/var/lib/samba/share_c
   FILE_SAMBA_LOG=/var/log/samba/%m.log
   FILE_KRB5=/etc/krb5.conf
   FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
@@ -94,15 +95,16 @@ config() {
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
 
   DIR_SAMBA_SYSVOL="${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}"
-  DIR_SAMBA_NETLOGON="${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts/"
-  DIR_SAMBA_EVENTLOG="${DIR_SAMBA_CSHARE}/windows/system32/config/"
-  DIR_SAMBA_ADMIN="${DIR_SAMBA_CSHARE}/windows/"
-  DIR_SAMBA_EXTERNAL="${DIR_SAMBA_ETC}/external/"
-  DIR_SAMBA_PRINTDRIVER="${DIR_SAMBA_CSHARE}/windows/system32/spool/drivers/"
-  DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private/"
+  DIR_SAMBA_NETLOGON="${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts"
+  DIR_SAMBA_EVENTLOG="${DIR_SAMBA_CSHARE}/windows/system32/config"
+  DIR_SAMBA_ADMIN="${DIR_SAMBA_CSHARE}/windows"
+  DIR_SAMBA_EXTERNAL="${DIR_SAMBA_ETC}/external"
+  DIR_SAMBA_PRINTDRIVER="${DIR_SAMBA_CSHARE}/windows/system32/spool/drivers"
+  DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private"
+  FILE_CHRONY_PID="${DIR_CHRONY_RUN}/chronyd.pid"
   FILE_KRB5_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/krb5.conf"
   FILE_NSSWITCH_EXTERNAL="${DIR_SAMBA_EXTERNAL}/nsswitch.conf"
-  FILE_CHRONY_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/ntp.conf"
+  FILE_CHRONY_CONF_EXTERNAL="${DIR_SAMBA_EXTERNAL}/chrony.conf"
   FILE_PKI_CA="${DIR_SAMBA_PRIVATE}/tls/ca.pem"
   FILE_PKI_CERT="${DIR_SAMBA_PRIVATE}/tls/cert.pem"
   FILE_PKI_CRL="${DIR_SAMBA_PRIVATE}/tls/crl.pem"
@@ -183,6 +185,7 @@ appSetup () {
   NTP_DEBUG_OPTION="-D ${DEBUG_LEVEL}"
   SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d ${DEBUG_LEVEL}"
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
+  CHRONY_DEBUG_OPTION="d"
 
   if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
     printf 'Set timezone'
@@ -192,21 +195,26 @@ appSetup () {
 
   sed -e "s:{{ NTP_DEBUG_OPTION }}:${NTP_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:${SAMBADAEMON_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -e "s:{{ CHRONY_DEBUG_OPTION }}:${CHRONY_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
   if [[ ! -f "${FILE_KRB5}" ]] ; then rm -f "${FILE_KRB5}" ; fi
 
-  if grep -q "{{ DIR_CHRONY_CONF }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONF }}:${DIR_CHRONY_CONF}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" -i "${FILE_CHRONY}"; fi
+  if [[ ! -d "${DIR_CHRONY_LOG}" ]]; then mkdir "${DIR_CHRONY_LOG}"; fi
+  chown _chrony:_chrony "${DIR_CHRONY_LOG}"
+  if [[ ! -d "${DIR_CHRONY_RUN}" ]]; then mkdir "${DIR_CHRONY_RUN}"; fi
+  ls -ahl /run/
+  ls -ahl "${DIR_CHRONY_RUN}"
+  chmod 750 "${DIR_CHRONY_RUN}";
+  chown _chrony:_chrony "${DIR_CHRONY_RUN}"
 
-  # github actions
-  if [[ ! -d "${DIR_CHRONY_LOG}" ]]; then mkdir "${DIR_CHRONY_LOG}" ; fi
-  if [[ ! -d "/run/chrony" ]]; then mkdir "/run/chrony" ; fi
-  
-  if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_NTSDUMP }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_NTSDUMP }}:${DIR_CHRONY_NTSDUMP}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_CONF }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONF }}:${DIR_CHRONY_CONF}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_NTSDUMP }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_NTSDUMP }}:${DIR_CHRONY_NTSDUMP}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_PID }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_PID }}:${FILE_CHRONY_PID}:" -i "${FILE_CHRONY}"; fi
 
   if  [[ ! -f "${DIR_CHRONY_SRC}/my.sources" ]]; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
@@ -462,7 +470,7 @@ appSetup () {
 
   cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
 
-  if [[ ! -f "${DIR_CHRONY_SOCK}" ]]; then mkdir -p "${DIR_CHRONY_SOCK}" ; fi
+  if [[ ! -d "${DIR_CHRONY_SOCK}" ]]; then mkdir -p "${DIR_CHRONY_SOCK}" ; fi
   chmod 750 "${DIR_CHRONY_SOCK}"
   chown root:root "${DIR_CHRONY_SOCK}"
   # Stop VPN & write supervisor service
