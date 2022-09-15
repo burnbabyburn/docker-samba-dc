@@ -7,7 +7,7 @@ on:
     tags:
       - '**'
     branches: 
-      - 'chrony'
+      - '*'
   release:
     types: [published]
 
