@@ -7,7 +7,7 @@ on:
     tags:
       - '**'
     branches: 
-      - '*'
+      - 'chrony'
   release:
     types: [published]
 
@@ -31,8 +31,8 @@ jobs:
             org.opencontainers.image.title=docker-ubuntu-samba-dc
             org.opencontainers.image.description=Samba Active Directory Domain Controller for Docker built from scratch using internal DNS and NTP.
           tags: |
-            latest
             type=ref,event=tag
+            type=ref,event=branch
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -52,6 +52,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - 
+        name: Docker Hub Description
+        uses: peter-evans/dockerhub-description@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/docker-ubuntu-samba-dc
       -
         name: Build and push
         uses: docker/build-push-action@v3.1.0
