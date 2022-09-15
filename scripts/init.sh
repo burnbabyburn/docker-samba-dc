@@ -497,7 +497,7 @@ appFirstStart () {
     printf "smbclient: Connect as anonymous user" ; if grep 'Anonymous login successful' <(smbclient -N -L LOCALHOST "${SAMBA_DEBUG_OPTION}") ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
     printf "smbclient: Connect as %s" "${DOMAIN_USER}" ; if grep '[[:blank:]]session setup ok' <(smbclient --debug-stdout -d 4 -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST) ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
     printf "Kerberos: Connect as %s" "${DOMAIN_USER}" ; if printf "%s" "${DOMAIN_PASS}" | kinit "${DOMAIN_USER}" ; then printf 'OK' ; klist ; kdestroy ; else printf 'FAILED' ; exit 1 ; fi
-    echo "check chrony"; chrony sources; chrony tracking
+    echo "check chrony"; chronyc sources; chronyc tracking
     printf "Check DNS _ldap._tcp"; host -t SRV _ldap._tcp."${LDOMAIN}"
     printf "Check DNS _kerberos._tcp"; host -t SRV _kerberos._udp."${LDOMAIN}"
     printf "Check Host record"; host -t A "${HOSTNAME}.${LDOMAIN}"
