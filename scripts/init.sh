@@ -245,7 +245,7 @@ appSetup () {
     /usr/sbin/openvpn --config ${FILE_OPENVPNCONF} &
     VPNPID=$!
     printf "Sleeping 30s to ensure VPN connects %s" "($VPNPID)";
-    sleep 30
+    sleep 30s
   fi
   if [[ "${ENABLE_RFC2307,,}" = true ]]; then
     if [[ "${JOIN}" = true ]]; then OPTION_RFC='--option=idmap_ldb:use rfc2307 = yes' ; else OPTION_RFC='--use-rfc2307' ; fi
@@ -300,7 +300,7 @@ appSetup () {
       ARGS_SAMBA_TOOL+=("--password=${DOMAIN_PASS}")
       until [ $s = 0 ]
       do
-        samba-tool domain join "${ARGS_SAMBA_TOOL[@]}" && s=0 && break || s=$? && sleep 60
+        samba-tool domain join "${ARGS_SAMBA_TOOL[@]}" && s=0 && break || s=$? && sleep 60s
       done; (exit $s)
       # Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
       if [ ! -f "${FILE_SAMBA_USER_MAP}" ]; then
