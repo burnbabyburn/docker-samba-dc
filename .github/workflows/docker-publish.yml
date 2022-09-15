@@ -7,7 +7,7 @@ on:
     tags:
       - '**'
     branches: 
-      - '*'
+      - 'bind9'
   release:
     types: [published]
 
