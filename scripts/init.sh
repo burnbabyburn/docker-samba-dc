@@ -16,6 +16,7 @@ trap 'backupConfig' SIGTERM
 config() {
   cat /etc/debian_version
   cat /etc/os-release
+  uname -a
   # Set variables
   DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
   LDOMAIN=$(printf "%s" "$DOMAIN" | tr '[:upper:]' '[:lower:]')
