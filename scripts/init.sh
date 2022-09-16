@@ -211,7 +211,7 @@ appSetup () {
     if [[ ! -d "${DIR_CHRONY_RUN}" ]]; then mkdir "${DIR_CHRONY_RUN}"; fi
     chmod 750 "${DIR_CHRONY_RUN}";
     #samba-ad-dc      | 2022-09-15T18:35:00Z Wrong owner of /run/chrony (UID != 102)
-    #chown _chrony:_chrony "${DIR_CHRONY_RUN}"
+    chown _chrony:_chrony "${DIR_CHRONY_RUN}"
     #ls -ahl /run/
     #ls -ahl "${DIR_CHRONY_RUN}"
   #fi
