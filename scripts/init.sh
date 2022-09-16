@@ -14,6 +14,8 @@ trap 'backupConfig' SIGTERM
 # https://wiki.samba.org/index.php/Setting_up_Audit_Logging
 
 config() {
+  cat /etc/debian_version
+  cat /etc/os-release
   # Set variables
   DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
   LDOMAIN=$(printf "%s" "$DOMAIN" | tr '[:upper:]' '[:lower:]')
