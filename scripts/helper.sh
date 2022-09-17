@@ -39,7 +39,7 @@ setupSchemaRFC2307File() {
   IMAP_UID_END=$((IMAP_UID_START+1))
 
   sed -e "s: {{ LDAP_SUFFIX }}:$LDAP_SUFFIX:g" \
-    -e "s:{{ NETBIOS }}:${DOMAIN_NETBIOS,,}:g" \
+    -e "s:{{ NETBIOS }}:$(printf "%s" "$DOMAIN_NETBIOS" | tr '[:upper:]' '[:lower:]'):g" \
     -e "s:{{ GID_DOM_USER }}:$GID_DOM_USER:g" \
     -e "s:{{ GID_DOM_ADMIN }}:$GID_DOM_ADMIN:g" \
     -e "s:{{ GID_DOM_COMPUTERS }}:$GID_DOM_COMPUTERS:g" \
@@ -114,22 +114,21 @@ RDNSZonefromCIDR () {
   MASK=''
   IP_REVERSE=''
   IP_NET=''
-  if [[ "$HOSTIP" != "NONE" ]]; then
-    if grep '/' <<< "$HOSTIP" ; then
+  if [ "$HOSTIP" != "NONE" ]; then
+    if echo "$HOSTIP" grep '/' ; then
       IP=$(echo "$HOSTIP" | cut -d "/" -f1)
       MASK=$(echo "$HOSTIP" | cut -d "/" -f2)
       # https://stackoverflow.com/questions/13777387/check-for-ip-validity
-      if [[ $IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-
-        if ((MASK >= 1 && MASK <= 8)); then
+      if echo "$IP" | grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b'; then
+        if [ "${MASK}" -ge 1 ] && [ "${MASK}" -le 8 ];then
           IP_REVERSE=$(echo "$IP" | awk -F. '{print $1}')
           IP_NET=$(echo "$IP" | awk -F. '{print $1".0.0.0"}')
         fi
-        if ((MASK >= 9 && MASK <= 16)); then
+        if [ "${MASK}" -ge 9 ] && [ "${MASK}" -le 16 ];then
           IP_REVERSE=$(echo "$IP" | awk -F. '{print $2"."$1}')
           IP_NET=$(echo "$IP" | awk -F. '{print $1"."$2".0.0"}')
         fi
-        if ((MASK >= 17 && MASK <= 24)); then
+        if [ "${MASK}" -ge 17 ] && [ "${MASK}" -le 24 ];then
           IP_REVERSE=$(echo "$IP" | awk -F. '{print $3"." $2"."$1}')
           IP_NET=$(echo "$IP" | awk -F. '{print $1"."$2"."$3".0"}')
         fi
@@ -144,22 +143,43 @@ RDNSZonefromCIDR () {
 
   # https://stackoverflow.com/questions/5281341/get-local-network-interface-addresses-using-only-proc
   # https://stackoverflow.com/questions/50413579/bash-convert-netmask-in-cidr-notation
-  ft_local=$(awk '$1=="Local:" {flag=1} flag' <<< "$(</proc/net/fib_trie)")
-  for IF in $(ls /sys/class/net/); do
-    networks=$(awk '$1=="'$IF'" && $3=="00000000" && $8!="FFFFFFFF" {printf $2 $8 "\n"}' <<< "$(</proc/net/route)" )
+  #ft_local=$(awk '$1=="Local:" {flag=1} flag' <<< "$(</proc/net/fib_trie)")
+  for IF in /sys/class/net/*; do
+    IF=$(echo "$IF" | cut -d / -f5)
+    if [ "$IF" != lo ]; then
+      networks=$(awk '$1=="'"$IF"'" && $3=="00000000" && $8!="FFFFFFFF" {printf $2 $8 "\n"}' /proc/net/route)
+    fi
     for net_hex in $networks; do
-      net_dec=$(awk '{gsub(/../, "0x& "); printf "%d.%d.%d.%d\n", $4, $3, $2, $1}' <<< $net_hex)
-      mask_dec=$(awk '{gsub(/../, "0x& "); printf "%d.%d.%d.%d\n", $8, $7, $6, $5}' <<< $net_hex)
-      c=0 x=0$( printf '%o' ${mask_dec//./ } )
-      while [ $x -gt 0 ]; do
-        let c+=$((x%2)) 'x>>=1'
-      done
+      net_dec=$(echo "$net_hex" | awk '{gsub(/../, "0x& "); printf "%d.%d.%d.%d\n", $4, $3, $2, $1}' )
+      mask_dec=$(echo "$net_hex" | awk '{gsub(/../, "0x& "); printf "%d.%d.%d.%d\n", $8, $7, $6, $5}')
+      #netmask_spaces="$(echo "${mask_dec}" | sed 's/\./ /g')"
+      c="$(mask2cdr "$mask_dec")"
       CIDR=$net_dec/$c
-      if [[ $net_dec =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then samba-tool sites subnet create "$CIDR" "$JOIN_SITE" "${SAMBA_DEBUG_OPTION}"
+      if echo "$net_dec" | grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b'; then samba-tool sites subnet create "$CIDR" "$JOIN_SITE" "${SAMBA_DEBUG_OPTION}"
       else echo "Cant not create subnet: $CIDR for site: $JOIN_SITE. Invalid parameter ... exiting" ; exit 1 ; fi
     done
   done
 }
+
+mask2cdr ()
+{
+   # Assumes there's no "255." after a non-255 byte in the mask
+   x=${1##*255.}
+   set -- 0^^^128^192^224^240^248^252^254^ $(( (${#1} - ${#x})*2 )) "${x%%.*}"
+   x=${1%%"$3"*}
+   echo $(( $2 + (${#x}/4) ))
+}
+
+
+cdr2mask ()
+{
+   # Number of args to shift, 255..255, first non-255 byte, zeroes
+   set -- $(( 5 - ($1 / 8) )) 255 255 255 255 $(( (255 << (8 - ($1 % 8))) & 255 )) 0 0 0
+   [ "$1" -gt 1 ] && shift "$1" || shift
+   echo "${1-0}"."${2-0}"."${3-0}"."${4-0}"
+}
+
+
 EnableChangeKRBTGTSupervisord () {
   {
     echo ""
