@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 DEBUG_ENABLE=${DEBUG_ENABLE:-false}
 if [ "${DEBUG_ENABLE}" = true ] ; then set -x ; fi
@@ -138,7 +138,7 @@ config() {
   for dn in ${LDOMAIN}; do
     LDAP_SUFFIX="${LDAP_SUFFIX},DC=${dn}"
   done
-  IFS=$' \t\n'
+  IFS=$(printf ' \n\t')
   LDAP_DN="${HOSTNAME}${LDAP_SUFFIX}"
 
   # exports for other scripts and TLS_PKI
@@ -362,8 +362,7 @@ appSetup () {
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
       if [ "${FEATURE_RECYCLEBIN}" = true ]; then
         python3 /"${DIR_SCRIPTS}"/enablerecyclebin.py "${FILE_SAMLDB}"
-        if grep 'CN=Recycle Bin Feature' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base \
-        -b "CN=NTDS Settings,CN=${HOSTNAME},CN=Servers,CN=${JOIN_SITE},CN=Sites,CN=Configuration${LDAP_SUFFIX}" msDS-EnabledFeature) ; then printf "Optional Feature Recycle Bin Feature OK" ; else printf "FAILED" ; exit 1 ; fi
+        if ldbsearch -H /var/lib/samba/private/sam.ldb -s base -b "CN=NTDS Settings,CN=${HOSTNAME},CN=Servers,CN=${JOIN_SITE},CN=Sites,CN=Configuration${LDAP_SUFFIX}" msDS-EnabledFeature | grep -q 'CN=Recycle Bin Feature' ; then printf "Optional Feature Recycle Bin Feature OK" ; else printf "FAILED" ; exit 1 ; fi
       fi
 
       if [ "${FEATURE_KERBEROS_TGT}" = true ]; then EnableChangeKRBTGTSupervisord ; fi
@@ -372,7 +371,7 @@ appSetup () {
       if [ "${ENABLE_RFC2307}" = true ]; then
         setupSchemaRFC2307File
         ldbmodify -H "${FILE_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
-        if grep 'returned 1 records' <(ldbsearch -H /var/lib/samba/private/sam.ldb -s base -b CN="${DOMAIN_NETBIOS}",CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System"${LDAP_SUFFIX}"); then
+        if ldbsearch -H /var/lib/samba/private/sam.ldb -s base -b CN="${DOMAIN_NETBIOS}",CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System"${LDAP_SUFFIX}" | grep 'returned 1 records'; then
           printf "Add RFC2307 Attributes for default AD users" ; else printf 'FAILED' ; exit 1 ; fi
       fi
       # https://fy.blackhats.net.au/blog/html/2018/04/18/making_samba_4_the_default_ldap_server.html?highlight=samba
@@ -511,8 +510,8 @@ appFirstStart () {
     fi
     #Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
     printf "rpcclient: Connect as %s" "${DOMAIN_USER}" ; if rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1 ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
-    printf "smbclient: Connect as anonymous user" ; if grep 'Anonymous login successful' <(smbclient -N -L LOCALHOST "${SAMBA_DEBUG_OPTION}") ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
-    printf "smbclient: Connect as %s" "${DOMAIN_USER}" ; if grep '[[:blank:]]session setup ok' <(smbclient --debug-stdout -d 4 -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST) ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
+    printf "smbclient: Connect as anonymous user" ; if smbclient -N -L LOCALHOST "${SAMBA_DEBUG_OPTION}" | grep 'Anonymous login successful' ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
+    printf "smbclient: Connect as %s" "${DOMAIN_USER}" ; if smbclient --debug-stdout -d 4 -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST | grep '[[:blank:]]session setup ok' ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
     printf "Kerberos: Connect as %s" "${DOMAIN_USER}" ; if printf "%s" "${DOMAIN_PASS}" | kinit "${DOMAIN_USER}" ; then printf 'OK' ; klist ; kdestroy ; else printf 'FAILED' ; exit 1 ; fi
     echo "check chrony"; chronyc sources; chronyc tracking
     printf "Check DNS _ldap._tcp"; host -t SRV _ldap._tcp."${LDOMAIN}"
