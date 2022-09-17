@@ -129,8 +129,8 @@ config() {
   FILE_EXTERNAL_SUPERVISORD_CONF="${DIR_EXTERNAL}/supervisord.conf"
 
   # if hostname contains FQDN cut the rest
-  if grep "." "${HOSTNAME}" ; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
-
+  if printf "%s" "${HOSTNAME}" | grep -q "\."; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
+  
   #DN for LDIF
   LDAP_SUFFIX=""
   IFS='.'
@@ -154,7 +154,7 @@ config() {
 #  export FILE_SAMBA_INCLUDES="${FILE_SAMBA_INCLUDES}"
 
   # shellcheck source=/dev/null
-  ./"${DIR_SCRIPTS}"/helper.sh
+  . /"${DIR_SCRIPTS}"/helper.sh
 }
 
 appSetup () {
@@ -207,9 +207,9 @@ appSetup () {
 
   # If used on azure image chrony breaks (github actions)
   # Fatal error : Could not open /run/chrony/chronyd.pid : Permission denied
-+ # INFO exited: chrony (exit status 1; not expected)
-  if ! grep "azure" <(uname -a); then
-    # Wrong owner of /run/chrony (UID != 102)
+ # INFO exited: chrony (exit status 1; not expected)
+  if ! uname -a | grep -q "azure"; then
+    # Wrong owner of /run/chrony (UID != 102) - the azure image complains but with a chowned dir chrony just crashes
     chown _chrony:_chrony "${DIR_CHRONY_RUN}"
   fi
   if grep -q "{{ DIR_CHRONY_CONF }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONF }}:${DIR_CHRONY_CONF}:" -i "${FILE_CHRONY}"; fi
@@ -233,7 +233,7 @@ appSetup () {
   if [ ! -d "${DIR_EXTERNAL}" ]; then mkdir "${DIR_EXTERNAL}" ; fi
   #Check if DOMAIN_NETBIOS <15 chars and contains no "."
   if [ "${#DOMAIN_NETBIOS}" -gt 15 ]; then printf "DOMAIN_NETBIOS too long => exiting" ; exit 1 ; fi
-  if grep "." "${DOMAIN_NETBIOS}" ; then printf "DOMAIN_NETBIOS contains forbiden char    .     => exiting" ; exit 1 ; fi
+  if printf "%s" "${DOMAIN_NETBIOS}" | grep -q "\." ; then printf "DOMAIN_NETBIOS contains forbiden char    .     => exiting" ; exit 1 ; fi
   if [ "${HOSTIP}" != "NONE" ]; then set -- "$@" "--host-ip=${HOSTIP%/*}" ; fi
   if [ "${HOSTIPV6}" != "NONE" ]; then set -- "$@" "--host-ip6=${HOSTIPV6}" ;  fi
   if [ "${JOIN_SITE}" != "Default-First-Site-Name" ]; then set -- "$@" "--site=${JOIN_SITE}" ; fi
