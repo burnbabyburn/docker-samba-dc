@@ -140,7 +140,8 @@ RDNSZonefromCIDR () {
       #this removes all internal docker IPs from samba DNS
       #samba_dnsupdate --current-ip="${HOSTIP%/*}"
     fi
-
+}
+GetAllCidrCreateSubnet () {
   # https://stackoverflow.com/questions/5281341/get-local-network-interface-addresses-using-only-proc
   # https://stackoverflow.com/questions/50413579/bash-convert-netmask-in-cidr-notation
   #ft_local=$(awk '$1=="Local:" {flag=1} flag' <<< "$(</proc/net/fib_trie)")
@@ -148,6 +149,8 @@ RDNSZonefromCIDR () {
     IF=$(echo "$IF" | cut -d / -f5)
     if [ "$IF" != lo ]; then
       networks=$(awk '$1=="'"$IF"'" && $3=="00000000" && $8!="FFFFFFFF" {printf $2 $8 "\n"}' /proc/net/route)
+	else
+	  break
     fi
     for net_hex in $networks; do
       net_dec=$(echo "$net_hex" | awk '{gsub(/../, "0x& "); printf "%d.%d.%d.%d\n", $4, $3, $2, $1}' )

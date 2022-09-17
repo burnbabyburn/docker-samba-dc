@@ -495,6 +495,7 @@ appFirstStart () {
   if [ "${JOIN}" = false ]; then
     # Better check if net rpc is rdy
     sleep 30s
+	GetAllCidrCreateSubnet
     RDNSZonefromCIDR
       #admxdir=$(find /tmp/ -name PolicyDefinitions)
       admxdir="${DIR_GPO}"
