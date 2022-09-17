@@ -14,9 +14,6 @@ trap 'backupConfig' SIGTERM
 # https://wiki.samba.org/index.php/Setting_up_Audit_Logging
 
 config() {
-  cat /etc/debian_version
-  cat /etc/os-release
-  uname -a
   # Set variables
   DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
   LDOMAIN=$(printf "%s" "$DOMAIN" | tr '[:upper:]' '[:lower:]')
@@ -205,19 +202,15 @@ appSetup () {
   if [[ ! -d "${DIR_CHRONY_LOG}" ]]; then mkdir "${DIR_CHRONY_LOG}"; fi
   chown _chrony:_chrony "${DIR_CHRONY_LOG}"
   if [[ ! -d "${DIR_CHRONY_RUN}" ]]; then mkdir "${DIR_CHRONY_RUN}"; fi
-  ls -ahl /run
-  ls -ahl /run/chrony
-#  if ! grep "azure" <(uname -a); then
-    if [[ ! -d "${DIR_CHRONY_RUN}" ]]; then mkdir "${DIR_CHRONY_RUN}"; fi
-    chmod 750 "${DIR_CHRONY_RUN}";
-    #samba-ad-dc      | 2022-09-15T18:35:00Z Wrong owner of /run/chrony (UID != 102)
+  chmod 750 "${DIR_CHRONY_RUN}";
+
+  # If used on azure image chrony breaks (github actions)
+  # Fatal error : Could not open /run/chrony/chronyd.pid : Permission denied
++ # INFO exited: chrony (exit status 1; not expected)
+  if ! grep "azure" <(uname -a); then
+    # Wrong owner of /run/chrony (UID != 102)
     chown _chrony:_chrony "${DIR_CHRONY_RUN}"
-    #ls -ahl /run/
-    #ls -ahl "${DIR_CHRONY_RUN}"
-  #fi
-  ls -ahl /run
-  ls -ahl /run/chrony
-  
+  fi
   if grep -q "{{ DIR_CHRONY_CONF }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONF }}:${DIR_CHRONY_CONF}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_NTSDUMP }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_NTSDUMP }}:${DIR_CHRONY_NTSDUMP}:" -i "${FILE_CHRONY}"; fi
