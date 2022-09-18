@@ -495,6 +495,10 @@ appFirstStart () {
   if [ "${JOIN}" = false ]; then
     # Better check if net rpc is rdy
     sleep 30s
+	# new samba version: if HOSTIP is set, samba does not create dns entries for other internal interfaces.Thus many samba-tool operations fail.
+    # This is the correct behaviour in a normal env, but breaks some functions if on docker internal network.
+	# running a samba_dnsupdate manually adds the missing entries.
+	samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}"
 	GetAllCidrCreateSubnet
     RDNSZonefromCIDR
       #admxdir=$(find /tmp/ -name PolicyDefinitions)
