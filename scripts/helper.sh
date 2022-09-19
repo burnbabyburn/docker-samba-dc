@@ -155,7 +155,6 @@ GetAllCidrCreateSubnet () {
     for net_hex in $networks; do
       net_dec=$(echo "$net_hex" | awk '{gsub(/../, "0x& "); printf "%d.%d.%d.%d\n", $4, $3, $2, $1}' )
       mask_dec=$(echo "$net_hex" | awk '{gsub(/../, "0x& "); printf "%d.%d.%d.%d\n", $8, $7, $6, $5}')
-      #netmask_spaces="$(echo "${mask_dec}" | sed 's/\./ /g')"
       c="$(mask2cdr "$mask_dec")"
       CIDR=$net_dec/$c
       if echo "$net_dec" | grep -E '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b'; then samba-tool sites subnet create "$CIDR" "$JOIN_SITE" "${SAMBA_DEBUG_OPTION}"
