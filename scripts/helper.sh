@@ -171,7 +171,7 @@ mask2cdr ()
    x=${1%%"$3"*}
    echo $(( $2 + (${#x}/4) ))
 }
-
+ 
 cdr2mask ()
 {
    # Number of args to shift, 255..255, first non-255 byte, zeroes
