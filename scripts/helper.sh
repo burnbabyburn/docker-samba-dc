@@ -173,7 +173,6 @@ mask2cdr ()
    echo $(( $2 + (${#x}/4) ))
 }
 
-
 cdr2mask ()
 {
    # Number of args to shift, 255..255, first non-255 byte, zeroes
@@ -181,7 +180,6 @@ cdr2mask ()
    [ "$1" -gt 1 ] && shift "$1" || shift
    echo "${1-0}"."${2-0}"."${3-0}"."${4-0}"
 }
-
 
 EnableChangeKRBTGTSupervisord () {
   {
