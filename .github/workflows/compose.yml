@@ -32,6 +32,8 @@ jobs:
         run: docker exec --tty samba-dc01 /usr/bin/cat /etc/passwd
       - name: Check DC01 NTP
         run: docker exec --tty samba-dc01 /usr/bin/chronyc sources && /usr/bin/chronyc tracking
+      - name: Check DC01 named
+        run: docker exec --tty samba-dc01 /usr/bin/named-checkconf -p
       - name: Check DC01 config
         run: docker exec --tty samba-dc01 /usr/bin/testparm -vs
       - name: Check DC01 processes
@@ -54,6 +56,8 @@ jobs:
         run: docker logs samba-dc02
       - name: Check DC02 NTP
         run: docker exec --tty samba-dc02 /usr/bin/chronyc sources && /usr/bin/chronyc tracking
+      - name: Check DC02 named
+        run: docker exec --tty samba-dc02 /usr/bin/named-checkconf -p
       - name: Check DC02 config
         run: docker exec --tty samba-dc02 /usr/bin/testparm -vs
       - name: Check DC02 processes

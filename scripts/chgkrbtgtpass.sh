@@ -29,9 +29,9 @@ do
     echo "ERROR: Failed chainging KRBTGT password" && exit 1
   fi
 
-  date1="$(date +"%a, %d %b %Y %H:%M:%S %Z")"
+  date1="$(date +"%a, %d %b %Y %H:%M")"
   lastset="$(pdbedit -Lv krbtgt | grep "Password last set:")"
-  date2="$(echo "$lastset" | cut -d ':' -f2):$(echo "$lastset" | cut -d ':' -f3):$(echo "$lastset" | cut -d ':' -f4)"
+  date2="$(echo "$lastset" | cut -d ':' -f2):$(echo "$lastset" | cut -d ':' -f3)"
   #remove leading spaces
   date2=$(echo $date2 | sed 's/^ *//g')
   echo "Verifying that KRBTGT password has been updated"

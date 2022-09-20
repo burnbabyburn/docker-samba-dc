@@ -79,7 +79,8 @@ config() {
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba
   DIR_SAMBA_ETC=/etc/samba
   DIR_SAMBA_CSHARE=/var/lib/samba/share_c
-  FILE_SAMBA_LOG=/var/log/samba/%m.log
+  #%S one log file per service
+  FILE_SAMBA_LOG=/var/log/samba/%S.log
   FILE_KRB5=/etc/krb5.conf
   FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
@@ -176,6 +177,7 @@ config() {
   export FILE_EXTERNAL_CHRONY_CONF="${FILE_EXTERNAL_CHRONY_CONF}"
   export FILE_EXTERNAL_NSSWITCH="${FILE_EXTERNAL_NSSWITCH}"
   export FILE_EXTERNAL_KRB5_CONF="${FILE_EXTERNAL_KRB5_CONF}"
+  export DIR_EXTERNAL_BIND9="${DIR_EXTERNAL_BIND9}"
 
   # shellcheck source=/dev/null
   . /"${DIR_SCRIPTS}"/helper.sh
