@@ -60,6 +60,7 @@ config() {
   TLS_PKI_O=${PKI_O:-Simple Root CA}
   TLS_PKI_OU=${PKI_OU:-Samba}
   TZ=${TZ:-/Etc/UTC}
+  BIND9_VALIDATE_EXCEPT=${BIND9_VALIDATE_EXCEPT:-NONE}
 
   # Min Counter Values for NIS Attributes. Set in docker-compose
   # does nothing on DCs as they shall not use idmap settings.
@@ -93,6 +94,8 @@ config() {
   FILE_OPENVPNCONF=/docker.ovpn
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
+  DIR_BIND9=/etc/bind
+  DIR_BIND9_RUN=/run/named
 
   DIR_SAMBA_SYSVOL="${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}"
   DIR_SAMBA_NETLOGON="${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts"
@@ -127,10 +130,33 @@ config() {
   FILE_SAMBA_WINSLDB="${DIR_SAMBA_PRIVATE}/wins_config.ldb"
   FILE_SAMLDB="${DIR_SAMBA_PRIVATE}/sam.ldb"
   FILE_EXTERNAL_SUPERVISORD_CONF="${DIR_EXTERNAL}/supervisord.conf"
+  FILE_BIND9_CONF="${DIR_BIND9}/named.conf"
+  FILE_BIND9_OPTIONS="${DIR_BIND9}/named.conf.options"
+  FILE_BIND9_LOCAL="${DIR_BIND9}/named.conf.local"
+  FILE_BIND9_SAMBA_CONF="${DIR_BIND9}/samba-named.conf"
+  FILE_BIND9_SAMBA_GENCONF="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
 
   # if hostname contains FQDN cut the rest
   if printf "%s" "${HOSTNAME}" | grep -q "\."; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
-  
+
+  # Check if strings end with semicolon. if not append it
+  if [[ ! $(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then
+    ENABLE_DNSFORWARDER_FORMATED=""
+    for dnsserver in ${ENABLE_DNSFORWARDER}; do
+      ENABLE_DNSFORWARDER_FORMATED="$ENABLE_DNSFORWARDER_FORMATED$dnsserver;"
+    done
+    export ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER_FORMATED}"
+  fi
+
+  if [ ! $(printf "%s" "${BIND9_VALIDATE_EXCEPT}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]; then
+    BIND9_VALIDATE_EXCEPT_FORMATED=""
+    for except in "${BIND9_VALIDATE_EXCEPT}"; do
+      # each substring needs to be in "" and seperated by ;
+      BIND9_VALIDATE_EXCEPT_FORMATED="${BIND9_VALIDATE_EXCEPT_FORMATED}${except};"
+    done
+    export BIND9_VALIDATE_EXCEPT="${BIND9_VALIDATE_EXCEPT_FORMATED}"
+  fi
+
   #DN for LDIF
   LDAP_SUFFIX=""
   IFS='.'
@@ -151,23 +177,16 @@ config() {
   export FILE_EXTERNAL_SAMBA_CONF="${FILE_EXTERNAL_SAMBA_CONF}"
   export FILE_EXTERNAL_CHRONY_CONF="${FILE_EXTERNAL_CHRONY_CONF}"
   export FILE_EXTERNAL_NSSWITCH="${FILE_EXTERNAL_NSSWITCH}"
-#  export FILE_SAMBA_INCLUDES="${FILE_SAMBA_INCLUDES}"
+  export FILE_EXTERNAL_KRB5_CONF="${FILE_EXTERNAL_KRB5_CONF}"
 
   # shellcheck source=/dev/null
   . /"${DIR_SCRIPTS}"/helper.sh
 }
 
 appSetup () {
-  set -- "--dns-backend=SAMBA_INTERNAL" \
-         "--option=add group script=/usr/sbin/groupadd %g" \
-         "--option=add machine script=/usr/sbin/useradd -N -M -g Domain-Computer -d /dev/null -s /bin/false %u" \
-         "--option=add user to group script=/usr/sbin/adduser %u %g" \
-         "--option=delete group script=/usr/sbin/groupdel %g" \
-         "--option=delete user from group script=/usr/sbin/deluser %u %g" \
-         "--option=delete user script=/usr/sbin/deluser %u" \
+  set -- "--dns-backend=BIND9_DLZ" \
+         "--option=server services=-dns" \
          "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool"
-
-  if ! grep 'Domain-Computer' /etc/group ; then /usr/sbin/groupadd Domain-Computer ; fi
 
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#NAMERESOLVEORDER
   set -- "$@" "--option=name resolve order = wins host bcast"
@@ -183,7 +202,7 @@ appSetup () {
   set -- "$@" "--option=eventlog list = Application System Security SyslogLinux Webserver"
 
   set -- "$@" "-d ${DEBUG_LEVEL}"
-  NTP_DEBUG_OPTION="-D ${DEBUG_LEVEL}"
+
   SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d ${DEBUG_LEVEL}"
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
   CHRONY_DEBUG_OPTION="d"
@@ -194,9 +213,22 @@ appSetup () {
     printf "%s" "${TZ}" >/etc/timezone
   fi
 
-  sed -e "s:{{ NTP_DEBUG_OPTION }}:${NTP_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+
   sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:${SAMBADAEMON_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ CHRONY_DEBUG_OPTION }}:${CHRONY_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+
+  NTPUSERGROUP="root"
+  BINDUSERGROUP="bind"  
+  sed -e "s:{{ NTPUSERGROUP }}:${NTPUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -e "s:{{ BINDUSERGROUP }}:${BINDUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+
+ # BIND9
+  if [[ ! -d "${DIR_BIND9_RUN}" ]]; then mkdir "${DIR_BIND9_RUN}";chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}";else chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"; fi
+  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
+  # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
+  if [[ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]]; then sed "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_OPTIONS}"; fi
+  # https://www.elastic2ls.com/blog/loading-from-master-file-managed-keys-bind-failed/
+  if ! grep -q "/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi  
 
   if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
 
