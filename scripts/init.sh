@@ -208,7 +208,7 @@ appSetup () {
     printf "%s" "${TZ}" >/etc/timezone
   fi
 
-
+  sed -e "s:{{ SAMBA_DEBUG_OPTION }}:${SAMBA_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:${SAMBADAEMON_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ CHRONY_DEBUG_OPTION }}:${CHRONY_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
