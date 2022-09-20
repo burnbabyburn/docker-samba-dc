@@ -171,6 +171,7 @@ config() {
   export LDAP_DN="${LDAP_DN}"
   export LDAP_SUFFIX="${LDAP_SUFFIX}"
   export DIR_SCRIPTS="${DIR_SCRIPTS}"
+  export DIR_BIND9="${DIR_BIND9}"
   # Export if we don't source helper.sh in the future. These vars are needed from helper script
   export FILE_EXTERNAL_SUPERVISORD_CONF="${FILE_EXTERNAL_SUPERVISORD_CONF}"
   export FILE_EXTERNAL_SAMBA_CONF="${FILE_EXTERNAL_SAMBA_CONF}"
@@ -336,8 +337,7 @@ appSetup () {
       set -- "$@" "DC"
       set -- "$@" "-U${DOMAIN_NETBIOS}\\${DOMAIN_USER}"
       set -- "$@" "--password=${DOMAIN_PASS}"
-      until [ $s = 0 ]
-      do
+      until [ $s = 0 ]; do
         samba-tool domain join "$@" && s=0 && break || s=$? && sleep 60s
       done; (exit $s)
       # Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
@@ -534,11 +534,22 @@ appFirstStart () {
   # new samba version: if HOSTIP is set, samba does not create dns entries for other internal interfaces.Thus many samba-tool operations fail.
   # This is the correct behaviour in a normal env, but breaks some functions if on docker internal network.
   # running a samba_dnsupdate manually adds the missing entries.
-  samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}"
+  s=1
+  until [ $s = 0 ]; do
+        smbclient -N -L LOCALHOST "$@" && s=0 && break || s=$? printf "Waiting for samba to start" && sleep 10s
+  done; (exit $s)
+  printf "DNS: Testing Dynamic DNS Updates" ; if ! samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}"
+  #Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
+  printf "rpcclient: Connect as %s" "${DOMAIN_USER}" ; if ! rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1 ; then printf "rpcclient: Connect as %s FAILED" "${DOMAIN_USER}" ; exit 1 ; fi
+  printf "smbclient: Connect as %s" "${DOMAIN_USER}" ; if ! smbclient --debug-stdout -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST "${SAMBA_DEBUG_OPTION}" | grep '[[:blank:]]session setup ok' ; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1 ; fi
+  printf "Kerberos: Connect as %s" "${DOMAIN_USER}" ; if printf "%s" "${DOMAIN_PASS}" | kinit -V "${DOMAIN_USER}" ; then printf 'OK' ; klist ; kdestroy ; else printf "Kerberos: Connect as %s FAILED" "${DOMAIN_USER}" ; exit 1 ; fi
+  echo "NTP: Check timesource and sync"; if ! chronyc sources || ! chronyc tracking; then printf "NTP: Check timesource and sync FAILED"; exit 1 ; fi
+  printf "DNS: Check _ldap._tcp.%s" "${LDOMAIN}"; if ! host -t SRV _ldap._tcp."${LDOMAIN}"; then printf "DNS: Check _ldap._tcp.%s FAILED" "${LDOMAIN}"; exit 1 ; fi
+  printf "DNS: Check _kerberos._udp.%s" "${LDOMAIN}"; if ! host -t SRV _kerberos._udp."${LDOMAIN}"; then printf "DNS: Check _kerberos._udp.%s FAILED" "${LDOMAIN}"; exit 1 ; fi
+  printf "HOST: Check record %s.%s" "${HOSTNAME}" "${LDOMAIN}"; if ! host -t A "${HOSTNAME}.${LDOMAIN}"; then printf "HOST: Check record %s.%s FAILED" "${HOSTNAME}" "${LDOMAIN}"; exit 1 ; fi
+  printf "DNS: Check Reverse resolution of IP:%s" "${IP}"; if ! dig -x "${IP}"; then printf "DNS: Check Reverse resolution of IP:%s FAILED" "${IP}"; exit 1 ; fi
 
   if [ "${JOIN}" = false ]; then
-    # Better check if net rpc is rdy
-    sleep 30s
     GetAllCidrCreateSubnet
     RDNSZonefromCIDR
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
@@ -550,17 +561,6 @@ appFirstStart () {
     printf "%s" "${DOMAIN_PASS}" | if ! samba-tool gpo admxload -U Administrator "${SAMBA_DEBUG_OPTION}"; then printf "Check Reverse DNS resolution of IP:%s" "${IP}"; exit 1 ; fi
     # Import Windows admx&adml
     printf "%s" "${DOMAIN_PASS}" | if ! samba-tool gpo admxload -U Administrator --admx-dir="${DIR_GPO}" "${SAMBA_DEBUG_OPTION}"; then printf "Check Reverse DNS resolution of IP:%s" "${IP}"; exit 1 ; fi
-
-    #Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
-    printf "rpcclient: Connect as %s" "${DOMAIN_USER}" ; if ! rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1 ; then printf "rpcclient: Connect as %s FAILED" "${DOMAIN_USER}" ; exit 1 ; fi
-    printf "smbclient: Connect as anonymous user" ; if ! smbclient -N -L LOCALHOST "${SAMBA_DEBUG_OPTION}" | grep 'Anonymous login successful' ; then printf 'smbclient: Connect as anonymous user FAILED' ; exit 1 ; fi
-    printf "smbclient: Connect as %s" "${DOMAIN_USER}" ; if ! smbclient --debug-stdout -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST "${SAMBA_DEBUG_OPTION}" | grep '[[:blank:]]session setup ok' ; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1 ; fi
-    printf "Kerberos: Connect as %s" "${DOMAIN_USER}" ; if printf "%s" "${DOMAIN_PASS}" | kinit -V "${DOMAIN_USER}" ; then printf 'OK' ; klist ; kdestroy ; else printf "Kerberos: Connect as %s FAILED" "${DOMAIN_USER}" ; exit 1 ; fi
-    echo "check chrony"; if ! chronyc sources || ! chronyc tracking; then printf "check chrony FAILED"; exit 1 ; fi
-    printf "Check DNS _ldap._tcp.%s" "${LDOMAIN}"; if ! host -t SRV _ldap._tcp."${LDOMAIN}"; then printf "Check DNS _ldap._tcp.%s FAILED" "${LDOMAIN}"; exit 1 ; fi
-    printf "Check DNS _kerberos._udp.%s" "${LDOMAIN}"; if ! host -t SRV _kerberos._udp."${LDOMAIN}"; then printf "Check DNS _kerberos._udp.%s FAILED" "${LDOMAIN}"; exit 1 ; fi
-    printf "Check Host record %s.%s" "${HOSTNAME}" "${LDOMAIN}"; if ! host -t A "${HOSTNAME}.${LDOMAIN}"; then printf "Check Host record %s.%s FAILED" "${HOSTNAME}" "${LDOMAIN}"; exit 1 ; fi
-    printf "Check Reverse DNS resolution of IP:%s" "${IP}"; if ! dig -x "${IP}"; then printf "Check Reverse DNS resolution of IP:%s FAILED" "${IP}"; exit 1 ; fi
 
     #Copy root cert as der to netlogon
     #openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
@@ -578,7 +578,6 @@ appFirstStart () {
     fi
   fi
   wait
-  # source /scripts/firstrun.sh
 }
 
 appStart () {
