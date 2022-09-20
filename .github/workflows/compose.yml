@@ -77,6 +77,6 @@ jobs:
       - name: Check DC02 Host record of DC02
         run: docker exec --tty samba-dc02 /usr/bin/dig +short dockersamba02.sam.dom
       - name: Get all Domain Controllers
-        run: docker exec --tty samba-dc02 /usr/bin/ldbsearch -H /var/lib/samba/private/sam.ldb -b"OU=Domain Controllers,DC=ad,DC=eternal,DC=chaos" "objectClass=computer" cn
+        run: docker exec --tty samba-dc02 /usr/bin/ldbsearch -H /var/lib/samba/private/sam.ldb -b"OU=Domain Controllers,DC=sam,DC=dom" "objectClass=computer" cn
             
     
