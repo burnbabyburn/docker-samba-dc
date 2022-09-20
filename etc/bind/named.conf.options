@@ -12,7 +12,7 @@ options {
       allow-transfer { none; };
 
       // If you only use IPv4.
-      listen-on-v6 { any; };
+      #listen-on-v6 { none; };
       // listen on these ipnumbers.
       listen-on port 53 { any; };
       #listen-on port 53 { 192.168.0.6; 127.0.0.1; ::1; };

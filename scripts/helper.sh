@@ -86,6 +86,7 @@ SetKeyValueFilePattern() {
 
 # https://stackoverflow.com/questions/41451159/how-to-execute-a-script-when-i-terminate-a-docker-container
 backupConfig () {
+  cp -dR --preserve=all "${DIR_BIND9}" "${DIR_EXTERNAL_BIND9}"
   cp -f "${FILE_CHRONY}" "${FILE_EXTERNAL_CHRONY_CONF}"
   cp -f "${FILE_KRB5}" "${FILE_EXTERNAL_KRB5_CONF}"
   cp -f "${FILE_NSSWITCH}" "${FILE_EXTERNAL_NSSWITCH}"
@@ -94,16 +95,15 @@ backupConfig () {
   cp -f "/etc/group" "${DIR_EXTERNAL}/group"
   cp -f "/etc/passwd" "${DIR_EXTERNAL}/passwd"
   cp -f "/etc/shadow" "${DIR_EXTERNAL}/shadow"
-
 }
 restoreConfig () {
+  cp -dR --preserve=all "${DIR_EXTERNAL_BIND9}" "${DIR_BIND9}"
   cp -f "${DIR_EXTERNAL}/group" "/etc/group"
   cp -f "${DIR_EXTERNAL}/passwd" "/etc/passwd"
   cp -f "${DIR_EXTERNAL}/shadow" "/etc/shadow"
   cp -f "${FILE_EXTERNAL_CHRONY_CONF}" "${FILE_CHRONY}" 
   cp -f "${FILE_EXTERNAL_KRB5_CONF}" "${FILE_KRB5}"
   cp -f "${FILE_EXTERNAL_NSSWITCH}" "${FILE_NSSWITCH}"
-  cp -f "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
   cp -f "${FILE_EXTERNAL_SAMBA_CONF}" "${FILE_SAMBA_CONF}"
   cp -f "${FILE_EXTERNAL_SUPERVISORD_CONF}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
 }
@@ -149,8 +149,8 @@ GetAllCidrCreateSubnet () {
     IF=$(echo "$IF" | cut -d / -f5)
     if [ "$IF" != lo ]; then
       networks=$(awk '$1=="'"$IF"'" && $3=="00000000" && $8!="FFFFFFFF" {printf $2 $8 "\n"}' /proc/net/route)
-	else
-	  break
+    else
+      break
     fi
     for net_hex in $networks; do
       net_dec=$(echo "$net_hex" | awk '{gsub(/../, "0x& "); printf "%d.%d.%d.%d\n", $4, $3, $2, $1}' )
