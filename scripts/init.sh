@@ -538,7 +538,7 @@ appFirstStart () {
   until [ $s = 0 ]; do
         smbclient -N -L LOCALHOST "$@" && s=0 && break || s=$? printf "Waiting for samba to start" && sleep 10s
   done; (exit $s)
-  printf "DNS: Testing Dynamic DNS Updates" ; if ! samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}"
+  printf "DNS: Testing Dynamic DNS Updates" ; if ! samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}" ; then printf "DNS: Testing Dynamic DNS Updates FAILED" ; exit 1 ; fi
   #Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
   printf "rpcclient: Connect as %s" "${DOMAIN_USER}" ; if ! rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1 ; then printf "rpcclient: Connect as %s FAILED" "${DOMAIN_USER}" ; exit 1 ; fi
   printf "smbclient: Connect as %s" "${DOMAIN_USER}" ; if ! smbclient --debug-stdout -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST "${SAMBA_DEBUG_OPTION}" | grep '[[:blank:]]session setup ok' ; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1 ; fi
