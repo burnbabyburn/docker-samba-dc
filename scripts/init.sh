@@ -70,10 +70,6 @@ config() {
   IMAP_GID_START=${IMAP_GID_START:-$IMAP_ID_START}
 
   # DIR_GPO, DIR_SAMBA_CONF, DIR_LDIF and DIR_SCRIPTS need to be changed in the Dockerfile
-  #DIR_LDIF=/ldif
-  #DIR_SCRIPTS=/scripts
-  #DIR_SAMBA_CONF=/etc/samba/smb.conf.d/
-  #DIR_GPO=/gpo
   DIR_CHRONY_LOG=/var/log/chrony
   DIR_CHRONY_NTSDUMP=/var/lib/chrony
   DIR_CHRONY_SRC=/etc/chrony/sources.d
@@ -89,7 +85,6 @@ config() {
   FILE_NSSWITCH=/etc/nsswitch.conf
   FILE_CHRONY_DRIFT=/var/lib/chrony/chrony.drift
   FILE_CHRONY=/etc/chrony/chrony.conf
-  #FILE_CHRONY_RTC=/var/lib/chrony/rtc
   FILE_CHRONY_KEY=/etc/chrony/chrony.keys
   FILE_OPENVPNCONF=/docker.ovpn
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
@@ -142,7 +137,7 @@ config() {
   # Check if strings end with semicolon. if not append it
   if [[ ! $(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then
     ENABLE_DNSFORWARDER_FORMATED=""
-    for dnsserver in ${ENABLE_DNSFORWARDER}; do
+    for dnsserver in "${ENABLE_DNSFORWARDER}"; do
       ENABLE_DNSFORWARDER_FORMATED="$ENABLE_DNSFORWARDER_FORMATED$dnsserver;"
     done
     export ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER_FORMATED}"
@@ -393,8 +388,8 @@ appSetup () {
 
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
       if [ "${FEATURE_RECYCLEBIN}" = true ]; then
-        python3 /"${DIR_SCRIPTS}"/enablerecyclebin.py "${FILE_SAMLDB}"
-        if ldbsearch -H /var/lib/samba/private/sam.ldb -s base -b "CN=NTDS Settings,CN=${HOSTNAME},CN=Servers,CN=${JOIN_SITE},CN=Sites,CN=Configuration${LDAP_SUFFIX}" msDS-EnabledFeature | grep -q 'CN=Recycle Bin Feature' ; then printf "Optional Feature Recycle Bin Feature OK" ; else printf "FAILED" ; exit 1 ; fi
+        python3 "${DIR_SCRIPTS}"/enablerecyclebin.py "${FILE_SAMLDB}"
+        if ldbsearch -H "${FILE_SAMLDB}" -s base -b "CN=NTDS Settings,CN=${HOSTNAME},CN=Servers,CN=${JOIN_SITE},CN=Sites,CN=Configuration${LDAP_SUFFIX}" msDS-EnabledFeature | grep -q 'CN=Recycle Bin Feature' ; then printf "Optional Feature Recycle Bin Feature OK" ; else printf "FAILED" ; exit 1 ; fi
       fi
 
       if [ "${FEATURE_KERBEROS_TGT}" = true ]; then EnableChangeKRBTGTSupervisord ; fi
@@ -403,7 +398,7 @@ appSetup () {
       if [ "${ENABLE_RFC2307}" = true ]; then
         setupSchemaRFC2307File
         ldbmodify -H "${FILE_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
-        if ldbsearch -H /var/lib/samba/private/sam.ldb -s base -b CN="${DOMAIN_NETBIOS}",CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System"${LDAP_SUFFIX}" | grep 'returned 1 records'; then
+        if ldbsearch -H "${FILE_SAMLDB}" -s base -b CN="${DOMAIN_NETBIOS}",CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System"${LDAP_SUFFIX}" | grep 'returned 1 records'; then
           printf "Add RFC2307 Attributes for default AD users" ; else printf 'FAILED' ; exit 1 ; fi
       fi
       # https://fy.blackhats.net.au/blog/html/2018/04/18/making_samba_4_the_default_ldap_server.html?highlight=samba
@@ -450,6 +445,11 @@ appSetup () {
       if [ "${DOMAIN_ACC_LOCK_THRESHOLD}" != 0 ]; then samba-tool domain passwordsettings set --account-lockout-threshold="$DOMAIN_ACC_LOCK_THRESHOLD" "${SAMBA_DEBUG_OPTION}" ; fi
       if [ "${DOMAIN_ACC_LOCK_RST_AFTER}" != 30 ]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" "${SAMBA_DEBUG_OPTION}" ; fi
     fi
+
+      #Add Debug to dynamically loadable zones (DLZ) - file exists after join/provision
+      cp "${FILE_BIND9_SAMBA_GENCONF}" "${FILE_BIND9_SAMBA_CONF}"
+      printf "include \"%s\";" "${FILE_BIND9_SAMBA_CONF}" > "${FILE_BIND9_LOCAL}"
+      sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_SAMBA_CONF}"
 
     # https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
     # https://wiki.samba.org/index.php/Setting_up_Samba_as_a_Print_Server
