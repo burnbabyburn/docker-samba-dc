@@ -4,7 +4,7 @@ DEBUG_ENABLE=${DEBUG_ENABLE:-false}
 if [ "${DEBUG_ENABLE}" = true ] ; then set -x ; fi
 #  if [ "$DEBUG_ENABLE" = "true" ] ; then set -x ; else set -e ; fi
 #Trap SIGTERM
-trap 'backupConfig' SIGTERM
+trap 'backupConfig' TERM
 
 #Todo:
 # ID_Map replication: https://wiki.samba.org/index.php/Joining_a_Samba_DC_to_an_Existing_Active_Directory#Built-in_User_.26_Group_ID_Mappings
@@ -80,7 +80,7 @@ config() {
   DIR_SAMBA_ETC=/etc/samba
   DIR_SAMBA_CSHARE=/var/lib/samba/share_c
   #%S one log file per service
-  FILE_SAMBA_LOG=/var/log/samba/%S.log
+  FILE_SAMBA_LOG=/var/log/samba/smb.log
   FILE_KRB5=/etc/krb5.conf
   FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
@@ -137,16 +137,16 @@ config() {
   if printf "%s" "${HOSTNAME}" | grep -q "\."; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
 
   # Check if strings end with semicolon. if not append it
-  if [[ ! $(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]]; then
+  if [ ! "$(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/")" = ';' ]; then
     ENABLE_DNSFORWARDER_FORMATED=""
-    for dnsserver in "${ENABLE_DNSFORWARDER}"; do
+    for dnsserver in ${ENABLE_DNSFORWARDER}; do
       ENABLE_DNSFORWARDER_FORMATED="${ENABLE_DNSFORWARDER_FORMATED:+${ENABLE_DNSFORWARDER_FORMATED};}$dnsserver"
     done
     ENABLE_DNSFORWARDER_FORMATED="${ENABLE_DNSFORWARDER_FORMATED};"
     export ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER_FORMATED}"
   fi
 
-  if [ ! $(printf "%s" "${BIND9_VALIDATE_EXCEPT}" | sed -e "s/^.*\(.\)$/\1/") == ';' ]; then
+  if [ ! "$(printf "%s" "${BIND9_VALIDATE_EXCEPT}" | sed -e "s/^.*\(.\)$/\1/")" = ';' ]; then
     BIND9_VALIDATE_EXCEPT_FORMATED=""
     # Do not add "" to BIND9_VALIDATE_EXCEPT
     for except in ${BIND9_VALIDATE_EXCEPT}; do
@@ -195,7 +195,7 @@ appSetup () {
   set -- "$@" "--option=password hash userPassword schemes = CryptSHA256 CryptSHA512"
   # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes also for idmap
   set -- "$@" "--option=template shell = /bin/false" "--option=template homedir = /dev/null"
-  
+
   # Setup ACLs correctly https://github.com/thctlo/samba4/blob/master/samba-setup-share-folders.sh
 #  if [[ ! -d "$DIR_SAMBA_DATA_PREFIX/unixhome/" ]]; then mkdir -p "$DIR_SAMBA_DATA_PREFIX/unixhome/" ; fi
   # Test
@@ -218,17 +218,17 @@ appSetup () {
   sed -e "s:{{ CHRONY_DEBUG_OPTION }}:${CHRONY_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
   NTPUSERGROUP="root"
-  BINDUSERGROUP="bind"  
+  BINDUSERGROUP="bind"
   sed -e "s:{{ NTPUSERGROUP }}:${NTPUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ BINDUSERGROUP }}:${BINDUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
  # BIND9
-  if [[ ! -d "${DIR_BIND9_RUN}" ]]; then mkdir "${DIR_BIND9_RUN}";chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}";else chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"; fi
+  if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "${DIR_BIND9_RUN}";chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}";else chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"; fi
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
-  if [[ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]]; then sed "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_OPTIONS}"; fi
+  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]; then sed "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_OPTIONS}"; fi
   # https://www.elastic2ls.com/blog/loading-from-master-file-managed-keys-bind-failed/
-  if ! grep -q "/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi  
+  if ! grep -q "/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi
 
   if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
 
@@ -531,38 +531,36 @@ appFirstStart () {
   done
   update-ca-certificates
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}" &
+  # new samba version: if HOSTIP is set, samba does not create dns entries for other internal interfaces.Thus many samba-tool operations fail.
+  # This is the correct behaviour in a normal env, but breaks some functions if on docker internal network.
+  # running a samba_dnsupdate manually adds the missing entries.
+  samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}"
 
   if [ "${JOIN}" = false ]; then
     # Better check if net rpc is rdy
     sleep 30s
-    # new samba version: if HOSTIP is set, samba does not create dns entries for other internal interfaces.Thus many samba-tool operations fail.
-    # This is the correct behaviour in a normal env, but breaks some functions if on docker internal network.
-    # running a samba_dnsupdate manually adds the missing entries.
-    samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}"
     GetAllCidrCreateSubnet
     RDNSZonefromCIDR
-      #admxdir=$(find /tmp/ -name PolicyDefinitions)
-      admxdir="${DIR_GPO}"
-      # Import Samba. admx&adml gpo
-      printf "%s" "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator "${SAMBA_DEBUG_OPTION}"
-      # Import Windows admx&adml
-      printf "%s" "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator --admx-dir="${admxdir}" "${SAMBA_DEBUG_OPTION}"
-
     #https://technet.microsoft.com/en-us/library/cc794902%28v=ws.10%29.aspx
     if [ "${DISABLE_DNS_WPAD_ISATAP}" = true ]; then
       samba-tool dns add "$(hostname -s)" "${LDOMAIN}" wpad A 127.0.0.1 -P "${SAMBA_DEBUG_OPTION}"
       samba-tool dns add "$(hostname -s)" "${LDOMAIN}" isatap A 127.0.0.1 -P "${SAMBA_DEBUG_OPTION}"
     fi
+    # Import Samba. admx&adml gpo
+    printf "%s" "${DOMAIN_PASS}" | if ! samba-tool gpo admxload -U Administrator "${SAMBA_DEBUG_OPTION}"; then printf "Check Reverse DNS resolution of IP:%s" "${IP}"; exit 1 ; fi
+    # Import Windows admx&adml
+    printf "%s" "${DOMAIN_PASS}" | if ! samba-tool gpo admxload -U Administrator --admx-dir="${DIR_GPO}" "${SAMBA_DEBUG_OPTION}"; then printf "Check Reverse DNS resolution of IP:%s" "${IP}"; exit 1 ; fi
+
     #Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
-    printf "rpcclient: Connect as %s" "${DOMAIN_USER}" ; if rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1 ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
-    printf "smbclient: Connect as anonymous user" ; if smbclient -N -L LOCALHOST "${SAMBA_DEBUG_OPTION}" | grep 'Anonymous login successful' ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
-    printf "smbclient: Connect as %s" "${DOMAIN_USER}" ; if smbclient --debug-stdout -d 4 -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST | grep '[[:blank:]]session setup ok' ; then printf 'OK' ; else printf 'FAILED' ; exit 1 ; fi
-    printf "Kerberos: Connect as %s" "${DOMAIN_USER}" ; if printf "%s" "${DOMAIN_PASS}" | kinit "${DOMAIN_USER}" ; then printf 'OK' ; klist ; kdestroy ; else printf 'FAILED' ; exit 1 ; fi
-    echo "check chrony"; chronyc sources; chronyc tracking
-    printf "Check DNS _ldap._tcp"; host -t SRV _ldap._tcp."${LDOMAIN}"
-    printf "Check DNS _kerberos._tcp"; host -t SRV _kerberos._udp."${LDOMAIN}"
-    printf "Check Host record"; host -t A "${HOSTNAME}.${LDOMAIN}"
-    printf "Check Reverse DNS resolution"; dig -x "${IP}"
+    printf "rpcclient: Connect as %s" "${DOMAIN_USER}" ; if ! rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1 ; then printf "rpcclient: Connect as %s FAILED" "${DOMAIN_USER}" ; exit 1 ; fi
+    printf "smbclient: Connect as anonymous user" ; if ! smbclient -N -L LOCALHOST "${SAMBA_DEBUG_OPTION}" | grep 'Anonymous login successful' ; then printf 'smbclient: Connect as anonymous user FAILED' ; exit 1 ; fi
+    printf "smbclient: Connect as %s" "${DOMAIN_USER}" ; if ! smbclient --debug-stdout -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST "${SAMBA_DEBUG_OPTION}" | grep '[[:blank:]]session setup ok' ; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1 ; fi
+    printf "Kerberos: Connect as %s" "${DOMAIN_USER}" ; if printf "%s" "${DOMAIN_PASS}" | kinit -V "${DOMAIN_USER}" ; then printf 'OK' ; klist ; kdestroy ; else printf "Kerberos: Connect as %s FAILED" "${DOMAIN_USER}" ; exit 1 ; fi
+    echo "check chrony"; if ! chronyc sources || ! chronyc tracking; then printf "check chrony FAILED"; exit 1 ; fi
+    printf "Check DNS _ldap._tcp.%s" "${LDOMAIN}"; if ! host -t SRV _ldap._tcp."${LDOMAIN}"; then printf "Check DNS _ldap._tcp.%s FAILED" "${LDOMAIN}"; exit 1 ; fi
+    printf "Check DNS _kerberos._udp.%s" "${LDOMAIN}"; if ! host -t SRV _kerberos._udp."${LDOMAIN}"; then printf "Check DNS _kerberos._udp.%s FAILED" "${LDOMAIN}"; exit 1 ; fi
+    printf "Check Host record %s.%s" "${HOSTNAME}" "${LDOMAIN}"; if ! host -t A "${HOSTNAME}.${LDOMAIN}"; then printf "Check Host record %s.%s FAILED" "${HOSTNAME}" "${LDOMAIN}"; exit 1 ; fi
+    printf "Check Reverse DNS resolution of IP:%s" "${IP}"; if ! dig -x "${IP}"; then printf "Check Reverse DNS resolution of IP:%s FAILED" "${IP}"; exit 1 ; fi
 
     #Copy root cert as der to netlogon
     #openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
