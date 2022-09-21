@@ -182,103 +182,35 @@ config() {
 
   # shellcheck source=/dev/null
   . /"${DIR_SCRIPTS}"/helper.sh
+  
+  BINDUSERGROUP="bind"
+  NTPUSERGROUP="root"
+
+  CHRONY_DEBUG_OPTION="d"
+  SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d ${DEBUG_LEVEL}"
+  SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
 }
 
 appSetup () {
   set -- "--dns-backend=BIND9_DLZ" \
          "--option=server services=-dns" \
          "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool"
-
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#NAMERESOLVEORDER
   set -- "$@" "--option=name resolve order = wins host bcast"
-
   # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
   set -- "$@" "--option=password hash userPassword schemes = CryptSHA256 CryptSHA512"
   # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes also for idmap
   set -- "$@" "--option=template shell = /bin/false" "--option=template homedir = /dev/null"
-
-  # Setup ACLs correctly https://github.com/thctlo/samba4/blob/master/samba-setup-share-folders.sh
-#  if [[ ! -d "$DIR_SAMBA_DATA_PREFIX/unixhome/" ]]; then mkdir -p "$DIR_SAMBA_DATA_PREFIX/unixhome/" ; fi
-  # Test
   set -- "$@" "--option=eventlog list = Application System Security SyslogLinux Webserver"
-
   set -- "$@" "-d ${DEBUG_LEVEL}"
 
-  SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d ${DEBUG_LEVEL}"
-  SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
-  CHRONY_DEBUG_OPTION="d"
-
-  if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
-    printf 'Set timezone'
-    cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
-    printf "%s" "${TZ}" >/etc/timezone
-  fi
-
-  sed -e "s:{{ SAMBA_DEBUG_OPTION }}:${SAMBA_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:${SAMBADAEMON_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  sed -e "s:{{ CHRONY_DEBUG_OPTION }}:${CHRONY_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-
-  NTPUSERGROUP="root"
-  BINDUSERGROUP="bind"
-  sed -e "s:{{ NTPUSERGROUP }}:${NTPUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  sed -e "s:{{ BINDUSERGROUP }}:${BINDUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-
- # BIND9
-  if [ ! -d "${DIR_EXTERNAL_BIND9}" ]; then mkdir "${DIR_EXTERNAL_BIND9}"; fi
-  if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "${DIR_BIND9_RUN}";chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}";else chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"; fi
-  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
-  # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
-  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]; then sed "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_OPTIONS}"; fi
-  # https://www.elastic2ls.com/blog/loading-from-master-file-managed-keys-bind-failed/
-  if ! grep -q "/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi
-
-  if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
-
-  if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "${DIR_CHRONY_LOG}"; fi
-  chown _chrony:_chrony "${DIR_CHRONY_LOG}"
-  if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "${DIR_CHRONY_RUN}"; fi
-  chmod 750 "${DIR_CHRONY_RUN}";
-
-  # If used on azure image chrony breaks (github actions)
-  # Fatal error : Could not open /run/chrony/chronyd.pid : Permission denied
- # INFO exited: chrony (exit status 1; not expected)
-  if ! uname -a | grep -q "azure"; then
-    # Wrong owner of /run/chrony (UID != 102) - the azure image complains but with a chowned dir chrony just crashes
-    chown _chrony:_chrony "${DIR_CHRONY_RUN}"
-  fi
-  if grep -q "{{ DIR_CHRONY_CONF }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONF }}:${DIR_CHRONY_CONF}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_NTSDUMP }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_NTSDUMP }}:${DIR_CHRONY_NTSDUMP}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_PID }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_PID }}:${FILE_CHRONY_PID}:" -i "${FILE_CHRONY}"; fi
-
-  if  [ ! -f "${DIR_CHRONY_SRC}/my.sources" ]; then
-    DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
-    for DC in $DCs
-    do
-      # valid entries need to end with newline (\n)
-      printf "server %s iburst\n" "${DC}" >> "${DIR_CHRONY_SRC}/my.sources"
-    done
-  fi
-  # If IPv6 is enabled
-  if ! cat /sys/module/ipv6/parameters/disable;then
-    if [ "${HOSTIPV6}" != "NONE" ]; then set -- "$@" "--host-ip6=${HOSTIPV6}" ;  fi
-    sed -e "s/listen-on-v6 { none; };/listen-on-v6 { any; };/" "${FILE_BIND9_OPTIONS}"
-  fi
-
-  if [ ! -d "${DIR_EXTERNAL}" ]; then mkdir "${DIR_EXTERNAL}" ; fi
-  if [ "${#DOMAIN_NETBIOS}" -gt 15 ]; then printf "DOMAIN_NETBIOS too long => exiting" ; exit 1 ; fi
-  if printf "%s" "${DOMAIN_NETBIOS}" | grep -q "\." ; then printf "DOMAIN_NETBIOS contains forbiden char    .     => exiting" ; exit 1 ; fi
-  if [ "${HOSTIP}" != "NONE" ]; then set -- "$@" "--host-ip=${HOSTIP%/*}" ; fi
-  if [ "${JOIN_SITE}" != "Default-First-Site-Name" ]; then set -- "$@" "--site=${JOIN_SITE}" ; fi
   if [ "${ENABLE_DNSFORWARDER}" != "NONE" ]; then set -- "$@" "--option=dns forwarder=${ENABLE_DNSFORWARDER}" ; fi
   if [ "${ENABLE_DYNAMIC_PORTRANGE}" != "NONE" ]; then set -- "$@" "--option=rpc server dynamic port range=${ENABLE_DYNAMIC_PORTRANGE}" ; fi
-  if [ "${ENABLE_MSCHAPV2}" = true ]; then set -- "$@" "--option=ntlm auth=mschapv2-and-ntlmv2-only" ; fi
   if [ "${ENABLE_INSECURE_DNSUPDATE}" = true ]; then set -- "$@" "--option=allow dns updates  = nonsecure" ; fi
   if [ "${ENABLE_INSECURE_LDAP}" = true ]; then set -- "$@" "--option=ldap server require strong auth = no" ; fi
+  if [ "${ENABLE_MSCHAPV2}" = true ]; then set -- "$@" "--option=ntlm auth=mschapv2-and-ntlmv2-only" ; fi
+  if [ "${HOSTIP}" != "NONE" ]; then set -- "$@" "--host-ip=${HOSTIP%/*}" ; fi
+  if [ "${JOIN_SITE}" != "Default-First-Site-Name" ]; then set -- "$@" "--site=${JOIN_SITE}" ; fi
 
   # If multi-site, we need to connect to the VPN before joining the domain
   if [ "${JOIN_SITE_VPN}" = true ]; then
@@ -313,14 +245,73 @@ appSetup () {
     set -- "$@" "--option=wins support = yes"
     set -- "$@" "--option=time server = yes"
   fi
-
+  # If IPv6 is enabled
+  if ! cat /sys/module/ipv6/parameters/disable;then
+    if [ "${HOSTIPV6}" != "NONE" ]; then set -- "$@" "--host-ip6=${HOSTIPV6}" ;  fi
+    sed -e "s/listen-on-v6 { none; };/listen-on-v6 { any; };/" "${FILE_BIND9_OPTIONS}"
+    sed -e "s;/usr/sbin/named.*;/usr/sbin/named -4 -u bind -f -g ${SAMBA_DEBUG_OPTION};" "${FILE_SUPERVISORD_CONF}"
+  fi
+  
   if [ "${ENABLE_LOGS}" = true ]; then
     set -- "$@" "--option=log file = ${FILE_SAMBA_LOG}"
     set -- "$@" "--option=max log size = 10000"
     set -- "$@" "--option=log level = ${DEBUG_LEVEL}"
     sed -i '/log[[:space:]]/s/^#//g' "$FILE_CHRONY"
   fi
+  if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
+    printf 'Set timezone'
+    cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
+    printf "%s" "${TZ}" >/etc/timezone
+  fi
 
+  sed -e "s:{{ CHRONY_DEBUG_OPTION }}:${CHRONY_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:${SAMBADAEMON_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -e "s:{{ SAMBA_DEBUG_OPTION }}:${SAMBA_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+
+  sed -e "s:{{ BINDUSERGROUP }}:${BINDUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -e "s:{{ NTPUSERGROUP }}:${NTPUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+
+ # BIND9
+  if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "${DIR_BIND9_RUN}";chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}";else chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"; fi
+  if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "${DIR_CHRONY_LOG}"; fi
+  if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "${DIR_CHRONY_RUN}"; fi
+  chmod 750 "${DIR_CHRONY_RUN}";
+  chown _chrony:_chrony "${DIR_CHRONY_LOG}"
+  if [ ! -d "${DIR_EXTERNAL_BIND9}" ]; then mkdir "${DIR_EXTERNAL_BIND9}"; fi
+  if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
+  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
+  # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
+  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]; then sed "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_OPTIONS}"; fi
+  # https://www.elastic2ls.com/blog/loading-from-master-file-managed-keys-bind-failed/
+  if ! grep -q "/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi
+
+  # If used on azure image chrony breaks (github actions)
+  # Fatal error : Could not open /run/chrony/chronyd.pid : Permission denied
+  # INFO exited: chrony (exit status 1; not expected)
+  # Wrong owner of /run/chrony (UID != 102) - the azure image complains but with a chowned dir chrony just crashes
+  if ! uname -a | grep -q "azure"; then chown _chrony:_chrony "${DIR_CHRONY_RUN}"; fi
+  if grep -q "{{ DIR_CHRONY_CONF }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONF }}:${DIR_CHRONY_CONF}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_NTSDUMP }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_NTSDUMP }}:${DIR_CHRONY_NTSDUMP}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_PID }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_PID }}:${FILE_CHRONY_PID}:" -i "${FILE_CHRONY}"; fi
+
+  if  [ ! -f "${DIR_CHRONY_SRC}/my.sources" ]; then
+    DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
+    for DC in $DCs
+    do
+      # valid entries need to end with newline (\n)
+      printf "server %s iburst\n" "${DC}" >> "${DIR_CHRONY_SRC}/my.sources"
+    done
+  fi
+
+  if [ ! -d "${DIR_EXTERNAL}" ]; then mkdir "${DIR_EXTERNAL}" ; fi
+  if [ "${#DOMAIN_NETBIOS}" -gt 15 ]; then printf "DOMAIN_NETBIOS too long => exiting" ; exit 1 ; fi
+  if printf "%s" "${DOMAIN_NETBIOS}" | grep -q "\." ; then printf "DOMAIN_NETBIOS contains forbiden char    .     => exiting" ; exit 1 ; fi
+  
   # nsswitch anpassen
   sed -i "s,passwd:.*,passwd:         files winbind,g" "${FILE_NSSWITCH}"
   sed -i "s,group:.*,group:          files winbind,g" "${FILE_NSSWITCH}"
@@ -341,11 +332,7 @@ appSetup () {
       until [ $s = 0 ]; do
         samba-tool domain join "$@" && s=0 && break || s=$? && sleep 60s
       done; (exit $s)
-      # Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
-      if [ ! -f "${FILE_SAMBA_USER_MAP}" ]; then
-        printf '!'"root = %s\\%s" > "${FILE_SAMBA_USER_MAP}" , "${DOMAIN_NETBIOS}","${DOMAIN_USER}"
-        set -- "$@" "--option=username map = ${FILE_SAMBA_USER_MAP}"
-      fi
+
       # Netlogon & sysvol readonly on secondary DC
       if [ ! -d "${DIR_SAMBA_NETLOGON}" ]; then mkdir "${DIR_SAMBA_NETLOGON}" ; fi
       if [ ! -d "${DIR_SAMBA_SYSVOL}" ]; then mkdir "${DIR_SAMBA_SYSVOL}" ; fi
@@ -361,7 +348,7 @@ appSetup () {
       } >> "${FILE_SAMBA_CONF}"
 
       #Check if Join was successfull
-      if host -t A "$HOSTNAME"."$LDOMAIN".;then
+      if host -t A "$HOSTNAME"."$LDOMAIN";then
         printf "found DNS host record"
       else
         printf "no DNS host record found. Pls see https://wiki.samba.org/index.php/Verifying_and_Creating_a_DC_DNS_Record#Verifying_and_Creating_the_objectGUID_Record"
@@ -455,10 +442,10 @@ appSetup () {
       if [ "${DOMAIN_ACC_LOCK_RST_AFTER}" != 30 ]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" "${SAMBA_DEBUG_OPTION}" ; fi
     fi
 
-      #Add Debug to dynamically loadable zones (DLZ) - file exists after join/provision
-      cp "${FILE_BIND9_SAMBA_GENCONF}" "${FILE_BIND9_SAMBA_CONF}"
-      printf "include \"%s\";" "${FILE_BIND9_SAMBA_CONF}" > "${FILE_BIND9_LOCAL}"
-      sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_SAMBA_CONF}"
+    #Add Debug to dynamically loadable zones (DLZ) - file exists after join/provision
+    cp "${FILE_BIND9_SAMBA_GENCONF}" "${FILE_BIND9_SAMBA_CONF}"
+    printf "include \"%s\";" "${FILE_BIND9_SAMBA_CONF}" > "${FILE_BIND9_LOCAL}"
+    sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_SAMBA_CONF}"
 
     # https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
     # https://wiki.samba.org/index.php/Setting_up_Samba_as_a_Print_Server

@@ -42,8 +42,7 @@ do
   if [ "$date1" = "$date2" ]; then
     echo "Verify OK"
   else
-    echo "Verify FAILED"
-   ## exit 1
+    echo "Verify FAILED" && exit 1
   fi
   #pdbedit -Lv krbtgt # grep password change date => compare to current date => replicate (samba-tool drs replicate <remote_dc> <pdc_dc> dc=mydomain,dc=lan)
 sleep 40d

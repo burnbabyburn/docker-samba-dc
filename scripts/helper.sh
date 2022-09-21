@@ -183,6 +183,7 @@ cdr2mask ()
 EnableChangeKRBTGTSupervisord () {
   {
     echo ""
+	echo ""
     echo "[program:ChangeKRBTGT]"
     echo "command=/bin/sh /scripts/chgkrbtgtpass.sh"
     echo "stdout_logfile=/dev/fd/1"
@@ -196,6 +197,7 @@ EnableChangeKRBTGTSupervisord () {
 EnableOpenvpnSupervisord () {
   {
     echo ""
+	echo ""
     echo "[program:openvpn]"
     echo "command=/usr/sbin/openvpn --config $FILE_OPENVPNCONF"
     echo "stdout_logfile=/dev/fd/1"
