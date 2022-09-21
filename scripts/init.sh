@@ -96,7 +96,7 @@ config() {
   DIR_BIND9_RUN=/run/named
 
   DIR_EXTERNAL="${DIR_SAMBA_ETC}/external"
-  DIR_EXTERNAL_BIND9"${DIR_EXTERNAL}/bind"
+  DIR_EXTERNAL_BIND9="${DIR_EXTERNAL}/bind"
   DIR_SAMBA_ADMIN="${DIR_SAMBA_CSHARE}/windows"
   DIR_SAMBA_EVENTLOG="${DIR_SAMBA_CSHARE}/windows/system32/config"
   DIR_SAMBA_NETLOGON="${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts"
@@ -248,10 +248,11 @@ appSetup () {
     set -- "$@" "--option=time server = yes"
   fi
   # If IPv6 is enabled
-  if ! cat /sys/module/ipv6/parameters/disable;then
+  if cat /sys/module/ipv6/parameters/disable;then
     if [ "${HOSTIPV6}" != "NONE" ]; then set -- "$@" "--host-ip6=${HOSTIPV6}" ;  fi
-    sed -e "s/listen-on-v6 { none; };/listen-on-v6 { any; };/" "${FILE_BIND9_OPTIONS}"
-    sed -e "s;/usr/sbin/named.*;/usr/sbin/named -4 -u bind -f -g ${SAMBA_DEBUG_OPTION};" "${FILE_SUPERVISORD_CONF}"
+  else
+    sed -e "s/listen-on-v6 { any; };/listen-on-v6 { none; };/" -i "${FILE_BIND9_OPTIONS}"
+    sed -e "s;/usr/sbin/named.*;/usr/sbin/named -4 -u bind -f -g ${SAMBA_DEBUG_OPTION};" -i "${FILE_SUPERVISORD_CONF}"
   fi
   
   if [ "${ENABLE_LOGS}" = true ]; then
@@ -283,7 +284,7 @@ appSetup () {
   if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
-  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]; then sed "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_OPTIONS}"; fi
+  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]; then sed -e "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_OPTIONS}"; fi
   # https://www.elastic2ls.com/blog/loading-from-master-file-managed-keys-bind-failed/
   if ! grep -q "/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi
 
@@ -526,18 +527,18 @@ appFirstStart () {
   # running a samba_dnsupdate manually adds the missing entries.
   s=1
   until [ $s = 0 ]; do
-    host -t A "${HOSTNAME}.${LDOMAIN}" && smbclient -N -L LOCALHOST "$@" && s=0 && break || s=$? printf "Waiting for samba to start" && sleep 10s
+    host -t A "${HOSTNAME}.${LDOMAIN}" && smbclient -N -L LOCALHOST >> /dev/null && s=0 && break || s=$? printf "Waiting for samba to start" && sleep 10s
   done; (exit $s)
   printf "DNS: Testing Dynamic DNS Updates" ; if ! samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}" ; then printf "DNS: Testing Dynamic DNS Updates FAILED" ; exit 1 ; fi
   #Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
   printf "rpcclient: Connect as %s" "${DOMAIN_USER}" ; if ! rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1 ; then printf "rpcclient: Connect as %s FAILED" "${DOMAIN_USER}" ; exit 1 ; fi
-  printf "smbclient: Connect as %s" "${DOMAIN_USER}" ; if ! smbclient -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST ; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1 ; fi
+  printf "smbclient: Connect as %s" "${DOMAIN_USER}" ; if ! smbclient -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST >> /dev/null; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1 ; fi
   printf "Kerberos: Connect as %s" "${DOMAIN_USER}" ; if printf "%s" "${DOMAIN_PASS}" | kinit -V "${DOMAIN_USER}" ; then printf 'OK' ; klist ; kdestroy ; else printf "Kerberos: Connect as %s FAILED" "${DOMAIN_USER}" ; exit 1 ; fi
   echo "NTP: Check timesource and sync"; if ! chronyc sources || ! chronyc tracking; then printf "NTP: Check timesource and sync FAILED"; exit 1 ; fi
   printf "DNS: Check _ldap._tcp.%s" "${LDOMAIN}"; if ! host -t SRV _ldap._tcp."${LDOMAIN}"; then printf "DNS: Check _ldap._tcp.%s FAILED" "${LDOMAIN}"; exit 1 ; fi
   printf "DNS: Check _kerberos._udp.%s" "${LDOMAIN}"; if ! host -t SRV _kerberos._udp."${LDOMAIN}"; then printf "DNS: Check _kerberos._udp.%s FAILED" "${LDOMAIN}"; exit 1 ; fi
   printf "HOST: Check record %s.%s" "${HOSTNAME}" "${LDOMAIN}"; if ! host -t A "${HOSTNAME}.${LDOMAIN}"; then printf "HOST: Check record %s.%s FAILED" "${HOSTNAME}" "${LDOMAIN}"; exit 1 ; fi
-  printf "DNS: Check Reverse resolution of IP:%s" "${IP}"; if ! dig -x "${IP}"; then printf "DNS: Check Reverse resolution of IP:%s FAILED" "${IP}"; exit 1 ; fi
+  #printf "DNS: Check Reverse resolution of IP:%s" "${IP}"; if ! dig -x "${IP}"; then printf "DNS: Check Reverse resolution of IP:%s FAILED" "${IP}"; exit 1 ; fi
 
   if [ "${JOIN}" = false ]; then
     GetAllCidrCreateSubnet
