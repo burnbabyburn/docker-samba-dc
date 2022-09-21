@@ -35,13 +35,15 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `ENABLE_DYNAMIC_PORTRANGE`  | NONE                                          |       | Set range of [dynamic rpc ports](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#RPCSERVERDYNAMICPORTRANGE). Can be usefull to limit on smaller systems, especially if behind reverse proxy (default 49152-65535) |
 | `ENABLE_INSECURE_DNSUPDATE` | false                                         |       | Enable insecure dns updates (no packet signing)  |
 | `ENABLE_INSECURE_LDAP`      | false                                         |       | Enable insecure ldap connections  |
-| `ENABLE_LAPS_SCHEMA`        | false                                         |   X   | Setup Local Administrator Password Solution  |
 | `ENABLE_LOGS`               | false                                         |       | Enable log files - disabled. log to stdout and ship docker logs |
 | `ENABLE_MSCHAPV2`           | false                                         |       | Enable MSCHAP authentication  |
 | `ENABLE_RFC2307`            | true                                          |   X   | Enable RFC2307 LDAP Extension in AD |
 | `ENABLE_WINS`               | false                                         |   X   | Enable WINS and also propagiate time server |
 | `FEATURE_KERBEROS_TGT`      | true                                          |   X   | Feature: Only activate on PDC! Change password of krbtgt user (Kerberos Ticket Granting Ticket) to prevent Golden Ticket attacks |
 | `FEATURE_RECYCLEBIN`        | true                                          |   X   | Feature: Enable AD RecylceBin|
+| `FEATURE_SCHEMA_LAPS`       | false                                         |   X   | Setup schema extension for Local Administrator Password Solution  |
+| `FEATURE_SCHEMA_SSH`        | false                                         |   X   | Setup schema extension for SSH-Keys  |
+| `FEATURE_SCHEMA_SUDO`       | false                                         |   X   | Setup schema extension for SUDO  |
 | `HOSTIPV6`                  | NONE                                          |   X   | Set external Host IPv6 if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
 | `HOSTIP`                    | NONE                                          |   X   | Set external Host IP if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
 | `HOSTNAME`                  | $(hostname)                                   |       | Hostname of Samba. Overrides you containers hostname. Only works while proivisioning a domain ! Samba will use HOSTNAME and HOSTIP to populate internal DNS |

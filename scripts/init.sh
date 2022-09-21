@@ -40,7 +40,9 @@ config() {
   ENABLE_DYNAMIC_PORTRANGE=${ENABLE_DYNAMIC_PORTRANGE:-NONE}
   ENABLE_INSECURE_DNSUPDATE=${ENABLE_INSECURE_DNSUPDATE:-false}
   ENABLE_INSECURE_LDAP=${ENABLE_INSECURE_LDAP:-false}
-  ENABLE_LAPS_SCHEMA=${ENABLE_LAPS_SCHEMA:-false}
+  FEATURE_SCHEMA_LAPS=${FEATURE_SCHEMA_LAPS:-false}
+  FEATURE_SCHEMA_SSH=${FEATURE_SCHEMA_SSH:-false}
+  FEATURE_SCHEMA_SUDO=${FEATURE_SCHEMA_SUDO:-false}
   ENABLE_LOGS=${ENABLE_LOGS:-false}
   ENABLE_MSCHAPV2=${ENABLE_MSCHAPV2:-false}
   ENABLE_RFC2307=${ENABLE_RFC2307:-true}
@@ -401,7 +403,7 @@ appSetup () {
       # https://blog.laslabs.com/2016/08/storing-ssh-keys-in-active-directory/
       # https://wiki.samba.org/index.php/Samba_AD_schema_extensions
       # https://gist.github.com/hsw0/5132d5dabd4384108b48
-#     if [[ true = true ]]; then
+      if [ "${FEATURE_SCHEMA_SSH}" = true ]; then
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SSH1}.j2" > "${FILE_SAMBA_SCHEMA_SSH1}"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
@@ -411,18 +413,18 @@ appSetup () {
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH3}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
-#      fi
-
+      fi
+      if [ "${FEATURE_SCHEMA_SUDO}" = true ]; then
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SUDO1}.j2" > "${FILE_SAMBA_SCHEMA_SUDO1}"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SUDO2}.j2" > "${FILE_SAMBA_SCHEMA_SUDO2}"
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SUDO1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SUDO2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
-
+      fi
       # https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507'
       # Microsoft Local Administrator Password Solution (LAPS) https://www.microsoft.com/en-us/download/details.aspx?id=46899
-      if [ "${ENABLE_LAPS_SCHEMA}" = true ]; then
+      if [ "${FEATURE_SCHEMA_LAPS}" = true ]; then
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
           "${FILE_SAMBA_SCHEMA_LAPS1}.j2" > "${FILE_SAMBA_SCHEMA_LAPS1}"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
@@ -524,7 +526,7 @@ appFirstStart () {
   # running a samba_dnsupdate manually adds the missing entries.
   s=1
   until [ $s = 0 ]; do
-        smbclient -N -L LOCALHOST "$@" && s=0 && break || s=$? printf "Waiting for samba to start" && sleep 10s
+    host -t A "${HOSTNAME}.${LDOMAIN}" && smbclient -N -L LOCALHOST "$@" && s=0 && break || s=$? printf "Waiting for samba to start" && sleep 10s
   done; (exit $s)
   printf "DNS: Testing Dynamic DNS Updates" ; if ! samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}" ; then printf "DNS: Testing Dynamic DNS Updates FAILED" ; exit 1 ; fi
   #Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
