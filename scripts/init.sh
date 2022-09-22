@@ -249,16 +249,17 @@ appSetup () {
   fi
   # If IPv6 is enabled
   if cat /sys/module/ipv6/parameters/disable;then
-    if [ "${HOSTIPV6}" != "NONE" ]; then set -- "$@" "--host-ip6=${HOSTIPV6}" ;  fi
-  else
     sed -e "s/listen-on-v6 { any; };/listen-on-v6 { none; };/" -i "${FILE_BIND9_OPTIONS}"
     sed -e "s;/usr/sbin/named.*;/usr/sbin/named -4 -u bind -f -g ${SAMBA_DEBUG_OPTION};" -i "${FILE_SUPERVISORD_CONF}"
+  else
+    if [ "${HOSTIPV6}" != "NONE" ]; then set -- "$@" "--host-ip6=${HOSTIPV6}" ;  fi
   fi
   
   if [ "${ENABLE_LOGS}" = true ]; then
     set -- "$@" "--option=log file = ${FILE_SAMBA_LOG}"
     set -- "$@" "--option=max log size = 10000"
     set -- "$@" "--option=log level = ${DEBUG_LEVEL}"
+	sed -e "s:/usr/sbin/samba -F:/usr/sbin/samba -i:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
     sed -i '/log[[:space:]]/s/^#//g' "$FILE_CHRONY"
   fi
   if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
@@ -280,8 +281,6 @@ appSetup () {
   if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "${DIR_CHRONY_RUN}"; fi
   chmod 750 "${DIR_CHRONY_RUN}";
   chown _chrony:_chrony "${DIR_CHRONY_LOG}"
-  if [ ! -d "${DIR_EXTERNAL_BIND9}" ]; then mkdir "${DIR_EXTERNAL_BIND9}"; fi
-  if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
   if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]; then sed -e "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_OPTIONS}"; fi
@@ -312,6 +311,8 @@ appSetup () {
   fi
 
   if [ ! -d "${DIR_EXTERNAL}" ]; then mkdir "${DIR_EXTERNAL}" ; fi
+  if [ ! -d "${DIR_EXTERNAL_BIND9}" ]; then mkdir "${DIR_EXTERNAL_BIND9}"; fi
+  if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
   if [ "${#DOMAIN_NETBIOS}" -gt 15 ]; then printf "DOMAIN_NETBIOS too long => exiting" ; exit 1 ; fi
   if printf "%s" "${DOMAIN_NETBIOS}" | grep -q "\." ; then printf "DOMAIN_NETBIOS contains forbiden char    .     => exiting" ; exit 1 ; fi
   
