@@ -201,12 +201,16 @@ config() {
   
   BINDUSERGROUP="bind"
   NTPUSERGROUP="root"
-
   CHRONY_DEBUG_OPTION="d"
-#  SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d ${DEBUG_LEVEL}"
-  SAMBADAEMON_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
-  if [ "${ENABLE_LOGS}" = true ]; then NAMED_DEBUG_OPTION="${SAMBA_DEBUG_OPTION}"; else NAMED_DEBUG_OPTION="-g ${SAMBA_DEBUG_OPTION}"; fi
+  # if file loging is active, named can not log to stdout (-g)
+  if [ "${ENABLE_LOGS}" = true ]; then
+    NAMED_DEBUG_OPTION="${SAMBA_DEBUG_OPTION}"
+	SAMBADAEMON_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
+  else
+    NAMED_DEBUG_OPTION="-g ${SAMBA_DEBUG_OPTION}"
+	SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d ${DEBUG_LEVEL}"
+  fi
 }
 
 appSetup () {
@@ -277,7 +281,6 @@ appSetup () {
     set -- "$@" "--option=max log size = 10000"
     set -- "$@" "--option=log level = ${DEBUG_LEVEL}"
 	set -- "$@" "--option=logging = file"
-	sed -e "s:/usr/sbin/samba -F:/usr/sbin/samba -i:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 	sed -e "s:/usr/sbin/samba -F:/usr/sbin/samba -i:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
     sed -i '/log[[:space:]]/s/^#//g' "$FILE_CHRONY"
 	if [ ! -d "${DIR_BIND9_LOG}" ]; then mkdir "${DIR_BIND9_LOG}" ; fi
