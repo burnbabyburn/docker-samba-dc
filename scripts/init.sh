@@ -277,7 +277,7 @@ appSetup () {
 	sed -e "s:/usr/sbin/samba -F:/usr/sbin/samba -i:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
     sed -i '/log[[:space:]]/s/^#//g' "$FILE_CHRONY"
 	if [ ! -d "${DIR_BIND9_LOG}" ]; then mkdir "${DIR_BIND9_LOG}" ; fi
-    printf "include %s" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
+    printf "include %s\n" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
     touch "${FILE_BIND9_LOG_AUTH_SERVERS}" && touch "${FILE_BIND9_LOG_CLIENT_SECURITY}" && touch "${FILE_BIND9_LOG_DDNS}"
     touch "${FILE_BIND9_LOG_DEFAULT}" && touch "${FILE_BIND9_LOG_DNSSEC}" && touch "${FILE_BIND9_LOG_DNSTAP}"
     touch "${FILE_BIND9_LOG_QUERIES}" && touch "${FILE_BIND9_LOG_QUERY-ERRORS}" && touch "${FILE_BIND9_LOG_RATE_LIMITING}"
