@@ -39,11 +39,11 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `ENABLE_MSCHAPV2`           | false                                         |       | Enable MSCHAP authentication  |
 | `ENABLE_RFC2307`            | true                                          |   X   | Enable RFC2307 LDAP Extension in AD |
 | `ENABLE_WINS`               | false                                         |   X   | Enable WINS and also propagiate time server |
-| `FEATURE_KERBEROS_TGT`      | true                                          |   X   | Feature: Only activate on PDC! Change password of krbtgt user (Kerberos Ticket Granting Ticket) to prevent Golden Ticket attacks |
+| `FEATURE_KERBEROS_TGT`      | true                                          |   X   | Feature: Change password of krbtgt user (Kerberos Ticket Granting Ticket) to prevent Golden Ticket attacks |
 | `FEATURE_RECYCLEBIN`        | true                                          |   X   | Feature: Enable AD RecylceBin|
-| `FEATURE_SCHEMA_LAPS`       | false                                         |   X   | Setup schema extension for Local Administrator Password Solution  |
-| `FEATURE_SCHEMA_SSH`        | false                                         |   X   | Setup schema extension for SSH-Keys  |
-| `FEATURE_SCHEMA_SUDO`       | false                                         |   X   | Setup schema extension for SUDO  |
+| `FEATURE_SCHEMA_LAPS`       | false                                         |   X   | Feature: Schema extension for Local Administrator Password Solution  |
+| `FEATURE_SCHEMA_SSH`        | false                                         |   X   | Feature: Schema extension for SSH-Keys  |
+| `FEATURE_SCHEMA_SUDO`       | false                                         |   X   | Feature: schema extension for SUDO  |
 | `HOSTIPV6`                  | NONE                                          |   X   | Set external Host IPv6 if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
 | `HOSTIP`                    | NONE                                          |   X   | Set external Host IP if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
 | `HOSTNAME`                  | $(hostname)                                   |       | Hostname of Samba. Overrides you containers hostname. Only works while proivisioning a domain ! Samba will use HOSTNAME and HOSTIP to populate internal DNS |

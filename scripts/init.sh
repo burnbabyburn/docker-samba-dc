@@ -12,6 +12,7 @@ trap 'backupConfig' TERM
 # Write a service for a wireguard mesh network between two docker containers on different sites as an "overlay-network" - https://www.scaleway.com/en/docs/tutorials/wireguard-mesh-vpn/
 # https://github.com/samba-team/samba/blob/master/docs-xml/Samba-EventLog-HOWTO.txt <= Didn't work
 # https://wiki.samba.org/index.php/Setting_up_Audit_Logging
+# SetKeyValueFilePattern - helper bugs out if file is not smb.conf - regex issues
 
 config() {
   # Set variables
@@ -277,7 +278,7 @@ appSetup () {
 	sed -e "s:/usr/sbin/samba -F:/usr/sbin/samba -i:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
     sed -i '/log[[:space:]]/s/^#//g' "$FILE_CHRONY"
 	if [ ! -d "${DIR_BIND9_LOG}" ]; then mkdir "${DIR_BIND9_LOG}" ; fi
-    printf "include %s\n" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
+    printf "include \"%s\";\n" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
     touch "${FILE_BIND9_LOG_AUTH_SERVERS}" && touch "${FILE_BIND9_LOG_CLIENT_SECURITY}" && touch "${FILE_BIND9_LOG_DDNS}"
     touch "${FILE_BIND9_LOG_DEFAULT}" && touch "${FILE_BIND9_LOG_DNSSEC}" && touch "${FILE_BIND9_LOG_DNSTAP}"
     touch "${FILE_BIND9_LOG_QUERIES}" && touch "${FILE_BIND9_LOG_QUERY-ERRORS}" && touch "${FILE_BIND9_LOG_RATE_LIMITING}"
