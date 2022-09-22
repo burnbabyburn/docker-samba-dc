@@ -95,7 +95,7 @@ config() {
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
   DIR_BIND9=/etc/bind
   DIR_BIND9_RUN=/run/named
-  DIR_BIND9_LOG=/var/log/bind/
+  DIR_BIND9_LOG=/var/log/bind
 
   DIR_EXTERNAL="${DIR_SAMBA_ETC}/external"
   DIR_EXTERNAL_BIND9="${DIR_EXTERNAL}/bind"
