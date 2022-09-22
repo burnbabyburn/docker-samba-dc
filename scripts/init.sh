@@ -82,7 +82,7 @@ config() {
   DIR_SAMBA_ETC=/etc/samba
   DIR_SAMBA_CSHARE=/var/lib/samba/share_c
   #%S one log file per service
-  FILE_SAMBA_LOG=/var/log/samba/smb.log
+  FILE_SAMBA_LOG=/var/log/samba/%S.log
   FILE_KRB5=/etc/krb5.conf
   FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
@@ -94,6 +94,7 @@ config() {
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
   DIR_BIND9=/etc/bind
   DIR_BIND9_RUN=/run/named
+  DIR_BIND9_LOG=/var/log/bind/
 
   DIR_EXTERNAL="${DIR_SAMBA_ETC}/external"
   DIR_EXTERNAL_BIND9="${DIR_EXTERNAL}/bind"
@@ -104,7 +105,19 @@ config() {
   DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private"
   DIR_SAMBA_SYSVOL="${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}"
   FILE_BIND9_CONF="${DIR_BIND9}/named.conf"
-  FILE_BIND9_LOCAL="${DIR_BIND9}/named.conf.local"
+  FILE_BIND9_CONF_LOCAL="${DIR_BIND9}/named.conf.local"
+  FILE_BIND9_CONF_LOG="${DIR_BIND9}/log.conf"
+  FILE_BIND9_LOG_AUTH_SERVERS="${DIR_BIND9_LOG}/auth_servers"
+  FILE_BIND9_LOG_CLIENT_SECURITY="${DIR_BIND9_LOG}/client_security"
+  FILE_BIND9_LOG_DDNS="${DIR_BIND9_LOG}/ddns"
+  FILE_BIND9_LOG_DEFAULT="${DIR_BIND9_LOG}/default"
+  FILE_BIND9_LOG_DNSSEC="${DIR_BIND9_LOG}/dnssec"
+  FILE_BIND9_LOG_DNSTAP="${DIR_BIND9_LOG}/dnstap"
+  FILE_BIND9_LOG_QUERIES="${DIR_BIND9_LOG}/queries"
+  FILE_BIND9_LOG_QUERY-ERRORS="${DIR_BIND9_LOG}/query-errors"
+  FILE_BIND9_LOG_RATE_LIMITING="${DIR_BIND9_LOG}/rate_limiting"
+  FILE_BIND9_LOG_RPZ="${DIR_BIND9_LOG}/rpz"
+  FILE_BIND9_LOG_ZONE_TRANSFERS="${DIR_BIND9_LOG}/zone_transfers"
   FILE_BIND9_OPTIONS="${DIR_BIND9}/named.conf.options"
   FILE_BIND9_SAMBA_CONF="${DIR_BIND9}/samba-named.conf"
   FILE_BIND9_SAMBA_GENCONF="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
@@ -200,10 +213,11 @@ appSetup () {
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#NAMERESOLVEORDER
   set -- "$@" "--option=name resolve order = wins host bcast"
   # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
+#  set -- "$@" "--option=password hash userPassword schemes = CryptSHA256 CryptSHA512"
   set -- "$@" "--option=password hash userPassword schemes = CryptSHA256 CryptSHA512"
   # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes also for idmap
   set -- "$@" "--option=template shell = /bin/false" "--option=template homedir = /dev/null"
-  set -- "$@" "--option=eventlog list = Application System Security SyslogLinux Webserver"
+  set -- "$@" "--option=eventlog list = Samba"
   set -- "$@" "-d ${DEBUG_LEVEL}"
 
   if [ "${ENABLE_DNSFORWARDER}" != "NONE" ]; then set -- "$@" "--option=dns forwarder=${ENABLE_DNSFORWARDER}" ; fi
@@ -259,9 +273,19 @@ appSetup () {
     set -- "$@" "--option=log file = ${FILE_SAMBA_LOG}"
     set -- "$@" "--option=max log size = 10000"
     set -- "$@" "--option=log level = ${DEBUG_LEVEL}"
+	set -- "$@" "--option=logging = file"
 	sed -e "s:/usr/sbin/samba -F:/usr/sbin/samba -i:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
     sed -i '/log[[:space:]]/s/^#//g' "$FILE_CHRONY"
+	if [ ! -d "${DIR_BIND9_LOG}" ]; then mkdir "${DIR_BIND9_LOG}" ; fi
+    printf "include %s" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
+    touch "${FILE_BIND9_LOG_AUTH_SERVERS}" && touch "${FILE_BIND9_LOG_CLIENT_SECURITY}" && touch "${FILE_BIND9_LOG_DDNS}"
+    touch "${FILE_BIND9_LOG_DEFAULT}" && touch "${FILE_BIND9_LOG_DNSSEC}" && touch "${FILE_BIND9_LOG_DNSTAP}"
+    touch "${FILE_BIND9_LOG_QUERIES}" && touch "${FILE_BIND9_LOG_QUERY-ERRORS}" && touch "${FILE_BIND9_LOG_RATE_LIMITING}"
+    touch "${FILE_BIND9_LOG_RPZ}" && touch "${FILE_BIND9_LOG_ZONE_TRANSFERS}"
+	chown -R bind "${DIR_BIND9_LOG}"
+    chmod u+rw "${DIR_BIND9_LOG}"
   fi
+
   if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
     printf 'Set timezone'
     cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
@@ -448,7 +472,7 @@ appSetup () {
 
     #Add Debug to dynamically loadable zones (DLZ) - file exists after join/provision
     cp "${FILE_BIND9_SAMBA_GENCONF}" "${FILE_BIND9_SAMBA_CONF}"
-    printf "include \"%s\";" "${FILE_BIND9_SAMBA_CONF}" > "${FILE_BIND9_LOCAL}"
+    printf "include \"%s\";" "${FILE_BIND9_SAMBA_CONF}" > "${FILE_BIND9_CONF_LOCAL}"
     sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_SAMBA_CONF}"
 
     # https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
