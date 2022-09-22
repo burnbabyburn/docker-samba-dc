@@ -115,7 +115,7 @@ config() {
   FILE_BIND9_LOG_DNSSEC="${DIR_BIND9_LOG}/dnssec"
   FILE_BIND9_LOG_DNSTAP="${DIR_BIND9_LOG}/dnstap"
   FILE_BIND9_LOG_QUERIES="${DIR_BIND9_LOG}/queries"
-  FILE_BIND9_LOG_QUERY-ERRORS="${DIR_BIND9_LOG}/query-errors"
+  FILE_BIND9_LOG_QUERY_ERRORS="${DIR_BIND9_LOG}/query-errors"
   FILE_BIND9_LOG_RATE_LIMITING="${DIR_BIND9_LOG}/rate_limiting"
   FILE_BIND9_LOG_RPZ="${DIR_BIND9_LOG}/rpz"
   FILE_BIND9_LOG_ZONE_TRANSFERS="${DIR_BIND9_LOG}/zone_transfers"
@@ -203,8 +203,10 @@ config() {
   NTPUSERGROUP="root"
 
   CHRONY_DEBUG_OPTION="d"
-  SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d ${DEBUG_LEVEL}"
+#  SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d ${DEBUG_LEVEL}"
+  SAMBADAEMON_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
+  if [ "${ENABLE_LOGS}" = true ]; then NAMED_DEBUG_OPTION="-g ${SAMBA_DEBUG_OPTION}"; else NAMED_DEBUG_OPTION="-g ${SAMBA_DEBUG_OPTION}"; fi
 }
 
 appSetup () {
@@ -276,13 +278,21 @@ appSetup () {
     set -- "$@" "--option=log level = ${DEBUG_LEVEL}"
 	set -- "$@" "--option=logging = file"
 	sed -e "s:/usr/sbin/samba -F:/usr/sbin/samba -i:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+	sed -e "s:/usr/sbin/samba -F:/usr/sbin/samba -i:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
     sed -i '/log[[:space:]]/s/^#//g' "$FILE_CHRONY"
 	if [ ! -d "${DIR_BIND9_LOG}" ]; then mkdir "${DIR_BIND9_LOG}" ; fi
     printf "include \"%s\";\n" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
-    touch "${FILE_BIND9_LOG_AUTH_SERVERS}" && touch "${FILE_BIND9_LOG_CLIENT_SECURITY}" && touch "${FILE_BIND9_LOG_DDNS}"
-    touch "${FILE_BIND9_LOG_DEFAULT}" && touch "${FILE_BIND9_LOG_DNSSEC}" && touch "${FILE_BIND9_LOG_DNSTAP}"
-    touch "${FILE_BIND9_LOG_QUERIES}" && touch "${FILE_BIND9_LOG_QUERY-ERRORS}" && touch "${FILE_BIND9_LOG_RATE_LIMITING}"
-    touch "${FILE_BIND9_LOG_RPZ}" && touch "${FILE_BIND9_LOG_ZONE_TRANSFERS}"
+    touch "${FILE_BIND9_LOG_AUTH_SERVERS}" 
+	touch "${FILE_BIND9_LOG_CLIENT_SECURITY}" 
+	touch "${FILE_BIND9_LOG_DDNS}"
+    touch "${FILE_BIND9_LOG_DEFAULT}" 
+	touch "${FILE_BIND9_LOG_DNSSEC}" 
+	touch "${FILE_BIND9_LOG_DNSTAP}"
+    touch "${FILE_BIND9_LOG_QUERIES}" 
+	touch "${FILE_BIND9_LOG_QUERY_ERRORS}" 
+	touch "${FILE_BIND9_LOG_RATE_LIMITING}"
+    touch "${FILE_BIND9_LOG_RPZ}" 
+	touch "${FILE_BIND9_LOG_ZONE_TRANSFERS}"
 	chown -R bind "${DIR_BIND9_LOG}"
     chmod u+rw "${DIR_BIND9_LOG}"
   fi
@@ -296,6 +306,7 @@ appSetup () {
   sed -e "s:{{ CHRONY_DEBUG_OPTION }}:${CHRONY_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:${SAMBADAEMON_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ SAMBA_DEBUG_OPTION }}:${SAMBA_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -e "s:{{ NAMED_DEBUG_OPTION }}:${NAMED_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
   sed -e "s:{{ BINDUSERGROUP }}:${BINDUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ NTPUSERGROUP }}:${NTPUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
