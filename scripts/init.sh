@@ -324,9 +324,11 @@ appSetup () {
   fi
 
   # Configure Options "Array" for samba setup
+  # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#ENABLEASUSUPPORT
   set -- "--dns-backend=BIND9_DLZ" \
          "--option=server services=-dns" \
-         "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool"
+         "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool" \
+		 "--option=enable asu support = no"
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#NAMERESOLVEORDER
   set -- "$@" "--option=name resolve order = wins host bcast"
   # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
