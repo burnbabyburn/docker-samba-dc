@@ -399,7 +399,7 @@ appSetup () {
       set -- "$@" "--password=${DOMAIN_PASS}"
 	  s=1
       until [ $s = 0 ]; do
-        samba-tool domain join "$@" && s=0 && break || s=$? && sleep 30s
+        samba-tool domain join "$@" && s=0 && break || s=$? && printf "Couldn't join...trying again in 10s" && sleep 10s
       done; (exit $s)
 
       # Netlogon & sysvol readonly on secondary DC
