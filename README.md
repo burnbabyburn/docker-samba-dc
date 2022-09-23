@@ -10,14 +10,14 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 
 ## Environment variables for quick start
 
-| ENVVAR                      | default value                                 |dc only| description  |
+| ENVVAR                      | default value                                 |Pdc only| description  |
 | --------------------------- | --------------------------------------------- |------------- | ------------- |
 | `BIND_INTERFACES_ENABLE`    | false                                         |       | set to true to [bind](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#BINDINTERFACESONLY) services to interfaces  |  
 | `BIND_INTERFACES`           | NONE                                          |       | set [interfaces](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#INTERFACES) name,ip.. to bind services to. See   |
 | `DEBUG_ENABLE`              | false                                         |       | Enables script debug messages |
 | `DEBUG_LEVEL`               | 0                                             |       | Level of debug messages from services (e.g. ntpd, samba)|
 | `DISABLE_DNS_WPAD_ISATAP`   | false                                         |   X   | Create DNS records for WPAD and ISATAP pointing to localhost|
-| `DISABLE_MD5`               | true                                          |   X   | Disable MD5 Clients (reject md5 clients) and Server (reject md5 servers) |
+| `DISABLE_MD5`               | true                                          |       | Disable MD5 Clients (reject md5 clients) and Server (reject md5 servers) |
 | `DOMAIN_ACC_LOCK_DURATION`  | 30                                            |   X   | min password length  |
 | `DOMAIN_ACC_LOCK_RST_AFTER` | 30                                            |   X   | min password length  |
 | `DOMAIN_ACC_LOCK_THRESHOLD` | 0                                             |   X   | min password length  |
@@ -28,6 +28,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `DOMAIN_PWD_MAX_AGE`        | 43                                            |   X   | max password age in days  |
 | `DOMAIN_PWD_MIN_AGE`        | 1                                             |   X   | min password age in days  |
 | `DOMAIN_PWD_MIN_LENGTH`     | 7                                             |   X   | min password length  |
+| `DOMAIN_PWD_ADMIN_NO_EXP`   | true                                          |   X   | If enabled Domain Admin PW will not expire. Auto set to false if FEATURE_SCHEMA_LAPS` is enabled  |
 | `DOMAIN_USER`               | Administrator                                 |       | Best leave at default. unknown consequences  |
 | `DOMAIN`                    | SAMDOM.LOCAL                                  |       | Your Domain Name            |
 | `ENABLE_CUPS`               | false                                         |       | Enable CUPS - cups is not installed but setup in smb.conf modify Dockerfile  |
@@ -38,7 +39,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `ENABLE_LOGS`               | false                                         |       | Enable log files - disabled. log to stdout and ship docker logs |
 | `ENABLE_MSCHAPV2`           | false                                         |       | Enable MSCHAP authentication  |
 | `ENABLE_RFC2307`            | true                                          |   X   | Enable RFC2307 LDAP Extension in AD |
-| `ENABLE_WINS`               | false                                         |   X   | Enable WINS and also propagiate time server |
+| `ENABLE_WINS`               | false                                         |       | Enable WINS and also propagiate time server |
 | `FEATURE_KERBEROS_TGT`      | true                                          |   X   | Feature: Change password of krbtgt user (Kerberos Ticket Granting Ticket) to prevent Golden Ticket attacks |
 | `FEATURE_RECYCLEBIN`        | true                                          |   X   | Feature: Enable AD RecylceBin|
 | `FEATURE_SCHEMA_LAPS`       | false                                         |   X   | Feature: Schema extension for Local Administrator Password Solution  |

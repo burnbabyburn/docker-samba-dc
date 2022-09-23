@@ -15,11 +15,12 @@ trap 'backupConfig' TERM
 # SetKeyValueFilePattern - helper bugs out if file is not smb.conf - regex issues
 
 config() {
-  # Set variables
+  # Environment VARS for setup
   DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
   LDOMAIN=$(printf "%s" "$DOMAIN" | tr '[:upper:]' '[:lower:]')
   UDOMAIN=$(printf "%s" "$LDOMAIN" | tr '[:lower:]' '[:upper:]')
   URDOMAIN=$(printf "%s" "$UDOMAIN" | cut -d "." -f1)
+  BIND9_VALIDATE_EXCEPT=${BIND9_VALIDATE_EXCEPT:-NONE}
   BIND_INTERFACES=${BIND_INTERFACES:-127.0.0.1} # Can be a list of interfaces seperated by spaces
   BIND_INTERFACES_ENABLE=${BIND_INTERFACES_ENABLE:-false}
   DEBUG_LEVEL=${DEBUG_LEVEL:-0}
@@ -30,6 +31,7 @@ config() {
   DOMAIN_ACC_LOCK_THRESHOLD=${DOMAIN_ACC_LOCK_THRESHOLD:-0}
   DOMAIN_NETBIOS=${DOMAIN_NETBIOS:-$URDOMAIN}
   DOMAIN_PASS=${DOMAIN_PASS:-youshouldsetapassword}
+  DOMAIN_PWD_ADMIN_NO_EXP=${DOMAIN_PWD_ADMIN_NO_EXP:-true}
   DOMAIN_PWD_COMPLEXITY=${DOMAIN_PWD_COMPLEXITY:-true}
   DOMAIN_PWD_HISTORY_LENGTH=${DOMAIN_PWD_HISTORY_LENGTH:-24}
   DOMAIN_PWD_MAX_AGE=${DOMAIN_PWD_MAX_AGE:-43}
@@ -41,15 +43,15 @@ config() {
   ENABLE_DYNAMIC_PORTRANGE=${ENABLE_DYNAMIC_PORTRANGE:-NONE}
   ENABLE_INSECURE_DNSUPDATE=${ENABLE_INSECURE_DNSUPDATE:-false}
   ENABLE_INSECURE_LDAP=${ENABLE_INSECURE_LDAP:-false}
-  FEATURE_SCHEMA_LAPS=${FEATURE_SCHEMA_LAPS:-false}
-  FEATURE_SCHEMA_SSH=${FEATURE_SCHEMA_SSH:-false}
-  FEATURE_SCHEMA_SUDO=${FEATURE_SCHEMA_SUDO:-false}
   ENABLE_LOGS=${ENABLE_LOGS:-false}
   ENABLE_MSCHAPV2=${ENABLE_MSCHAPV2:-false}
   ENABLE_RFC2307=${ENABLE_RFC2307:-true}
   ENABLE_WINS=${ENABLE_WINS:-false}
   FEATURE_KERBEROS_TGT=${FEATURE_KERBEROS_TGT:-false}
   FEATURE_RECYCLEBIN=${FEATURE_RECYCLEBIN:-true}
+  FEATURE_SCHEMA_LAPS=${FEATURE_SCHEMA_LAPS:-false}
+  FEATURE_SCHEMA_SSH=${FEATURE_SCHEMA_SSH:-false}
+  FEATURE_SCHEMA_SUDO=${FEATURE_SCHEMA_SUDO:-false}
   HOSTIP=${HOSTIP:-NONE}
   HOSTIPV6=${HOSTIPV6:-NONE}
   HOSTNAME=${HOSTNAME:-$(hostname)} # Only hostname, no FQDN
@@ -63,7 +65,6 @@ config() {
   TLS_PKI_O=${PKI_O:-Simple Root CA}
   TLS_PKI_OU=${PKI_OU:-Samba}
   TZ=${TZ:-/Etc/UTC}
-  BIND9_VALIDATE_EXCEPT=${BIND9_VALIDATE_EXCEPT:-NONE}
 
   # Min Counter Values for NIS Attributes. Set in docker-compose
   # does nothing on DCs as they shall not use idmap settings.
@@ -73,6 +74,8 @@ config() {
   IMAP_GID_START=${IMAP_GID_START:-$IMAP_ID_START}
 
   # DIR_GPO, DIR_SAMBA_CONF, DIR_LDIF and DIR_SCRIPTS need to be changed in the Dockerfile
+  
+  # File and directory locations
   DIR_CHRONY_LOG=/var/log/chrony
   DIR_CHRONY_NTSDUMP=/var/lib/chrony
   DIR_CHRONY_SRC=/etc/chrony/sources.d
@@ -82,8 +85,7 @@ config() {
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba
   DIR_SAMBA_ETC=/etc/samba
   DIR_SAMBA_CSHARE=/var/lib/samba/share_c
-  #%S one log file per service
-  FILE_SAMBA_LOG=/var/log/samba/%S.log
+  FILE_SAMBA_LOG=/var/log/samba/smb.log
   FILE_KRB5=/etc/krb5.conf
   FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
@@ -148,7 +150,6 @@ config() {
   FILE_SAMBA_USER_MAP="${DIR_SAMBA_ETC}/user.map"
   FILE_SAMBA_WINSLDB="${DIR_SAMBA_PRIVATE}/wins_config.ldb"
   FILE_SAMLDB="${DIR_SAMBA_PRIVATE}/sam.ldb"
-#  FILE_SAMBA_INCLUDES="${DIR_SAMBA_ETC}/includes.conf"
 
   # if hostname contains FQDN cut the rest
   if printf "%s" "${HOSTNAME}" | grep -q "\."; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
@@ -191,7 +192,8 @@ config() {
   export LDAP_SUFFIX="${LDAP_SUFFIX}"
   export DIR_SCRIPTS="${DIR_SCRIPTS}"
   export DIR_BIND9="${DIR_BIND9}"
-  # Export if we don't source helper.sh in the future. These vars are needed from helper script
+  
+  # Export for backup and restore in helper.sh
   export FILE_EXTERNAL_SUPERVISORD_CONF="${FILE_EXTERNAL_SUPERVISORD_CONF}"
   export FILE_EXTERNAL_SAMBA_CONF="${FILE_EXTERNAL_SAMBA_CONF}"
   export FILE_EXTERNAL_CHRONY_CONF="${FILE_EXTERNAL_CHRONY_CONF}"
@@ -203,144 +205,102 @@ config() {
   . /"${DIR_SCRIPTS}"/helper.sh
 
   BINDUSERGROUP="bind"
-  NTPUSERGROUP="root"
-  CHRONY_DEBUG_OPTION="d"
+  CHRONYUSERGROUP="_chrony"
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
-  # if file loging is active, named can not log to stdout (-g)
-  if [ "${ENABLE_LOGS}" = true ]; then
-    NAMED_DEBUG_OPTION="${SAMBA_DEBUG_OPTION}"
-	SAMBADAEMON_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
+  
+  SAMBA_START_PARAM="--no-process-group"
+  CHRONY_START_PARAM="-n -u ${CHRONYUSERGROUP}"
+  BIND9_START_PARAM="-f -u ${BINDUSERGROUP}"
+  
+  if cat /sys/module/ipv6/parameters/disable;then
+    #sed -e "s/listen-on-v6 { any; };/listen-on-v6 { none; };/" -i "${FILE_BIND9_OPTIONS}"
+	BIND9_START_PARAM="${BIND9_START_PARAM} -4"
+    CHRONY_START_PARAM="${CHRONY_START_PARAM} -4"
   else
-    NAMED_DEBUG_OPTION="-g ${SAMBA_DEBUG_OPTION}"
-	SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d ${DEBUG_LEVEL}"
+    if [ "${HOSTIPV6}" != "NONE" ]; then set -- "$@" "--host-ip6=${HOSTIPV6}" ;  fi
+  fi
+
+  # if file loging is active, named can not log to stdout (-g), samba needs to be run with -i instead of -F
+  if [ "${ENABLE_LOGS}" = true ]; then
+    BIND9_START_PARAM="${BIND9_START_PARAM} ${SAMBA_DEBUG_OPTION}"
+	SAMBA_START_PARAM="${SAMBA_START_PARAM} -i ${SAMBA_DEBUG_OPTION}"
+  else
+    BIND9_START_PARAM="-g ${SAMBA_DEBUG_OPTION}"
+	SAMBA_START_PARAM="${SAMBA_START_PARAM} -F --debug-stdout -d ${DEBUG_LEVEL}"
+	CHRONY_START_PARAM="${CHRONY_START_PARAM} -dd -L ${DEBUG_LEVEL}"
+  fi
+  if ! printf "%s" "${BIND_INTERFACES}" | grep "127.0.0.1\|lo\|::1" >> /dev/null; then
+    printf "
+    127.0.0.1 missing from BIND_INTERFACES.
+    If bind interfaces only is set and the network address 127.0.0.1 is not added to the interfaces parameter list smbpasswd(8) may not work as expected due to the reasons covered below.
+    To change a users SMB password, the smbpasswd by default connects to the localhost - 127.0.0.1 address as an SMB client to issue the password change request.
+    If bind interfaces only is set then unless the network address 127.0.0.1 is added to the interfaces parameter list then smbpasswd will fail to connect in it's default mode.
+    smbpasswd can be forced to use the primary IP interface of the local host by using its smbpasswd(8) -r remote machine parameter, with remote machine set to the IP name of the primary interface of the local host. "
+    BIND_INTERFACES="${BIND_INTERFACES},lo"
   fi
 }
 
 appSetup () {
-
   if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
     printf 'Set timezone'
     cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
     printf "%s" "${TZ}" >/etc/timezone
   fi
-
+  
+  ## Setup filesystem and config files
+  # Setup external dir - Backup dir for configs
   if [ ! -d "${DIR_EXTERNAL}" ]; then mkdir "${DIR_EXTERNAL}" ; fi
   if [ ! -d "${DIR_EXTERNAL_BIND9}" ]; then mkdir "${DIR_EXTERNAL_BIND9}"; fi
+  # Remove krb5.conf will be replaced by a samba generated one
   if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
-  if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "${DIR_BIND9_RUN}";chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}";else chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"; fi
-  if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "${DIR_CHRONY_LOG}"; fi
+
+  # PID and session.key dir for bind9
+  if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "${DIR_BIND9_RUN}"; fi
+  chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"
+
+  # PID and chronyd.sock dir for chrony
   if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "${DIR_CHRONY_RUN}"; fi
   chmod 750 "${DIR_CHRONY_RUN}";
-  chown _chrony:_chrony "${DIR_CHRONY_LOG}"
-  if [ ! -d "${DIR_BIND9_LOG}" ]; then mkdir "${DIR_BIND9_LOG}" ; fi
 
-  # nsswitch anpassen
+  #Setup chrony log dir
+  if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "${DIR_CHRONY_LOG}"; fi
+  chown "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LOG}"
+
+  # Setup bind9 log dir and logfiles
+  if [ ! -d "${DIR_BIND9_LOG}" ]; then mkdir "${DIR_BIND9_LOG}" ; fi
+  touch "${FILE_BIND9_LOG_AUTH_SERVERS}"
+  touch "${FILE_BIND9_LOG_CLIENT_SECURITY}"
+  touch "${FILE_BIND9_LOG_DDNS}"
+  touch "${FILE_BIND9_LOG_DEFAULT}"
+  touch "${FILE_BIND9_LOG_DNSSEC}"
+  touch "${FILE_BIND9_LOG_DNSTAP}"
+  touch "${FILE_BIND9_LOG_QUERIES}"
+  touch "${FILE_BIND9_LOG_QUERY_ERRORS}"
+  touch "${FILE_BIND9_LOG_RATE_LIMITING}"
+  touch "${FILE_BIND9_LOG_RPZ}"
+  touch "${FILE_BIND9_LOG_ZONE_TRANSFERS}"
+  chown -R bind "${DIR_BIND9_LOG}"
+  chmod u+rw "${DIR_BIND9_LOG}"
+  
+  #Configure /etc/supervisor/conf.d/supervisord.conf
+  sed -e "s:{{ SAMBA_START_PARAM }}:${SAMBA_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -e "s:{{ BIND9_START_PARAM }}:${BIND9_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -e "s:{{ CHRONY_START_PARAM }}:${CHRONY_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+
+  # Configure /etc/nsswitch.conf 
   sed -i "s,passwd:.*,passwd:         files winbind,g" "${FILE_NSSWITCH}"
   sed -i "s,group:.*,group:          files winbind,g" "${FILE_NSSWITCH}"
   sed -i "s,hosts:.*,hosts:          files dns,g" "${FILE_NSSWITCH}"
   sed -i "s,networks:.*,networks:      files dns,g" "${FILE_NSSWITCH}"
-
-  set -- "--dns-backend=BIND9_DLZ" \
-         "--option=server services=-dns" \
-         "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool"
-  # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#NAMERESOLVEORDER
-  set -- "$@" "--option=name resolve order = wins host bcast"
-  # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
-#  set -- "$@" "--option=password hash userPassword schemes = CryptSHA256 CryptSHA512"
-  set -- "$@" "--option=password hash userPassword schemes = CryptSHA256 CryptSHA512"
-  # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes also for idmap
-  set -- "$@" "--option=template shell = /bin/false" "--option=template homedir = /dev/null"
-  set -- "$@" "--option=eventlog list = Samba"
-  set -- "$@" "-d ${DEBUG_LEVEL}"
-
-  if [ "${ENABLE_DNSFORWARDER}" != "NONE" ]; then set -- "$@" "--option=dns forwarder=${ENABLE_DNSFORWARDER}" ; fi
-  if [ "${ENABLE_DYNAMIC_PORTRANGE}" != "NONE" ]; then set -- "$@" "--option=rpc server dynamic port range=${ENABLE_DYNAMIC_PORTRANGE}" ; fi
-  if [ "${ENABLE_INSECURE_DNSUPDATE}" = true ]; then set -- "$@" "--option=allow dns updates  = nonsecure" ; fi
-  if [ "${ENABLE_INSECURE_LDAP}" = true ]; then set -- "$@" "--option=ldap server require strong auth = no" ; fi
-  if [ "${ENABLE_MSCHAPV2}" = true ]; then set -- "$@" "--option=ntlm auth=mschapv2-and-ntlmv2-only" ; fi
-  if [ "${HOSTIP}" != "NONE" ]; then set -- "$@" "--host-ip=${HOSTIP%/*}" ; fi
-  if [ "${JOIN_SITE}" != "Default-First-Site-Name" ]; then set -- "$@" "--site=${JOIN_SITE}" ; fi
-
-  # If multi-site, we need to connect to the VPN before joining the domain
-  if [ "${JOIN_SITE_VPN}" = true ]; then
-    /usr/sbin/openvpn --config ${FILE_OPENVPNCONF} &
-    VPNPID=$!
-    printf "Sleeping 30s to ensure VPN connects %s" "($VPNPID)";
-    sleep 30s
-  fi
-  if [ "${ENABLE_RFC2307}" = true ]; then
-    if [ "${JOIN}" = true ]; then OPTION_RFC='--option=idmap_ldb:use rfc2307 = yes' ; else OPTION_RFC='--use-rfc2307' ; fi
-    set -- "$@" "${OPTION_RFC}"
-  fi
-  if [ "${BIND_INTERFACES_ENABLE}" = true ]; then
-    if ! printf "%s" "${BIND_INTERFACES}" | grep "127.0.0.1\|lo\|::1" >> /dev/null; then
-      printf "
-       127.0.0.1 missing from BIND_INTERFACES.
-       If bind interfaces only is set and the network address 127.0.0.1 is not added to the interfaces parameter list smbpasswd(8) may not work as expected due to the reasons covered below.
-       To change a users SMB password, the smbpasswd by default connects to the localhost - 127.0.0.1 address as an SMB client to issue the password change request.
-       If bind interfaces only is set then unless the network address 127.0.0.1 is added to the interfaces parameter list then smbpasswd will fail to connect in it's default mode.
-       smbpasswd can be forced to use the primary IP interface of the local host by using its smbpasswd(8) -r remote machine parameter, with remote machine set to the IP name of the primary interface of the local host. "
-       BIND_INTERFACES="${BIND_INTERFACES},lo"
-    fi
-    set -- "$@" "--option=interfaces=${BIND_INTERFACES}"
-    set -- "$@" "--option=bind interfaces only = yes"
-  fi
-  if [ "${DISABLE_MD5}" = true ]; then
-    # Prevent downgrade attacks to md5
-    set -- "$@" "--option=reject md5 clients = yes"
-    set -- "$@" "--option=reject md5 servers = yes"
-  fi
-  if [ "${ENABLE_WINS}" = true ]; then
-    set -- "$@" "--option=wins support = yes"
-    set -- "$@" "--option=time server = yes"
-  fi
-  # If IPv6 is enabled
-  if cat /sys/module/ipv6/parameters/disable;then
-    sed -e "s/listen-on-v6 { any; };/listen-on-v6 { none; };/" -i "${FILE_BIND9_OPTIONS}"
-    sed -e "s;/usr/sbin/named.*;/usr/sbin/named -4 -u bind -f -g ${SAMBA_DEBUG_OPTION};" -i "${FILE_SUPERVISORD_CONF}"
-  else
-    if [ "${HOSTIPV6}" != "NONE" ]; then set -- "$@" "--host-ip6=${HOSTIPV6}" ;  fi
-  fi
-
-  if [ "${ENABLE_LOGS}" = true ]; then
-    set -- "$@" "--option=log file = ${FILE_SAMBA_LOG}"
-    set -- "$@" "--option=max log size = 10000"
-    set -- "$@" "--option=log level = ${DEBUG_LEVEL}"
-	set -- "$@" "--option=logging = file"
-	sed -e "s:/usr/sbin/samba -F:/usr/sbin/samba -i:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-    sed -i '/log[[:space:]]/s/^#//g' "$FILE_CHRONY"
-    printf "include \"%s\";\n" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
-    touch "${FILE_BIND9_LOG_AUTH_SERVERS}"
-	touch "${FILE_BIND9_LOG_CLIENT_SECURITY}"
-	touch "${FILE_BIND9_LOG_DDNS}"
-    touch "${FILE_BIND9_LOG_DEFAULT}"
-	touch "${FILE_BIND9_LOG_DNSSEC}"
-	touch "${FILE_BIND9_LOG_DNSTAP}"
-    touch "${FILE_BIND9_LOG_QUERIES}"
-	touch "${FILE_BIND9_LOG_QUERY_ERRORS}"
-	touch "${FILE_BIND9_LOG_RATE_LIMITING}"
-    touch "${FILE_BIND9_LOG_RPZ}"
-	touch "${FILE_BIND9_LOG_ZONE_TRANSFERS}"
-	chown -R bind "${DIR_BIND9_LOG}"
-    chmod u+rw "${DIR_BIND9_LOG}"
-  fi
-
-  sed -e "s:{{ CHRONY_DEBUG_OPTION }}:${CHRONY_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:${SAMBADAEMON_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  sed -e "s:{{ SAMBA_DEBUG_OPTION }}:${SAMBA_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  sed -e "s:{{ NAMED_DEBUG_OPTION }}:${NAMED_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-
-  sed -e "s:{{ BINDUSERGROUP }}:${BINDUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  sed -e "s:{{ NTPUSERGROUP }}:${NTPUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-
- # BIND9
-
+  
+  # Configure Bind9 files
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
   if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]; then sed -e "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_OPTIONS}"; fi
   # https://www.elastic2ls.com/blog/loading-from-master-file-managed-keys-bind-failed/
   if ! grep -q "/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi
 
+  # Configure chrony files
   # If used on azure image chrony breaks (github actions)
   # Fatal error : Could not open /run/chrony/chronyd.pid : Permission denied
   # INFO exited: chrony (exit status 1; not expected)
@@ -363,6 +323,50 @@ appSetup () {
     done
   fi
 
+  # Configure Options "Array" for samba setup
+  set -- "--dns-backend=BIND9_DLZ" \
+         "--option=server services=-dns" \
+         "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool"
+  # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#NAMERESOLVEORDER
+  set -- "$@" "--option=name resolve order = wins host bcast"
+  # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
+  set -- "$@" "--option=password hash userPassword schemes = CryptSHA256 CryptSHA512"
+  # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes also for idmap
+  set -- "$@" "--option=template shell = /bin/false" "--option=template homedir = /dev/null"
+  set -- "$@" "--option=eventlog list = Samba"
+  set -- "$@" "-d ${DEBUG_LEVEL}"
+  if [ "${ENABLE_DNSFORWARDER}" != "NONE" ]; then set -- "$@" "--option=dns forwarder=${ENABLE_DNSFORWARDER}" ; fi
+  if [ "${ENABLE_DYNAMIC_PORTRANGE}" != "NONE" ]; then set -- "$@" "--option=rpc server dynamic port range=${ENABLE_DYNAMIC_PORTRANGE}" ; fi
+  if [ "${ENABLE_INSECURE_DNSUPDATE}" = true ]; then set -- "$@" "--option=allow dns updates  = nonsecure" ; fi
+  if [ "${ENABLE_INSECURE_LDAP}" = true ]; then set -- "$@" "--option=ldap server require strong auth = no" ; fi
+  if [ "${ENABLE_MSCHAPV2}" = true ]; then set -- "$@" "--option=ntlm auth=mschapv2-and-ntlmv2-only" ; fi
+  if [ "${HOSTIP}" != "NONE" ]; then set -- "$@" "--host-ip=${HOSTIP%/*}" ; fi
+  if [ "${JOIN_SITE}" != "Default-First-Site-Name" ]; then set -- "$@" "--site=${JOIN_SITE}" ; fi
+  if [ "${ENABLE_RFC2307}" = true ]; then
+    if [ "${JOIN}" = true ]; then OPTION_RFC='--option=idmap_ldb:use rfc2307 = yes' ; else OPTION_RFC='--use-rfc2307' ; fi
+    set -- "$@" "${OPTION_RFC}"
+  fi
+  if [ "${BIND_INTERFACES_ENABLE}" = true ]; then
+    set -- "$@" "--option=interfaces=${BIND_INTERFACES}"
+    set -- "$@" "--option=bind interfaces only = yes"
+  fi
+  if [ "${DISABLE_MD5}" = true ]; then
+    # Prevent downgrade attacks to md5
+    set -- "$@" "--option=reject md5 clients = yes"
+    set -- "$@" "--option=reject md5 servers = yes"
+  fi
+  if [ "${ENABLE_WINS}" = true ]; then
+    set -- "$@" "--option=wins support = yes"
+    set -- "$@" "--option=time server = yes"
+  fi
+  if [ "${ENABLE_LOGS}" = true ]; then
+    set -- "$@" "--option=log file = ${FILE_SAMBA_LOG}"
+    set -- "$@" "--option=max log size = 10000"
+    set -- "$@" "--option=log level = ${DEBUG_LEVEL}"
+	set -- "$@" "--option=logging = file"
+    sed -i '/log[[:space:]]/s/^#//g' "$FILE_CHRONY"
+    printf "include \"%s\";\n" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
+  fi
   if [ "${TLS_ENABLE}" = true ]; then
     if [ ! -f "${FILE_PKI_CERT}" ] && [ ! -f "${FILE_PKI_KEY}" ] && [ ! -f "${FILE_PKI_CA}" ]; then printf "No custom CA found. Samba will autogenerate one" ; fi
     if [ ! -f "${FILE_PKI_DH}" ]; then openssl dhparam -out "${FILE_PKI_DH}" 2048 ; fi
@@ -377,19 +381,25 @@ appSetup () {
     set -- "$@" "--option=tls enabled = no"
   fi
 
+  # If multi-site, we need to connect to the VPN before joining the domain
+  if [ "${JOIN_SITE_VPN}" = true ]; then
+    /usr/sbin/openvpn --config ${FILE_OPENVPNCONF} &
+    VPNPID=$!
+    printf "Sleeping 30s to ensure VPN connects %s" "($VPNPID)";
+    sleep 30s
+  fi
+
   # If external/smb.conf doesn't exist, this is new container with empty volume, we're not just moving to a new container
   if [ ! -f "${FILE_EXTERNAL_SAMBA_CONF}" ]; then
     if [ -f "${FILE_SAMBA_CONF}" ]; then mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig ; fi
-      # Optional params encased with "" will break the command
     if [ "${JOIN}" = true ]; then
-#     if [ "$(dig +short -t srv _ldap._tcp.$LDOMAIN.)" ] && printf "got answer"
-      s=1
       set -- "$@" "${LDOMAIN}"
       set -- "$@" "DC"
       set -- "$@" "-U${DOMAIN_NETBIOS}\\${DOMAIN_USER}"
       set -- "$@" "--password=${DOMAIN_PASS}"
+	  s=1
       until [ $s = 0 ]; do
-        samba-tool domain join "$@" && s=0 && break || s=$? && sleep 60s
+        samba-tool domain join "$@" && s=0 && break || s=$? && sleep 30s
       done; (exit $s)
 
       # Netlogon & sysvol readonly on secondary DC
@@ -415,13 +425,6 @@ appSetup () {
         printf 'read only = Yes\n'
         printf 'valid users = @\"Domain Admins\"\n'
       } >> "${FILE_SAMBA_CONF}"
-
-      #Check if Join was successfull
-      if host -t A "$HOSTNAME"."$LDOMAIN";then
-        printf "found DNS host record"
-      else
-        printf "no DNS host record found. Pls see https://wiki.samba.org/index.php/Verifying_and_Creating_a_DC_DNS_Record#Verifying_and_Creating_the_objectGUID_Record"
-      fi
     # domain provision
     else
       set -- "$@" "--server-role=dc"
@@ -431,7 +434,6 @@ appSetup () {
       set -- "$@" "--domain=${DOMAIN_NETBIOS}"
 
       samba-tool domain provision "$@"
-      samba-tool user setexpiry Administrator --noexpiry
       {
         printf '\n'
         printf '[C$]\n'
@@ -502,13 +504,25 @@ appSetup () {
       if [ "${DOMAIN_PWD_MAX_AGE}" != 43 ]; then samba-tool domain passwordsettings set --max-pwd-age="$DOMAIN_PWD_MAX_AGE" "${SAMBA_DEBUG_OPTION}" ; fi
       if [ "${DOMAIN_PWD_MIN_AGE}" != 1 ]; then samba-tool domain passwordsettings set --min-pwd-age="$DOMAIN_PWD_MIN_AGE" "${SAMBA_DEBUG_OPTION}" ; fi
       if [ "${DOMAIN_PWD_MIN_LENGTH}" != 7 ]; then samba-tool domain passwordsettings set --min-pwd-length="$DOMAIN_PWD_MIN_LENGTH" "${SAMBA_DEBUG_OPTION}" ; fi
+	  if [ "${DOMAIN_PWD_ADMIN_NO_EXP}" = true ]; then samba-tool user setexpiry "${DOMAIN_USER}" --noexpiry "${SAMBA_DEBUG_OPTION}" ; fi 
     fi
 	# End of join or provision
 
-    #Add Debug to dynamically loadable zones (DLZ) - file exists after join/provision
+    ## Configure files generated by SAMBA setup
+    # Add Debug to dynamically loadable zones (DLZ)
     cp "${FILE_BIND9_SAMBA_GENCONF}" "${FILE_BIND9_SAMBA_CONF}"
     printf "include \"%s\";" "${FILE_BIND9_SAMBA_CONF}" > "${FILE_BIND9_CONF_LOCAL}"
     sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_SAMBA_CONF}"
+	
+    cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
+    if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "${DIR_CHRONY_SOCK}" ; fi
+    chmod 750 "${DIR_CHRONY_SOCK}"
+    chown root:_chrony "${DIR_CHRONY_SOCK}"
+	
+	if [ ! -d "${DIR_SAMBA_CSHARE}" ]; then
+      mkdir -p "${DIR_SAMBA_EVENTLOG}"
+      mkdir -p "${DIR_SAMBA_ADMIN}"
+    fi
 
     # https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
     # https://wiki.samba.org/index.php/Setting_up_Samba_as_a_Print_Server
@@ -543,20 +557,10 @@ appSetup () {
       SetKeyValueFilePattern 'disable spoolss' 'yes'
     fi
 
-    cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
-    if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "${DIR_CHRONY_SOCK}" ; fi
-    chmod 750 "${DIR_CHRONY_SOCK}"
-    chown root:_chrony "${DIR_CHRONY_SOCK}"
     # Stop VPN & write supervisor service
     if [ "${JOIN_SITE_VPN}" = true ]; then
       if [ -n "${VPNPID}" ]; then kill "${VPNPID}" ; fi
       EnableOpenvpnSupervisord
-    fi
-
-    if [ ! -d "${DIR_SAMBA_CSHARE}" ]; then
-      mkdir -p "${DIR_SAMBA_EVENTLOG}"
-      mkdir -p "${DIR_SAMBA_ADMIN}"
-      #ln -s "$DIR_SAMBA_SYSVOL" "$DIR_SAMBA_CSHARE/sysvol"
     fi
   fi
   # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
@@ -597,9 +601,9 @@ appFirstStart () {
       samba-tool dns add "$(hostname -s)" "${LDOMAIN}" isatap A 127.0.0.1 -P "${SAMBA_DEBUG_OPTION}"
     fi
     # Import Samba. admx&adml gpo
-    printf "%s" "${DOMAIN_PASS}" | if ! samba-tool gpo admxload -U Administrator "${SAMBA_DEBUG_OPTION}"; then printf "Check Reverse DNS resolution of IP:%s" "${IP}"; exit 1 ; fi
+    printf "%s" "${DOMAIN_PASS}" | samba-tool gpo admxload -U Administrator "${SAMBA_DEBUG_OPTION}"
     # Import Windows admx&adml
-    printf "%s" "${DOMAIN_PASS}" | if ! samba-tool gpo admxload -U Administrator --admx-dir="${DIR_GPO}" "${SAMBA_DEBUG_OPTION}"; then printf "Check Reverse DNS resolution of IP:%s" "${IP}"; exit 1 ; fi
+    printf "%s" "${DOMAIN_PASS}" | if [ -d "${DIR_GPO}" ]; then samba-tool gpo admxload -U Administrator --admx-dir="${DIR_GPO}" "${SAMBA_DEBUG_OPTION}"; fi
 
     #Copy root cert as der to netlogon
     #openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
