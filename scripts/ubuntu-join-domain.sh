@@ -18,7 +18,7 @@ LO_DOMAIN=${DOMAIN,,}
 echo "Setting hostnames..."
 hostnamectl set-hostname ${HOSTNAME}
 
-DEBIAN_FRONTEND=noninteractive apt install -y realmd sssd sssd-tools libnss-sss libpam-sss krb5-user adcli samba-common-bin
+DEBIAN_FRONTEND=noninteractive
 {
 echo "" > /etc/krb5.conf
 echo "[libdefaults]"

@@ -475,6 +475,7 @@ appSetup () {
       # https://wiki.samba.org/index.php/Samba_AD_schema_extensions
       # https://gist.github.com/hsw0/5132d5dabd4384108b48
       if [ "${FEATURE_SCHEMA_SSH}" = true ]; then
+	    printf "Trying to add SSH LDAP-Schema to AD"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SSH1}.j2" > "${FILE_SAMBA_SCHEMA_SSH1}"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
@@ -486,6 +487,7 @@ appSetup () {
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH3}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
       fi
       if [ "${FEATURE_SCHEMA_SUDO}" = true ]; then
+	    printf "Trying to add SUDO LDAP-Schema to AD"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SUDO1}.j2" > "${FILE_SAMBA_SCHEMA_SUDO1}"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
@@ -496,6 +498,7 @@ appSetup () {
       # https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507'
       # Microsoft Local Administrator Password Solution (LAPS) https://www.microsoft.com/en-us/download/details.aspx?id=46899
       if [ "${FEATURE_SCHEMA_LAPS}" = true ]; then
+	    printf "Trying to add LAPS LDAP-Schema to AD"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
           "${FILE_SAMBA_SCHEMA_LAPS1}.j2" > "${FILE_SAMBA_SCHEMA_LAPS1}"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \

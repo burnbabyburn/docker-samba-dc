@@ -1,7 +1,7 @@
 #!/bin/bash
 #See: https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_reset_krbtgt.html
 
-set -x
+if [ "${DEBUG_ENABLE}" = true ]; then set -x; fi
 
 while true
 do
@@ -20,29 +20,26 @@ do
 #  done
 #  IFS=' '
 #TESTING END
-  echo "changing Kerberos Ticket Granting Ticket (TGT) password"
+  printf "changing Kerberos Ticket Granting Ticket (TGT) password"
   if python3 /"${DIR_SCRIPTS}"/chgkrbtgtpass-v4-15-stable.py | tee /var/log/chgkrbtgtpass.log; then
-    echo "SUCCESS: Changed KRBTGT password"
+    printf "SUCCESS: Changed KRBTGT password"
 	# Change a second time
 	python3 /"${DIR_SCRIPTS}"/chgkrbtgtpass-v4-15-stable.py
   else
-    echo "ERROR: Failed chainging KRBTGT password" && exit 1
+    printf "ERROR: Failed chainging KRBTGT password" && exit 1
   fi
 
   date1="$(date +"%a, %d %b %Y %H:%M")"
   lastset="$(pdbedit -Lv krbtgt | grep "Password last set:")"
-  date2="$(echo "$lastset" | cut -d ':' -f2):$(echo "$lastset" | cut -d ':' -f3)"
+  date2="$(printf "%s" "$lastset" | cut -d ':' -f2):$(printf "%s" "$lastset" | cut -d ':' -f3)"
   #remove leading spaces
-  date2=$(echo $date2 | sed 's/^ *//g')
-  echo "Verifying that KRBTGT password has been updated"
-  echo "Current date and time"
-  echo "$date1"
-  echo "$lastset"
+  date2=$(printf "%s" $date2 | sed 's/^ *//g')
+  printf "Verifying Kerberos Ticket Granting Ticket password has been updated"
   
   if [ "$date1" = "$date2" ]; then
-    echo "Verify OK"
+    printf "Verify OK"
   else
-    echo "Verify FAILED" && exit 1
+    printf "Verify FAILED" && exit 1
   fi
   #pdbedit -Lv krbtgt # grep password change date => compare to current date => replicate (samba-tool drs replicate <remote_dc> <pdc_dc> dc=mydomain,dc=lan)
 sleep 40d

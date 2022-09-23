@@ -42,4 +42,4 @@ WORKDIR /
 
 HEALTHCHECK CMD smbcontrol smbd num-children || exit 1
 
-ENTRYPOINT ["bash", "/scripts/init.sh"]
+ENTRYPOINT ["sh", "/scripts/init.sh"]
