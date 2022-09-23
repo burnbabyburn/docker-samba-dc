@@ -55,7 +55,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `TLS_ENABLE`                | false                                         |       | Enable TLS. Samba will autogen a cert if not provided before first start  |
 | `TZ`                        | /Etc/UTC                                      |       | Set Timezone and localtime. Case sensitiv.  |
 
-## Add Reverse DNS Zone - IF $HOSTIP is set, DNS-Reverse-Zone gets created on first run. Additional subnets connected to the host are
+## Add Reverse DNS Zone
 docker exec -it samba-ad-dc "samba-tool dns zonecreate <Your-AD-DNS-Server-IP-or-hostname> <NETADDR>.in-addr.arpa -U<URDOMAIN>\administrator --password=<DOMAINPASS>"
 ## Add Share Privileges to DomAdmin Group - Set by default
 docker exec -it samba-ad-dc "net rpc rights grant "<URDOMAIN>\Domain Admins" SeDiskOperatorPrivilege -U<URDOMAIN>\administrator --password=<DOMAINPASS> "
@@ -81,22 +81,6 @@ cd /data/docker/builds
 git clone https://github.com/Fmstrat/samba-domain.git
 cd samba-domain
 docker build -t samba-domain .
-```
-
-Or just use the HUB:
-
-```bash
-docker pull nowsci/samba-domain
-```
-
-## Setting things up for the container
-
-To set things up you will first want a new IP on your host machine so that ports don't conflict. A domain controller needs a lot of ports, and will likely conflict with things like dnsmasq. The below commands will do this, and set up some required folders.
-
-```bash
-ifconfig eno1:1 192.168.3.222 netmask 255.255.255.0 up
-mkdir -p /data/docker/containers/samba/data
-mkdir -p /data/docker/containers/samba/config/samba
 ```
 
 If you plan on using a multi-site VPN, also run:
