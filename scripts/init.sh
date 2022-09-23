@@ -100,9 +100,9 @@ config() {
   DIR_EXTERNAL="${DIR_SAMBA_ETC}/external"
   DIR_EXTERNAL_BIND9="${DIR_EXTERNAL}/bind"
   DIR_SAMBA_ADMIN="${DIR_SAMBA_CSHARE}/windows"
-  DIR_SAMBA_EVENTLOG="${DIR_SAMBA_CSHARE}/windows/system32/config"
+  DIR_SAMBA_EVENTLOG="${DIR_SAMBA_ADMIN}/system32/config"
   DIR_SAMBA_NETLOGON="${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts"
-  DIR_SAMBA_PRINTDRIVER="${DIR_SAMBA_CSHARE}/windows/system32/spool/drivers"
+  DIR_SAMBA_PRINTDRIVER="${DIR_SAMBA_ADMIN}/system32/spool/drivers"
   DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private"
   DIR_SAMBA_SYSVOL="${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}"
   FILE_BIND9_CONF="${DIR_BIND9}/named.conf"
@@ -123,6 +123,7 @@ config() {
   FILE_BIND9_SAMBA_CONF="${DIR_BIND9}/samba-named.conf"
   FILE_BIND9_SAMBA_GENCONF="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
   FILE_CHRONY_PID="${DIR_CHRONY_RUN}/chronyd.pid"
+  FILE_CHRONY_TIMESRC="${DIR_CHRONY_SRC}/my.sources"
   FILE_EXTERNAL_CHRONY_CONF="${DIR_EXTERNAL}/chrony.conf"
   FILE_EXTERNAL_KRB5_CONF="${DIR_EXTERNAL}/krb5.conf"
   FILE_EXTERNAL_NSSWITCH="${DIR_EXTERNAL}/nsswitch.conf"
@@ -151,6 +152,8 @@ config() {
 
   # if hostname contains FQDN cut the rest
   if printf "%s" "${HOSTNAME}" | grep -q "\."; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
+  if [ "${#DOMAIN_NETBIOS}" -gt 15 ]; then printf "DOMAIN_NETBIOS too long" ; exit 1 ; fi
+  if printf "%s" "${DOMAIN_NETBIOS}" | grep -q "\." ; then printf "DOMAIN_NETBIOS contains forbiden character \".\" " ; exit 1 ; fi
 
   # Check if strings end with semicolon. if not append it
   if [ ! "$(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/")" = ';' ]; then
@@ -198,7 +201,7 @@ config() {
 
   # shellcheck source=/dev/null
   . /"${DIR_SCRIPTS}"/helper.sh
-  
+
   BINDUSERGROUP="bind"
   NTPUSERGROUP="root"
   CHRONY_DEBUG_OPTION="d"
@@ -214,6 +217,29 @@ config() {
 }
 
 appSetup () {
+
+  if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
+    printf 'Set timezone'
+    cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
+    printf "%s" "${TZ}" >/etc/timezone
+  fi
+
+  if [ ! -d "${DIR_EXTERNAL}" ]; then mkdir "${DIR_EXTERNAL}" ; fi
+  if [ ! -d "${DIR_EXTERNAL_BIND9}" ]; then mkdir "${DIR_EXTERNAL_BIND9}"; fi
+  if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
+  if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "${DIR_BIND9_RUN}";chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}";else chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"; fi
+  if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "${DIR_CHRONY_LOG}"; fi
+  if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "${DIR_CHRONY_RUN}"; fi
+  chmod 750 "${DIR_CHRONY_RUN}";
+  chown _chrony:_chrony "${DIR_CHRONY_LOG}"
+  if [ ! -d "${DIR_BIND9_LOG}" ]; then mkdir "${DIR_BIND9_LOG}" ; fi
+
+  # nsswitch anpassen
+  sed -i "s,passwd:.*,passwd:         files winbind,g" "${FILE_NSSWITCH}"
+  sed -i "s,group:.*,group:          files winbind,g" "${FILE_NSSWITCH}"
+  sed -i "s,hosts:.*,hosts:          files dns,g" "${FILE_NSSWITCH}"
+  sed -i "s,networks:.*,networks:      files dns,g" "${FILE_NSSWITCH}"
+
   set -- "--dns-backend=BIND9_DLZ" \
          "--option=server services=-dns" \
          "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool"
@@ -275,7 +301,7 @@ appSetup () {
   else
     if [ "${HOSTIPV6}" != "NONE" ]; then set -- "$@" "--host-ip6=${HOSTIPV6}" ;  fi
   fi
-  
+
   if [ "${ENABLE_LOGS}" = true ]; then
     set -- "$@" "--option=log file = ${FILE_SAMBA_LOG}"
     set -- "$@" "--option=max log size = 10000"
@@ -283,27 +309,20 @@ appSetup () {
 	set -- "$@" "--option=logging = file"
 	sed -e "s:/usr/sbin/samba -F:/usr/sbin/samba -i:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
     sed -i '/log[[:space:]]/s/^#//g' "$FILE_CHRONY"
-	if [ ! -d "${DIR_BIND9_LOG}" ]; then mkdir "${DIR_BIND9_LOG}" ; fi
     printf "include \"%s\";\n" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
-    touch "${FILE_BIND9_LOG_AUTH_SERVERS}" 
-	touch "${FILE_BIND9_LOG_CLIENT_SECURITY}" 
+    touch "${FILE_BIND9_LOG_AUTH_SERVERS}"
+	touch "${FILE_BIND9_LOG_CLIENT_SECURITY}"
 	touch "${FILE_BIND9_LOG_DDNS}"
-    touch "${FILE_BIND9_LOG_DEFAULT}" 
-	touch "${FILE_BIND9_LOG_DNSSEC}" 
+    touch "${FILE_BIND9_LOG_DEFAULT}"
+	touch "${FILE_BIND9_LOG_DNSSEC}"
 	touch "${FILE_BIND9_LOG_DNSTAP}"
-    touch "${FILE_BIND9_LOG_QUERIES}" 
-	touch "${FILE_BIND9_LOG_QUERY_ERRORS}" 
+    touch "${FILE_BIND9_LOG_QUERIES}"
+	touch "${FILE_BIND9_LOG_QUERY_ERRORS}"
 	touch "${FILE_BIND9_LOG_RATE_LIMITING}"
-    touch "${FILE_BIND9_LOG_RPZ}" 
+    touch "${FILE_BIND9_LOG_RPZ}"
 	touch "${FILE_BIND9_LOG_ZONE_TRANSFERS}"
 	chown -R bind "${DIR_BIND9_LOG}"
     chmod u+rw "${DIR_BIND9_LOG}"
-  fi
-
-  if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
-    printf 'Set timezone'
-    cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
-    printf "%s" "${TZ}" >/etc/timezone
   fi
 
   sed -e "s:{{ CHRONY_DEBUG_OPTION }}:${CHRONY_DEBUG_OPTION}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
@@ -315,11 +334,7 @@ appSetup () {
   sed -e "s:{{ NTPUSERGROUP }}:${NTPUSERGROUP}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
  # BIND9
-  if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "${DIR_BIND9_RUN}";chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}";else chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"; fi
-  if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "${DIR_CHRONY_LOG}"; fi
-  if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "${DIR_CHRONY_RUN}"; fi
-  chmod 750 "${DIR_CHRONY_RUN}";
-  chown _chrony:_chrony "${DIR_CHRONY_LOG}"
+
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
   if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]; then sed -e "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_OPTIONS}"; fi
@@ -339,27 +354,28 @@ appSetup () {
   if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ FILE_CHRONY_PID }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_PID }}:${FILE_CHRONY_PID}:" -i "${FILE_CHRONY}"; fi
-
-  if  [ ! -f "${DIR_CHRONY_SRC}/my.sources" ]; then
+  if  [ ! -f "${FILE_CHRONY_TIMESRC}" ]; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
     for DC in $DCs
     do
       # valid entries need to end with newline (\n)
-      printf "server %s iburst\n" "${DC}" >> "${DIR_CHRONY_SRC}/my.sources"
+      printf "server %s iburst\n" "${DC}" >> "${FILE_CHRONY_TIMESRC}"
     done
   fi
 
-  if [ ! -d "${DIR_EXTERNAL}" ]; then mkdir "${DIR_EXTERNAL}" ; fi
-  if [ ! -d "${DIR_EXTERNAL_BIND9}" ]; then mkdir "${DIR_EXTERNAL_BIND9}"; fi
-  if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
-  if [ "${#DOMAIN_NETBIOS}" -gt 15 ]; then printf "DOMAIN_NETBIOS too long => exiting" ; exit 1 ; fi
-  if printf "%s" "${DOMAIN_NETBIOS}" | grep -q "\." ; then printf "DOMAIN_NETBIOS contains forbiden char    .     => exiting" ; exit 1 ; fi
-  
-  # nsswitch anpassen
-  sed -i "s,passwd:.*,passwd:         files winbind,g" "${FILE_NSSWITCH}"
-  sed -i "s,group:.*,group:          files winbind,g" "${FILE_NSSWITCH}"
-  sed -i "s,hosts:.*,hosts:          files dns,g" "${FILE_NSSWITCH}"
-  sed -i "s,networks:.*,networks:      files dns,g" "${FILE_NSSWITCH}"
+  if [ "${TLS_ENABLE}" = true ]; then
+    if [ ! -f "${FILE_PKI_CERT}" ] && [ ! -f "${FILE_PKI_KEY}" ] && [ ! -f "${FILE_PKI_CA}" ]; then printf "No custom CA found. Samba will autogenerate one" ; fi
+    if [ ! -f "${FILE_PKI_DH}" ]; then openssl dhparam -out "${FILE_PKI_DH}" 2048 ; fi
+    set -- "$@" "--option=tls enabled = yes"
+    set -- "$@" "--option=tls keyfile = $FILE_PKI_KEY"
+    set -- "$@" "--option=tls certfile = $FILE_PKI_CERT"
+    set -- "$@" "--option=tls cafile = $FILE_PKI_CA"
+    set -- "$@" "--option=tls dh params file = $FILE_PKI_DH"
+#    set -- "$@" "--option=tls crlfile = $FILE_PKI_CRL"
+#    set -- "$@" "--option=tls verify peer = ca_and_name"
+  else
+    set -- "$@" "--option=tls enabled = no"
+  fi
 
   # If external/smb.conf doesn't exist, this is new container with empty volume, we're not just moving to a new container
   if [ ! -f "${FILE_EXTERNAL_SAMBA_CONF}" ]; then
@@ -388,6 +404,16 @@ appSetup () {
         printf '[sysvol]\n'
         printf 'path = %s\n' "${DIR_SAMBA_SYSVOL}"
         printf 'read only = Yes\n'
+        printf '\n'
+        printf '[C$]\n'
+        printf 'path = %s\n' "${DIR_SAMBA_CSHARE}"
+        printf 'read only = Yes\n'
+        printf 'valid users = @\"Domain Admins\"\n'
+        printf '\n'
+        printf '[ADMIN$]\n'
+        printf 'path = %s\n' "${DIR_SAMBA_ADMIN}"
+        printf 'read only = Yes\n'
+        printf 'valid users = @\"Domain Admins\"\n'
       } >> "${FILE_SAMBA_CONF}"
 
       #Check if Join was successfull
@@ -405,13 +431,7 @@ appSetup () {
       set -- "$@" "--domain=${DOMAIN_NETBIOS}"
 
       samba-tool domain provision "$@"
-
       samba-tool user setexpiry Administrator --noexpiry
-      if [ ! -d "${DIR_SAMBA_CSHARE}" ]; then
-        mkdir -p "${DIR_SAMBA_EVENTLOG}"
-        mkdir -p "${DIR_SAMBA_ADMIN}"
-        #ln -s "$DIR_SAMBA_SYSVOL" "$DIR_SAMBA_CSHARE/sysvol"
-      fi
       {
         printf '\n'
         printf '[C$]\n'
@@ -474,16 +494,16 @@ appSetup () {
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
       fi
 
+      if [ "${DOMAIN_ACC_LOCK_DURATION}" != 30 ]; then samba-tool domain passwordsettings set --account-lockout-duration="$DOMAIN_ACC_LOCK_DURATION" "${SAMBA_DEBUG_OPTION}" ; fi
+      if [ "${DOMAIN_ACC_LOCK_RST_AFTER}" != 30 ]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" "${SAMBA_DEBUG_OPTION}" ; fi
+      if [ "${DOMAIN_ACC_LOCK_THRESHOLD}" != 0 ]; then samba-tool domain passwordsettings set --account-lockout-threshold="$DOMAIN_ACC_LOCK_THRESHOLD" "${SAMBA_DEBUG_OPTION}" ; fi
+      if [ "${DOMAIN_PWD_COMPLEXITY}" = false ]; then samba-tool domain passwordsettings set --complexity="$DOMAIN_PWD_COMPLEXITY" "${SAMBA_DEBUG_OPTION}" ; fi
       if [ "${DOMAIN_PWD_HISTORY_LENGTH}" != 24 ]; then samba-tool domain passwordsettings set --history-length="$DOMAIN_PWD_HISTORY_LENGTH" "${SAMBA_DEBUG_OPTION}" ; fi
       if [ "${DOMAIN_PWD_MAX_AGE}" != 43 ]; then samba-tool domain passwordsettings set --max-pwd-age="$DOMAIN_PWD_MAX_AGE" "${SAMBA_DEBUG_OPTION}" ; fi
       if [ "${DOMAIN_PWD_MIN_AGE}" != 1 ]; then samba-tool domain passwordsettings set --min-pwd-age="$DOMAIN_PWD_MIN_AGE" "${SAMBA_DEBUG_OPTION}" ; fi
       if [ "${DOMAIN_PWD_MIN_LENGTH}" != 7 ]; then samba-tool domain passwordsettings set --min-pwd-length="$DOMAIN_PWD_MIN_LENGTH" "${SAMBA_DEBUG_OPTION}" ; fi
-      if [ "${DOMAIN_PWD_COMPLEXITY}" = false ]; then samba-tool domain passwordsettings set --complexity="$DOMAIN_PWD_COMPLEXITY" "${SAMBA_DEBUG_OPTION}" ; fi
-
-      if [ "${DOMAIN_ACC_LOCK_DURATION}" != 30 ]; then samba-tool domain passwordsettings set --account-lockout-duration="$DOMAIN_ACC_LOCK_DURATION" "${SAMBA_DEBUG_OPTION}" ; fi
-      if [ "${DOMAIN_ACC_LOCK_THRESHOLD}" != 0 ]; then samba-tool domain passwordsettings set --account-lockout-threshold="$DOMAIN_ACC_LOCK_THRESHOLD" "${SAMBA_DEBUG_OPTION}" ; fi
-      if [ "${DOMAIN_ACC_LOCK_RST_AFTER}" != 30 ]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" "${SAMBA_DEBUG_OPTION}" ; fi
     fi
+	# End of join or provision
 
     #Add Debug to dynamically loadable zones (DLZ) - file exists after join/provision
     cp "${FILE_BIND9_SAMBA_GENCONF}" "${FILE_BIND9_SAMBA_CONF}"
@@ -523,36 +543,24 @@ appSetup () {
       SetKeyValueFilePattern 'disable spoolss' 'yes'
     fi
 
-  if [ "${TLS_ENABLE}" = true ]; then
-    if [ ! -f "${FILE_PKI_CERT}" ] && [ ! -f "${FILE_PKI_KEY}" ] && [ ! -f "${FILE_PKI_CA}" ]; then printf "No custom CA found. Samba will autogenerate one" ; fi
-    if [ ! -f "${FILE_PKI_DH}" ]; then openssl dhparam -out "${FILE_PKI_DH}" 2048 ; fi
-    set -- "$@" "--option=tls enabled = yes"
-    set -- "$@" "--option=tls keyfile = $FILE_PKI_KEY"
-    set -- "$@" "--option=tls certfile = $FILE_PKI_CERT"
-    set -- "$@" "--option=tls cafile = $FILE_PKI_CA"
-    set -- "$@" "--option=tls dh params file = $FILE_PKI_DH"
-#    set -- "$@" "--option=tls crlfile = $FILE_PKI_CRL"
-#    set -- "$@" "--option=tls verify peer = ca_and_name"
-  else
-    set -- "$@" "--option=tls enabled = no"
-  fi
+    cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
+    if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "${DIR_CHRONY_SOCK}" ; fi
+    chmod 750 "${DIR_CHRONY_SOCK}"
+    chown root:_chrony "${DIR_CHRONY_SOCK}"
+    # Stop VPN & write supervisor service
+    if [ "${JOIN_SITE_VPN}" = true ]; then
+      if [ -n "${VPNPID}" ]; then kill "${VPNPID}" ; fi
+      EnableOpenvpnSupervisord
+    fi
 
-    # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
-    backupConfig
-  else
-    restoreConfig
+    if [ ! -d "${DIR_SAMBA_CSHARE}" ]; then
+      mkdir -p "${DIR_SAMBA_EVENTLOG}"
+      mkdir -p "${DIR_SAMBA_ADMIN}"
+      #ln -s "$DIR_SAMBA_SYSVOL" "$DIR_SAMBA_CSHARE/sysvol"
+    fi
   fi
-
-  cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
-
-  if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "${DIR_CHRONY_SOCK}" ; fi
-  chmod 750 "${DIR_CHRONY_SOCK}"
-  chown root:root "${DIR_CHRONY_SOCK}"
-  # Stop VPN & write supervisor service
-  if [ "${JOIN_SITE_VPN}" = true ]; then
-    if [ -n "${VPNPID}" ]; then kill "${VPNPID}" ; fi
-    EnableOpenvpnSupervisord
-  fi
+  # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
+  backupConfig
   appFirstStart
 }
 

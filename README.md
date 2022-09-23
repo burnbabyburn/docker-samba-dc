@@ -32,7 +32,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `DOMAIN`                    | SAMDOM.LOCAL                                  |       | Your Domain Name            |
 | `ENABLE_CUPS`               | false                                         |       | Enable CUPS - cups is not installed but setup in smb.conf modify Dockerfile  |
 | `ENABLE_DNSFORWARDER`       | NONE                                          |       | Ip of upstream dns server. If not set, no upstream dns will be avaible.  |
-| `ENABLE_DYNAMIC_PORTRANGE`  | NONE                                          |       | Set range of [dynamic rpc ports](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#RPCSERVERDYNAMICPORTRANGE). Can be usefull to limit on smaller systems, especially if behind reverse proxy (default 49152-65535) |
+| `ENABLE_DYNAMIC_PORTRANGE`  | 49152-65535                                   |       | Set range of [dynamic rpc ports](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#RPCSERVERDYNAMICPORTRANGE). Usefull on limited res. or RProxy |
 | `ENABLE_INSECURE_DNSUPDATE` | false                                         |       | Enable insecure dns updates (no packet signing)  |
 | `ENABLE_INSECURE_LDAP`      | false                                         |       | Enable insecure ldap connections  |
 | `ENABLE_LOGS`               | false                                         |       | Enable log files - disabled. log to stdout and ship docker logs |
