@@ -207,3 +207,17 @@ EnableOpenvpnSupervisord () {
     echo "priority=1"
   } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
 }
+
+EnableEventlogSupervisord () {
+  {
+    echo ""
+	echo ""
+    echo "[program:Eventlog_Samba]"
+    echo "command=/usr/bin/tail -f ${FILE_SAMBA_LOG} | parselog.pl | eventlogadm -o write ${EVENTLOG_SAMBA}"
+    echo "stdout_logfile=/dev/fd/1"
+    echo "stdout_logfile_maxbytes=0"
+    echo "stdout_logfile_backups=0"
+    echo "redirect_stderr=true"
+    echo "priority=1"
+  } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
+}

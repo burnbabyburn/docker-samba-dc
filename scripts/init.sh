@@ -1,8 +1,8 @@
 #!/bin/sh
 
 DEBUG_ENABLE=${DEBUG_ENABLE:-false}
-if [ "${DEBUG_ENABLE}" = true ] ; then set -x ; fi
-#  if [ "$DEBUG_ENABLE" = "true" ] ; then set -x ; else set -e ; fi
+if [ "${DEBUG_ENABLE}" = true ]; then set -x; fi
+#  if [ "$DEBUG_ENABLE" = "true" ]; then set -x; else set -e; fi
 #Trap SIGTERM
 trap 'backupConfig' TERM
 
@@ -65,6 +65,7 @@ config() {
   TLS_PKI_O=${PKI_O:-Simple Root CA}
   TLS_PKI_OU=${PKI_OU:-Samba}
   TZ=${TZ:-/Etc/UTC}
+  ENABLE_EVENTLOG_SAMBA=${ENABLE_EVENTLOG_SAMBA:-false}
 
   # Min Counter Values for NIS Attributes. Set in docker-compose
   # does nothing on DCs as they shall not use idmap settings.
@@ -152,9 +153,9 @@ config() {
   FILE_SAMLDB="${DIR_SAMBA_PRIVATE}/sam.ldb"
 
   # if hostname contains FQDN cut the rest
-  if printf "%s" "${HOSTNAME}" | grep -q "\."; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1) ; fi
-  if [ "${#DOMAIN_NETBIOS}" -gt 15 ]; then printf "DOMAIN_NETBIOS too long" ; exit 1 ; fi
-  if printf "%s" "${DOMAIN_NETBIOS}" | grep -q "\." ; then printf "DOMAIN_NETBIOS contains forbiden character \".\" " ; exit 1 ; fi
+  if printf "%s" "${HOSTNAME}" | grep -q "\."; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1); fi
+  if [ "${#DOMAIN_NETBIOS}" -gt 15 ]; then printf "DOMAIN_NETBIOS too long"; exit 1; fi
+  if printf "%s" "${DOMAIN_NETBIOS}" | grep -q "\."; then printf "DOMAIN_NETBIOS contains forbiden character \".\" "; exit 1; fi
 
   # Check if strings end with semicolon. if not append it
   if [ ! "$(printf "%s" "${ENABLE_DNSFORWARDER}" | sed -e "s/^.*\(.\)$/\1/")" = ';' ]; then
@@ -192,7 +193,10 @@ config() {
   export LDAP_SUFFIX="${LDAP_SUFFIX}"
   export DIR_SCRIPTS="${DIR_SCRIPTS}"
   export DIR_BIND9="${DIR_BIND9}"
-  
+  export FILE_SAMBA_LOG="${FILE_SAMBA_LOG}"
+  # Queue for Samba eventlog
+  export EVENTLOG_SAMBA="Samba"
+
   # Export for backup and restore in helper.sh
   export FILE_EXTERNAL_SUPERVISORD_CONF="${FILE_EXTERNAL_SUPERVISORD_CONF}"
   export FILE_EXTERNAL_SAMBA_CONF="${FILE_EXTERNAL_SAMBA_CONF}"
@@ -217,7 +221,7 @@ config() {
 	BIND9_START_PARAM="${BIND9_START_PARAM} -4"
     CHRONY_START_PARAM="${CHRONY_START_PARAM} -4"
   else
-    if [ "${HOSTIPV6}" != "NONE" ]; then set -- "$@" "--host-ip6=${HOSTIPV6}" ;  fi
+    if [ "${HOSTIPV6}" != "NONE" ]; then set -- "$@" "--host-ip6=${HOSTIPV6}";  fi
   fi
 
   # if file loging is active, named can not log to stdout (-g), samba needs to be run with -i instead of -F
@@ -225,7 +229,7 @@ config() {
     BIND9_START_PARAM="${BIND9_START_PARAM} ${SAMBA_DEBUG_OPTION}"
 	SAMBA_START_PARAM="${SAMBA_START_PARAM} -i ${SAMBA_DEBUG_OPTION}"
   else
-    BIND9_START_PARAM="-g ${SAMBA_DEBUG_OPTION}"
+    BIND9_START_PARAM="${BIND9_START_PARAM} -g ${SAMBA_DEBUG_OPTION}"
 	SAMBA_START_PARAM="${SAMBA_START_PARAM} -F --debug-stdout -d ${DEBUG_LEVEL}"
 	CHRONY_START_PARAM="${CHRONY_START_PARAM} -dd -L ${DEBUG_LEVEL}"
   fi
@@ -249,10 +253,10 @@ appSetup () {
   
   ## Setup filesystem and config files
   # Setup external dir - Backup dir for configs
-  if [ ! -d "${DIR_EXTERNAL}" ]; then mkdir "${DIR_EXTERNAL}" ; fi
+  if [ ! -d "${DIR_EXTERNAL}" ]; then mkdir "${DIR_EXTERNAL}"; fi
   if [ ! -d "${DIR_EXTERNAL_BIND9}" ]; then mkdir "${DIR_EXTERNAL_BIND9}"; fi
   # Remove krb5.conf will be replaced by a samba generated one
-  if [ ! -f "${FILE_KRB5}" ] ; then rm -f "${FILE_KRB5}" ; fi
+  if [ ! -f "${FILE_KRB5}" ]; then rm -f "${FILE_KRB5}"; fi
 
   # PID and session.key dir for bind9
   if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "${DIR_BIND9_RUN}"; fi
@@ -267,7 +271,7 @@ appSetup () {
   chown "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LOG}"
 
   # Setup bind9 log dir and logfiles
-  if [ ! -d "${DIR_BIND9_LOG}" ]; then mkdir "${DIR_BIND9_LOG}" ; fi
+  if [ ! -d "${DIR_BIND9_LOG}" ]; then mkdir "${DIR_BIND9_LOG}"; fi
   touch "${FILE_BIND9_LOG_AUTH_SERVERS}"
   touch "${FILE_BIND9_LOG_CLIENT_SECURITY}"
   touch "${FILE_BIND9_LOG_DDNS}"
@@ -337,15 +341,15 @@ appSetup () {
   set -- "$@" "--option=template shell = /bin/false" "--option=template homedir = /dev/null"
   set -- "$@" "--option=eventlog list = Samba"
   set -- "$@" "-d ${DEBUG_LEVEL}"
-  if [ "${ENABLE_DNSFORWARDER}" != "NONE" ]; then set -- "$@" "--option=dns forwarder=${ENABLE_DNSFORWARDER}" ; fi
-  if [ "${ENABLE_DYNAMIC_PORTRANGE}" != "NONE" ]; then set -- "$@" "--option=rpc server dynamic port range=${ENABLE_DYNAMIC_PORTRANGE}" ; fi
-  if [ "${ENABLE_INSECURE_DNSUPDATE}" = true ]; then set -- "$@" "--option=allow dns updates  = nonsecure" ; fi
-  if [ "${ENABLE_INSECURE_LDAP}" = true ]; then set -- "$@" "--option=ldap server require strong auth = no" ; fi
-  if [ "${ENABLE_MSCHAPV2}" = true ]; then set -- "$@" "--option=ntlm auth=mschapv2-and-ntlmv2-only" ; fi
-  if [ "${HOSTIP}" != "NONE" ]; then set -- "$@" "--host-ip=${HOSTIP%/*}" ; fi
-  if [ "${JOIN_SITE}" != "Default-First-Site-Name" ]; then set -- "$@" "--site=${JOIN_SITE}" ; fi
+  if [ "${ENABLE_DNSFORWARDER}" != "NONE" ]; then set -- "$@" "--option=dns forwarder=${ENABLE_DNSFORWARDER}"; fi
+  if [ "${ENABLE_DYNAMIC_PORTRANGE}" != "NONE" ]; then set -- "$@" "--option=rpc server dynamic port range=${ENABLE_DYNAMIC_PORTRANGE}"; fi
+  if [ "${ENABLE_INSECURE_DNSUPDATE}" = true ]; then set -- "$@" "--option=allow dns updates  = nonsecure"; fi
+  if [ "${ENABLE_INSECURE_LDAP}" = true ]; then set -- "$@" "--option=ldap server require strong auth = no"; fi
+  if [ "${ENABLE_MSCHAPV2}" = true ]; then set -- "$@" "--option=ntlm auth=mschapv2-and-ntlmv2-only"; fi
+  if [ "${HOSTIP}" != "NONE" ]; then set -- "$@" "--host-ip=${HOSTIP%/*}"; fi
+  if [ "${JOIN_SITE}" != "Default-First-Site-Name" ]; then set -- "$@" "--site=${JOIN_SITE}"; fi
   if [ "${ENABLE_RFC2307}" = true ]; then
-    if [ "${JOIN}" = true ]; then OPTION_RFC='--option=idmap_ldb:use rfc2307 = yes' ; else OPTION_RFC='--use-rfc2307' ; fi
+    if [ "${JOIN}" = true ]; then OPTION_RFC='--option=idmap_ldb:use rfc2307 = yes'; else OPTION_RFC='--use-rfc2307'; fi
     set -- "$@" "${OPTION_RFC}"
   fi
   if [ "${BIND_INTERFACES_ENABLE}" = true ]; then
@@ -370,8 +374,8 @@ appSetup () {
     printf "include \"%s\";\n" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
   fi
   if [ "${TLS_ENABLE}" = true ]; then
-    if [ ! -f "${FILE_PKI_CERT}" ] && [ ! -f "${FILE_PKI_KEY}" ] && [ ! -f "${FILE_PKI_CA}" ]; then printf "No custom CA found. Samba will autogenerate one" ; fi
-    if [ ! -f "${FILE_PKI_DH}" ]; then openssl dhparam -out "${FILE_PKI_DH}" 2048 ; fi
+    if [ ! -f "${FILE_PKI_CERT}" ] && [ ! -f "${FILE_PKI_KEY}" ] && [ ! -f "${FILE_PKI_CA}" ]; then printf "No custom CA found. Samba will autogenerate one"; fi
+    if [ ! -f "${FILE_PKI_DH}" ]; then openssl dhparam -out "${FILE_PKI_DH}" 2048; fi
     set -- "$@" "--option=tls enabled = yes"
     set -- "$@" "--option=tls keyfile = $FILE_PKI_KEY"
     set -- "$@" "--option=tls certfile = $FILE_PKI_CERT"
@@ -393,7 +397,7 @@ appSetup () {
 
   # If external/smb.conf doesn't exist, this is new container with empty volume, we're not just moving to a new container
   if [ ! -f "${FILE_EXTERNAL_SAMBA_CONF}" ]; then
-    if [ -f "${FILE_SAMBA_CONF}" ]; then mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig ; fi
+    if [ -f "${FILE_SAMBA_CONF}" ]; then mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig; fi
     if [ "${JOIN}" = true ]; then
       set -- "$@" "${LDOMAIN}"
       set -- "$@" "DC"
@@ -405,8 +409,8 @@ appSetup () {
       done; (exit $s)
 
       # Netlogon & sysvol readonly on secondary DC
-      if [ ! -d "${DIR_SAMBA_NETLOGON}" ]; then mkdir "${DIR_SAMBA_NETLOGON}" ; fi
-      if [ ! -d "${DIR_SAMBA_SYSVOL}" ]; then mkdir "${DIR_SAMBA_SYSVOL}" ; fi
+      if [ ! -d "${DIR_SAMBA_NETLOGON}" ]; then mkdir "${DIR_SAMBA_NETLOGON}"; fi
+      if [ ! -d "${DIR_SAMBA_SYSVOL}" ]; then mkdir "${DIR_SAMBA_SYSVOL}"; fi
       {
         printf '\n'
         printf '[netlogon]\n'
@@ -452,17 +456,18 @@ appSetup () {
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
       if [ "${FEATURE_RECYCLEBIN}" = true ]; then
         python3 "${DIR_SCRIPTS}"/enablerecyclebin.py "${FILE_SAMLDB}"
-        if ldbsearch -H "${FILE_SAMLDB}" -s base -b "CN=NTDS Settings,CN=${HOSTNAME},CN=Servers,CN=${JOIN_SITE},CN=Sites,CN=Configuration${LDAP_SUFFIX}" msDS-EnabledFeature | grep -q 'CN=Recycle Bin Feature' ; then printf "Optional Feature Recycle Bin Feature OK" ; else printf "FAILED" ; exit 1 ; fi
+        if ldbsearch -H "${FILE_SAMLDB}" -s base -b "CN=NTDS Settings,CN=${HOSTNAME},CN=Servers,CN=${JOIN_SITE},CN=Sites,CN=Configuration${LDAP_SUFFIX}" msDS-EnabledFeature | grep -q 'CN=Recycle Bin Feature'; then printf "Optional Feature Recycle Bin Feature OK"; else printf "FAILED"; exit 1; fi
       fi
 
-      if [ "${FEATURE_KERBEROS_TGT}" = true ]; then EnableChangeKRBTGTSupervisord ; fi
+      if [ "${FEATURE_KERBEROS_TGT}" = true ]; then EnableChangeKRBTGTSupervisord; fi
+	  if [ "${ENABLE_EVENTLOG_SAMBA}" = true ] && [ "${ENABLE_LOGS}" = true ]; then EnableEventlogSupervisord; fi
 
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
       if [ "${ENABLE_RFC2307}" = true ]; then
         setupSchemaRFC2307File
         ldbmodify -H "${FILE_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
         if ldbsearch -H "${FILE_SAMLDB}" -s base -b CN="${DOMAIN_NETBIOS}",CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System"${LDAP_SUFFIX}" | grep 'returned 1 records'; then
-          printf "Add RFC2307 Attributes for default AD users" ; else printf 'FAILED' ; exit 1 ; fi
+          printf "Add RFC2307 Attributes for default AD users"; else printf 'FAILED'; exit 1; fi
       fi
       # https://fy.blackhats.net.au/blog/html/2018/04/18/making_samba_4_the_default_ldap_server.html?highlight=samba
       # https://blog.laslabs.com/2016/08/storing-ssh-keys-in-active-directory/
@@ -498,15 +503,15 @@ appSetup () {
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
       fi
 
-      if [ "${DOMAIN_ACC_LOCK_DURATION}" != 30 ]; then samba-tool domain passwordsettings set --account-lockout-duration="$DOMAIN_ACC_LOCK_DURATION" "${SAMBA_DEBUG_OPTION}" ; fi
-      if [ "${DOMAIN_ACC_LOCK_RST_AFTER}" != 30 ]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" "${SAMBA_DEBUG_OPTION}" ; fi
-      if [ "${DOMAIN_ACC_LOCK_THRESHOLD}" != 0 ]; then samba-tool domain passwordsettings set --account-lockout-threshold="$DOMAIN_ACC_LOCK_THRESHOLD" "${SAMBA_DEBUG_OPTION}" ; fi
-      if [ "${DOMAIN_PWD_COMPLEXITY}" = false ]; then samba-tool domain passwordsettings set --complexity="$DOMAIN_PWD_COMPLEXITY" "${SAMBA_DEBUG_OPTION}" ; fi
-      if [ "${DOMAIN_PWD_HISTORY_LENGTH}" != 24 ]; then samba-tool domain passwordsettings set --history-length="$DOMAIN_PWD_HISTORY_LENGTH" "${SAMBA_DEBUG_OPTION}" ; fi
-      if [ "${DOMAIN_PWD_MAX_AGE}" != 43 ]; then samba-tool domain passwordsettings set --max-pwd-age="$DOMAIN_PWD_MAX_AGE" "${SAMBA_DEBUG_OPTION}" ; fi
-      if [ "${DOMAIN_PWD_MIN_AGE}" != 1 ]; then samba-tool domain passwordsettings set --min-pwd-age="$DOMAIN_PWD_MIN_AGE" "${SAMBA_DEBUG_OPTION}" ; fi
-      if [ "${DOMAIN_PWD_MIN_LENGTH}" != 7 ]; then samba-tool domain passwordsettings set --min-pwd-length="$DOMAIN_PWD_MIN_LENGTH" "${SAMBA_DEBUG_OPTION}" ; fi
-	  if [ "${DOMAIN_PWD_ADMIN_NO_EXP}" = true ]; then samba-tool user setexpiry "${DOMAIN_USER}" --noexpiry "${SAMBA_DEBUG_OPTION}" ; fi 
+      if [ "${DOMAIN_ACC_LOCK_DURATION}" != 30 ]; then samba-tool domain passwordsettings set --account-lockout-duration="$DOMAIN_ACC_LOCK_DURATION" "${SAMBA_DEBUG_OPTION}"; fi
+      if [ "${DOMAIN_ACC_LOCK_RST_AFTER}" != 30 ]; then samba-tool domain passwordsettings set --reset-account-lockout-after="$DOMAIN_ACC_LOCK_RST_AFTER" "${SAMBA_DEBUG_OPTION}"; fi
+      if [ "${DOMAIN_ACC_LOCK_THRESHOLD}" != 0 ]; then samba-tool domain passwordsettings set --account-lockout-threshold="$DOMAIN_ACC_LOCK_THRESHOLD" "${SAMBA_DEBUG_OPTION}"; fi
+      if [ "${DOMAIN_PWD_COMPLEXITY}" = false ]; then samba-tool domain passwordsettings set --complexity="$DOMAIN_PWD_COMPLEXITY" "${SAMBA_DEBUG_OPTION}"; fi
+      if [ "${DOMAIN_PWD_HISTORY_LENGTH}" != 24 ]; then samba-tool domain passwordsettings set --history-length="$DOMAIN_PWD_HISTORY_LENGTH" "${SAMBA_DEBUG_OPTION}"; fi
+      if [ "${DOMAIN_PWD_MAX_AGE}" != 43 ]; then samba-tool domain passwordsettings set --max-pwd-age="$DOMAIN_PWD_MAX_AGE" "${SAMBA_DEBUG_OPTION}"; fi
+      if [ "${DOMAIN_PWD_MIN_AGE}" != 1 ]; then samba-tool domain passwordsettings set --min-pwd-age="$DOMAIN_PWD_MIN_AGE" "${SAMBA_DEBUG_OPTION}"; fi
+      if [ "${DOMAIN_PWD_MIN_LENGTH}" != 7 ]; then samba-tool domain passwordsettings set --min-pwd-length="$DOMAIN_PWD_MIN_LENGTH" "${SAMBA_DEBUG_OPTION}"; fi
+	  if [ "${DOMAIN_PWD_ADMIN_NO_EXP}" = true ] && [ "${FEATURE_SCHEMA_LAPS}" = false ]; then samba-tool user setexpiry "${DOMAIN_USER}" --noexpiry "${SAMBA_DEBUG_OPTION}"; fi 
     fi
 	# End of join or provision
 
@@ -517,13 +522,14 @@ appSetup () {
     sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_SAMBA_CONF}"
 	
     cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
-    if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "${DIR_CHRONY_SOCK}" ; fi
+    if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "${DIR_CHRONY_SOCK}"; fi
     chmod 750 "${DIR_CHRONY_SOCK}"
     chown root:_chrony "${DIR_CHRONY_SOCK}"
 	
 	if [ ! -d "${DIR_SAMBA_CSHARE}" ]; then
       mkdir -p "${DIR_SAMBA_EVENTLOG}"
       mkdir -p "${DIR_SAMBA_ADMIN}"
+	  mkdir -p "${DIR_SAMBA_PRINTDRIVER}"
     fi
 
     # https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
@@ -536,7 +542,7 @@ appSetup () {
       SetKeyValueFilePattern 'cups encrypt' 'no'
       SetKeyValueFilePattern 'cups options' '\"raw media=a4\"'
       SetKeyValueFilePattern '#cups server' "${CUPS_SERVER}:${CUPS_PORT}"
-      if [ ! -d "${DIR_SAMBA_PRINTDRIVER}" ]; then mkdir -p "${DIR_SAMBA_PRINTDRIVER}" ; fi
+      if [ ! -d "${DIR_SAMBA_PRINTDRIVER}" ]; then mkdir -p "${DIR_SAMBA_PRINTDRIVER}"; fi
       {
         printf '\n'
         printf '[printers]\n'
@@ -561,7 +567,7 @@ appSetup () {
 
     # Stop VPN & write supervisor service
     if [ "${JOIN_SITE_VPN}" = true ]; then
-      if [ -n "${VPNPID}" ]; then kill "${VPNPID}" ; fi
+      if [ -n "${VPNPID}" ]; then kill "${VPNPID}"; fi
       EnableOpenvpnSupervisord
     fi
   fi
@@ -583,16 +589,16 @@ appFirstStart () {
   until [ $s = 0 ]; do
     host -t A "${HOSTNAME}.${LDOMAIN}" && smbclient -N -L LOCALHOST >> /dev/null && s=0 && break || s=$? printf "Waiting for samba to start" && sleep 10s
   done; (exit $s)
-  printf "DNS: Testing Dynamic DNS Updates" ; if ! samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}" ; then printf "DNS: Testing Dynamic DNS Updates FAILED" ; exit 1 ; fi
+  printf "DNS: Testing Dynamic DNS Updates"; if ! samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}"; then printf "DNS: Testing Dynamic DNS Updates FAILED"; exit 1; fi
   #Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
-  printf "rpcclient: Connect as %s" "${DOMAIN_USER}" ; if ! rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1 ; then printf "rpcclient: Connect as %s FAILED" "${DOMAIN_USER}" ; exit 1 ; fi
-  printf "smbclient: Connect as %s" "${DOMAIN_USER}" ; if ! smbclient -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST >> /dev/null; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1 ; fi
-  printf "Kerberos: Connect as %s" "${DOMAIN_USER}" ; if printf "%s" "${DOMAIN_PASS}" | kinit -V "${DOMAIN_USER}" ; then printf 'OK' ; klist ; kdestroy ; else printf "Kerberos: Connect as %s FAILED" "${DOMAIN_USER}" ; exit 1 ; fi
-  echo "NTP: Check timesource and sync"; if ! chronyc sources || ! chronyc tracking; then printf "NTP: Check timesource and sync FAILED"; exit 1 ; fi
-  printf "DNS: Check _ldap._tcp.%s" "${LDOMAIN}"; if ! host -t SRV _ldap._tcp."${LDOMAIN}"; then printf "DNS: Check _ldap._tcp.%s FAILED" "${LDOMAIN}"; exit 1 ; fi
-  printf "DNS: Check _kerberos._udp.%s" "${LDOMAIN}"; if ! host -t SRV _kerberos._udp."${LDOMAIN}"; then printf "DNS: Check _kerberos._udp.%s FAILED" "${LDOMAIN}"; exit 1 ; fi
-  printf "HOST: Check record %s.%s" "${HOSTNAME}" "${LDOMAIN}"; if ! host -t A "${HOSTNAME}.${LDOMAIN}"; then printf "HOST: Check record %s.%s FAILED" "${HOSTNAME}" "${LDOMAIN}"; exit 1 ; fi
-  #printf "DNS: Check Reverse resolution of IP:%s" "${IP}"; if ! dig -x "${IP}"; then printf "DNS: Check Reverse resolution of IP:%s FAILED" "${IP}"; exit 1 ; fi
+  printf "rpcclient: Connect as %s" "${DOMAIN_USER}"; if ! rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1; then printf "rpcclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
+  printf "smbclient: Connect as %s" "${DOMAIN_USER}"; if ! smbclient -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST >> /dev/null; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
+  printf "Kerberos: Connect as %s" "${DOMAIN_USER}"; if printf "%s" "${DOMAIN_PASS}" | kinit -V "${DOMAIN_USER}"; then printf 'OK'; klist; kdestroy; else printf "Kerberos: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
+  echo "NTP: Check timesource and sync"; if ! chronyc sources || ! chronyc tracking; then printf "NTP: Check timesource and sync FAILED"; exit 1; fi
+  printf "DNS: Check _ldap._tcp.%s" "${LDOMAIN}"; if ! host -t SRV _ldap._tcp."${LDOMAIN}"; then printf "DNS: Check _ldap._tcp.%s FAILED" "${LDOMAIN}"; exit 1; fi
+  printf "DNS: Check _kerberos._udp.%s" "${LDOMAIN}"; if ! host -t SRV _kerberos._udp."${LDOMAIN}"; then printf "DNS: Check _kerberos._udp.%s FAILED" "${LDOMAIN}"; exit 1; fi
+  printf "HOST: Check record %s.%s" "${HOSTNAME}" "${LDOMAIN}"; if ! host -t A "${HOSTNAME}.${LDOMAIN}"; then printf "HOST: Check record %s.%s FAILED" "${HOSTNAME}" "${LDOMAIN}"; exit 1; fi
+  #printf "DNS: Check Reverse resolution of IP:%s" "${IP}"; if ! dig -x "${IP}"; then printf "DNS: Check Reverse resolution of IP:%s FAILED" "${IP}"; exit 1; fi
 
   if [ "${JOIN}" = false ]; then
     GetAllCidrCreateSubnet
@@ -611,7 +617,7 @@ appFirstStart () {
     #openssl x509 -outform der -in /var/lib/samba/private/tls/ca.pem -out /var/lib/samba/sysvol/"$LDOMAIN"/scripts/root.crt
     #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
     printf "%s" "${DOMAIN_PASS}" | net rpc rights grant "${UDOMAIN}\\Domain Admins" "-d ${DEBUG_LEVEL}" "-U${UDOMAIN}\\${DOMAIN_USER}" "SeDiskOperatorPrivilege"
-    if [ "${ENABLE_CUPS}" = true ]; then net rpc rights grant "${UDOMAIN}\\Domain Admins" "-d ${DEBUG_LEVEL}" "-U${UDOMAIN}\\${DOMAIN_USER}" "SePrintOperatorPrivilege" ; fi
+    if [ "${ENABLE_CUPS}" = true ]; then net rpc rights grant "${UDOMAIN}\\Domain Admins" "-d ${DEBUG_LEVEL}" "-U${UDOMAIN}\\${DOMAIN_USER}" "SePrintOperatorPrivilege"; fi
   # if JOIN=true
   else
   #ERROR?`{{DC_IP}}:$LDAP_SUFFIX:g {DC_DNS}}:$LDAP_SUFFIX:g

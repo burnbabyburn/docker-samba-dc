@@ -40,6 +40,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `ENABLE_MSCHAPV2`           | false                                         |       | Enable MSCHAP authentication  |
 | `ENABLE_RFC2307`            | true                                          |   X   | Enable RFC2307 LDAP Extension in AD |
 | `ENABLE_WINS`               | false                                         |       | Enable WINS and also propagiate time server |
+| `ENABLE_EVENTLOG_SAMBA`     | false                                         |       | Enable Eventlog for Samba use with ENABLE_LOGS` |
 | `FEATURE_KERBEROS_TGT`      | true                                          |   X   | Feature: Change password of krbtgt user (Kerberos Ticket Granting Ticket) to prevent Golden Ticket attacks |
 | `FEATURE_RECYCLEBIN`        | true                                          |   X   | Feature: Enable AD RecylceBin|
 | `FEATURE_SCHEMA_LAPS`       | false                                         |   X   | Feature: Schema extension for Local Administrator Password Solution  |
