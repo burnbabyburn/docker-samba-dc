@@ -92,15 +92,9 @@ backupConfig () {
   cp -f "${FILE_NSSWITCH}" "${FILE_EXTERNAL_NSSWITCH}"
   cp -f "${FILE_SAMBA_CONF}" "${FILE_EXTERNAL_SAMBA_CONF}"
   cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_EXTERNAL_SUPERVISORD_CONF}"
-  cp -f "/etc/group" "${DIR_EXTERNAL}/group"
-  cp -f "/etc/passwd" "${DIR_EXTERNAL}/passwd"
-  cp -f "/etc/shadow" "${DIR_EXTERNAL}/shadow"
 }
 restoreConfig () {
   cp -dR --preserve=all "${DIR_EXTERNAL_BIND9}" "${DIR_BIND9}"
-  cp -f "${DIR_EXTERNAL}/group" "/etc/group"
-  cp -f "${DIR_EXTERNAL}/passwd" "/etc/passwd"
-  cp -f "${DIR_EXTERNAL}/shadow" "/etc/shadow"
   cp -f "${FILE_EXTERNAL_CHRONY_CONF}" "${FILE_CHRONY}" 
   cp -f "${FILE_EXTERNAL_KRB5_CONF}" "${FILE_KRB5}"
   cp -f "${FILE_EXTERNAL_NSSWITCH}" "${FILE_NSSWITCH}"
