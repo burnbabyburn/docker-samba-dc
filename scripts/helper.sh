@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # https://docs.microsoft.com/de-de/archive/blogs/activedirectoryua/identity-management-for-unix-idmu-is-deprecated-in-windows-server
 # https://wiki.samba.org/index.php/Maintaining_Unix_Attributes_in_AD_using_ADUC
 # Improvements: e.g. set memberofid
@@ -73,8 +73,7 @@ SetKeyValueFilePattern() {
   FILE=${3:-"$FILE_SAMBA_CONF"}
   ESCAPED_PATTERN=$(printf '%s\n' "$PATTERN" | sed -e 's/[]\/$*.^[]/\\&/g')
   ESCAPED_REPLACE=$(printf '%s\n' "$2" | sed -e 's/[\/&]/\\&/g')
-  echo "$ESCAPED_PATTERN"
-  echo "$ESCAPED_REPLACE"
+  if [ "${DEBUG_ENABLE}" = true ]; then printf "%s" "$ESCAPED_PATTERN"; echo "$ESCAPED_REPLACE"; fi
   if ! grep -R "^[#]*\s*$1[[:space:]]=.*" "$FILE" > /dev/null; then
     echo "Key: $1 not found. APPENDING $1 = $2 after $PATTERN"
     sed -i "/^$ESCAPED_PATTERN"'/a\\t'"$1 = $ESCAPED_REPLACE" "$FILE"
@@ -109,7 +108,7 @@ RDNSZonefromCIDR () {
   IP_REVERSE=''
   IP_NET=''
   if [ "$HOSTIP" != "NONE" ]; then
-    if echo "$HOSTIP" grep '/' ; then
+    if echo "$HOSTIP" | grep -q '/' ; then
       IP=$(echo "$HOSTIP" | cut -d "/" -f1)
       MASK=$(echo "$HOSTIP" | cut -d "/" -f2)
       # https://stackoverflow.com/questions/13777387/check-for-ip-validity
@@ -127,9 +126,9 @@ RDNSZonefromCIDR () {
           IP_NET=$(echo "$IP" | awk -F. '{print $1"."$2"."$3".0"}')
         fi
         samba-tool sites subnet create "${IP_NET}/${MASK}" "$JOIN_SITE" "${SAMBA_DEBUG_OPTION}"
-        echo "${DOMAIN_PASS}" | samba-tool dns zonecreate 127.0.0.1 "$IP_REVERSE".in-addr.arpa -UAdministrator "${SAMBA_DEBUG_OPTION}"
+        echo "${DOMAIN_PASS}" | samba-tool dns zonecreate 127.0.0.1 "$IP_REVERSE".in-addr.arpa -UAdministrator "${SAMBA_DEBUG_OPTION}" && printf "Reverse DNS Zone %s.in-addr.arpa for site %s created\n" "${IP_REVERSE}" "${JOIN_SITE}"
       else
-        echo "Cant not create subnet: ${HOSTIP} for site: $JOIN_SITE. Invalid IP parameter ... exiting" ; exit 1 ; fi
+        printf "Cant not create subnet: %s for site: %s. Invalid IP parameter ... exiting\n" "${HOSTIP}" "${JOIN_SITE}"; exit 1 ; fi
       fi
       #this removes all internal docker IPs from samba DNS
       #samba_dnsupdate --current-ip="${HOSTIP%/*}"
