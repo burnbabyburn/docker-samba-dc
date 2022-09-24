@@ -81,7 +81,7 @@ services:
 #      - SYS_TIME
 #    devices:
 #      - /dev/net/tun
-    privileged: true
+#    privileged: true
 
   samba-join:
     build: .
@@ -148,7 +148,37 @@ services:
 #      - SYS_TIME
 #    devices:
 #      - /dev/net/tun
-    privileged: true
+#    privileged: true
+
+ samba-join:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    container_name: samba-client
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - './samba-dc02/tls:/var/lib/samba/private/tls'
+      - './samba-dc02/data:/var/lib/samba/'
+      - './samba-dc02/log:/var/log/samba'
+    environment:
+      - TZ=Europe/Berlin
+      - DOMAIN=SAM.DOM
+      - DOMAIN_PASS=Pa11w0rd!
+      - PROVISIONINGUSER=Administrator
+      - PROVISIONINGPASSWORD=Pa11w0rd!
+    networks:
+      samba-net:
+    dns_search:
+      - SAM.DOM
+    dns:
+      - 172.101.1.100
+      - 172.101.1.200
+#    extra_hosts:
+#      - dc01 dc01.ad.chaos:192.168.1.45
+    hostname: sambaclient01
+    domainname: SAM.DOM
+    security_opt:
+      - seccomp:unconfined
 
 # git clone https://github.com/Netgear/wsdd2
 #  wsdd2:

@@ -1,24 +1,34 @@
-#!/bin/bash
+#!/bin/sh
+
+# If run in container u need to start it with --security-opt seccomp=unconfined
+# https://docs.docker.com/engine/security/seccomp/
+# https://gist.github.com/nathabonfim59/b088db8752673e1e7acace8806390242
 
 # Configure here
 # ======================================
-HOSTNAME=VirtualUbuntu
-DOMAIN=corp.example.com
-COMPUTEROU="DC=corp,DC=example,DC=com"
-PROVISIONINGUSER=administrator
-OSNAME="Ubuntu Workstation"
-OSVERSION=18.04
-SUDOUSERS="user1 administrator"
-USEDOMAININHOMEDIR="False"
+DOMAIN=${DOMAIN_ACC_LOCK_THRESHOLD:-SAM.DOM}
+PROVISIONINGUSER=${PROVISIONINGUSER:-Administrator}
+PROVISIONINGPASSWORD=${PROVISIONINGPASSWORD:-Pa11w0rd!}
+SUDOUSERS=${SUDOUSERS:-Administrator!}
+OSNAME=$(grep PRETTY_NAME /etc/os-release | cut -d '=' -f2 | cut -d '(' -f1)
+OSVERSION=$(grep VERSION_ID /etc/os-release | cut -d '=' -f2 | tr -d '"')
+TZ=Europe/Berlin
 # ======================================
 
-UP_DOMAIN=${DOMAIN^^}
-LO_DOMAIN=${DOMAIN,,}
+export DEBIAN_FRONTEND=noninteractive
 
-echo "Setting hostnames..."
-hostnamectl set-hostname ${HOSTNAME}
+UP_DOMAIN=$(printf "%s" "$DOMAIN" | tr '[:lower:]' '[:upper:]')
+LO_DOMAIN=$(printf "%s" "$DOMAIN" | tr '[:upper:]' '[:lower:]')
 
-DEBIAN_FRONTEND=noninteractive
+if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
+  printf 'Set timezone'
+  cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
+  printf "%s" "${TZ}" >/etc/timezone
+  dpkg-reconfigure tzdata
+fi
+
+#https://access.redhat.com/discussions/3370851
+#RDNS option see above
 {
 echo "" > /etc/krb5.conf
 echo "[libdefaults]"
@@ -28,9 +38,18 @@ echo "	ccache_type = 4"
 echo "	forwardable = true"
 echo "	proxiable = true"
 echo "	fcc-mit-ticketflags = true"
+echo "	rdns = false"
+
 echo ""
 echo "[realms]"
-} >> /etc/krb5.conf
+echo "$UP_DOMAIN = {"
+echo "        default_domain = $LO_DOMAIN"
+echo "}"
+echo ""
+echo "[domain_realm]"
+echo "$LO_DOMAIN = $UP_DOMAIN"
+echo ".$LO_DOMAIN = $UP_DOMAIN"
+} > /etc/krb5.conf
 
 {
 echo " "
@@ -47,73 +66,25 @@ echo " fully-qualified-names = yes"
 echo " automatic-id-mapping = no"
 echo " user-principal = yes"
 echo " manage-system = yes"
-} >> /etc/realmd.conf
+} > /etc/realmd.conf
 
-echo "Now, check off the box for auto-create home directory in the next configuration screen."
-echo -n "Press enter to continue..."
-#read E
-read -r E
-pam-auth-update
+echo "auto-create home directory in the next configuration screen."
+pam-auth-update --enable mkhomedir
 
 echo "Time to test..."
 echo "Discovering..."
-realm discover ${UP_DOMAIN}
+realm -v discover "${UP_DOMAIN}" --install=/
 echo "Testing admin connection..."
-kinit ${PROVISIONINGUSER}
+printf "%s" "${PROVISIONINGPASSWORD}" | kinit "${PROVISIONINGUSER}"
 klist
 kdestroy 
 
 echo ""
-echo -n "If the above test didn't error, press ENTER to join the domain."
-#read E
-read -r E
-
-echo ""
 echo "Joining domain"
-realm join --verbose --user=${PROVISIONINGUSER} --computer-ou=${COMPUTEROU} ${UP_DOMAIN}
-
-echo "Configuring SSSD..."
-if [ -f /etc/sssd/sssd.conf ]; then
-rm /etc/sssd/sssd.conf
-fi
-touch /etc/sssd/sssd.conf
-
-
-{
-echo "[sssd]"     
-echo "domains = ${LO_DOMAIN}"
-echo "config_file_version = 2"
-echo "services = nss, pam"
-echo ""
-echo "[domain/${LO_DOMAIN}]"
-echo "ad_domain = ${LO_DOMAIN}"
-echo "krb5_realm = ${UP_DOMAIN}"
-echo "realmd_tags = manages-system joined-with-adcli"
-echo "cache_credentials = True"
-echo "id_provider = ad"
-echo "krb5_store_password_if_offline = True"
-echo "default_shell = /bin/bash"
-echo "ldap_id_mapping = True"        
-} >> /etc/sssd/sssd.conf
-
-if [ $USEDOMAININHOMEDIR == "False" ]; then
-	echo "fallback_homedir = /home/%u" >> /etc/sssd/sssd.conf
-else
-	echo "fallback_homedir = /home/%d/%u" >> /etc/sssd/sssd.conf
-fi
-echo "access_provider = ad" >> /etc/sssd/sssd.conf
+printf "%s" "${PROVISIONINGPASSWORD}" | realm join --verbose --user="${PROVISIONINGUSER}"  "${UP_DOMAIN}" --install=/
 
 echo "Allowing users to log in"
-realm permit --all
-
-if [ $USEDOMAININHOMEDIR == "True" ]; then
-	echo "Now, enter '/home/${LO_DOMAIN}/' with the trailing slash in the next configuration screen."
-	echo -n "Press enter to continue..."
-	#read E
-	read -r E
-	#SC2034 (warning): E appears unused. Verify use (or export if used externally).
-	dpkg-reconfigure apparmor
-fi
+realm permit --all --install=/
 
 echo "Adding domain users to sudoers..."
 for U in $SUDOUSERS; do
@@ -121,4 +92,4 @@ for U in $SUDOUSERS; do
 	sed -i "s/# User privilege specification/# User privilege specification\n${U} ALL=(ALL) ALL/g" /etc/sudoers
 done
 
-echo "All done! Time to reboot!"
+sssd -i --logger=stderr

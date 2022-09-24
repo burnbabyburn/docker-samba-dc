@@ -1,0 +1,21 @@
+FROM ubuntu:devel
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y realmd sssd-ad sssd-tools libnss-sss libpam-sss krb5-user adcli samba-common-bin tzdata\ 
+    && apt-get clean autoclean \
+    && apt-get autoremove --yes \
+    && rm -rf /var/lib/{apt,dpkg,cache,log}/ \
+    && rm -fr /tmp/* /var/tmp/*
+
+COPY /scripts/ubuntu-join-domain.sh $DIR_SCRIPTS/ubuntu-join-domain.sh
+
+RUN chmod -R +x /scripts/
+
+WORKDIR /
+
+#HEALTHCHECK CMD smbcontrol smbd num-children || exit 1
+
+ENTRYPOINT ["sh", "/scripts/ubuntu-join-domain.sh"]

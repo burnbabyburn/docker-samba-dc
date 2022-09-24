@@ -18,7 +18,7 @@ config() {
   # Environment VARS for setup
   DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
   LDOMAIN=$(printf "%s" "$DOMAIN" | tr '[:upper:]' '[:lower:]')
-  UDOMAIN=$(printf "%s" "$LDOMAIN" | tr '[:lower:]' '[:upper:]')
+  UDOMAIN=$(printf "%s" "$DOMAIN" | tr '[:lower:]' '[:upper:]')
   URDOMAIN=$(printf "%s" "$UDOMAIN" | cut -d "." -f1)
   BIND9_VALIDATE_EXCEPT=${BIND9_VALIDATE_EXCEPT:-NONE}
   BIND_INTERFACES=${BIND_INTERFACES:-127.0.0.1} # Can be a list of interfaces seperated by spaces
