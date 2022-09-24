@@ -12,7 +12,8 @@ networks:
 
 services:
   samba:
-    build: .
+    context: .
+    dockerfile: Dockerfile.alpine
     container_name: samba-dc01
     volumes:
       - /etc/localtime:/etc/localtime:ro
