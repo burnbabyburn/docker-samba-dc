@@ -1,0 +1,28 @@
+FROM alpine
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    DIR_SAMBA_CONF=/etc/samba/conf.d \
+	DIR_SCRIPTS=/scripts \
+	DIR_LDIF=/ldif \
+	DIR_GPO=/gpo 
+
+RUN apk --no-cache --update add chrony samba-dc krb5 bind-tools ldb-tools ca-certificates
+
+
+
+COPY /ldif $DIR_LDIF
+COPY /etc /etc/
+COPY /scripts $DIR_SCRIPTS
+COPY /conf.d/ $DIR_SAMBA_CONF
+COPY /gpo /$DIR_GPO
+#COPY --from=builder ${src} /tmp/
+
+RUN chmod -R +x /scripts/
+
+EXPOSE 42 53 53/udp 88 88/udp 135 137-138/udp 139 389 389/udp 445 464 464/udp 636 3268-3269 49152-65535
+
+WORKDIR /
+
+HEALTHCHECK CMD smbcontrol smbd num-children || exit 1
+
+ENTRYPOINT ["sh", "/scripts/init.sh"]
