@@ -6,7 +6,13 @@ ENV DEBIAN_FRONTEND=noninteractive \
 	DIR_LDIF=/ldif \
 	DIR_GPO=/gpo 
 
-RUN apk --no-cache --update add chrony samba-dc ldb-tools tzdata supervisor
+RUN apk --no-cache --update add chrony samba-dc ldb-tools tzdata supervisor && rm -rf /etc/samba/smb.conf
+#  && rm -rf /etc/samba/smb.conf \
+#  && rm -rf /var/lib/samba \
+#  && rm -rf /var/log/samba \
+#  && ln -s /samba/etc /etc/samba \
+#  && ln -s /samba/lib /var/lib/samba \
+#  && ln -s /samba/log /var/log/samba
 
 COPY /ldif $DIR_LDIF
 COPY /etc /etc/
@@ -16,6 +22,8 @@ COPY /gpo /$DIR_GPO
 #COPY --from=builder ${src} /tmp/
 
 RUN chmod -R +x /scripts/
+
+VOLUME ["/samba"]
 
 EXPOSE 42 53 53/udp 88 88/udp 135 137-138/udp 139 389 389/udp 445 464 464/udp 636 3268-3269 49152-65535
 
