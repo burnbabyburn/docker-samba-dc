@@ -24,8 +24,18 @@ RUN apt-get update \
     #&& apt-get install -y openvpn inetutils-ping \   
     && apt-get clean autoclean \
     && apt-get autoremove --yes \
-    && rm -rf /var/lib/{apt,dpkg,cache,log}/ \
-    && rm -fr /tmp/* /var/tmp/*
+    && rm -rf /var/lib/{apt,dpkg,cache,log,samba}/ \
+    && rm -rf /tmp/* /var/tmp/* \
+	&& rm -rf /etc/samba \
+    && rm -rf /var/log/samba \
+    && ln -s /samba/etc /etc/samba \
+    && ln -s /samba/lib /var/lib/samba \
+    && ln -s /samba/log /var/log/samba \
+	&& ln -s /samba/bind /etc/bind \
+	&& ln -s /samba/log/bind /var/log/bind \
+	&& ln -s /samba/chrony /etc/chrony \
+	&& ln -s /samba/log/chrony /var/log/chrony \
+	&& ln -s /samba/supervisor /etc/supervisor
 
 COPY /ldif $DIR_LDIF
 COPY /etc /etc/
