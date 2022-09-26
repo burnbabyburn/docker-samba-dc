@@ -563,7 +563,9 @@ appSetup () {
       SetKeyValueFilePattern 'printcap name' '/dev/null'
       SetKeyValueFilePattern 'disable spoolss' 'yes'
     fi
-
+	
+	#Create symlink for wsdd2
+    ln -s /etc/samba/etc/samba/smb.conf  /etc/samba/
     # Stop VPN & write supervisor service
     if [ "${JOIN_SITE_VPN}" = true ]; then
       if [ -n "${VPNPID}" ]; then kill "${VPNPID}"; fi
