@@ -27,14 +27,15 @@ RUN apt-get update \
     && rm -rf /tmp/* /var/tmp/* \
 	&& rm -rf /etc/samba \
     && rm -rf /var/log/samba \
-    && ln -s /samba/etc /etc/samba \
-    && ln -s /samba /var/lib/samba \
-    && ln -s /samba/log /var/log/samba \
-	&& ln -s /samba/bind /etc/bind \
-	&& ln -s /samba/log/bind /var/log/bind \
-	&& ln -s /samba/chrony /etc/chrony \
-	&& ln -s /samba/log/chrony /var/log/chrony \
-	&& ln -s /samba/supervisor /etc/supervisor \
+	&& mkdir -p /data/{etc/{bind,chrony,supversior,samba},lib,log/{samba,bind,chrony}}
+    && ln -s /data/etc/samba /etc/samba \
+    && ln -s /data/lib/samba /var/lib/samba \
+    && ln -s /data/log/samba /var/log/samba \
+	&& ln -s /data/etc/bind /etc/bind \
+	&& ln -s /data/log/bind /var/log/bind \
+	&& ln -s /data/etc/chrony /etc/chrony \
+	&& ln -s /data/log/chrony /var/log/chrony \
+	&& ln -s /data/etc/supervisor /etc/supervisor \
 	&& apt-get install -y bind9 chrony pkg-config attr acl samba smbclient tdb-tools ldb-tools ldap-utils winbind libnss-winbind libpam-winbind libpam-krb5 krb5-user supervisor dnsutils
 
 COPY /ldif $DIR_LDIF
