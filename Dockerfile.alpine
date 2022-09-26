@@ -6,9 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 	DIR_LDIF=/ldif \
 	DIR_GPO=/gpo 
 
-RUN apk --no-cache --update add chrony samba-dc krb5 bind-tools ldb-tools ca-certificates
-
-
+RUN apk --no-cache --update add chrony samba-dc ldb-tools tzdata supervisor
 
 COPY /ldif $DIR_LDIF
 COPY /etc /etc/

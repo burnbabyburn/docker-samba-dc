@@ -77,28 +77,30 @@ config() {
   # DIR_GPO, DIR_SAMBA_CONF, DIR_LDIF and DIR_SCRIPTS need to be changed in the Dockerfile
   
   # File and directory locations
+  DIR_BIND9=/etc/bind
+  DIR_BIND9_LOG=/var/log/bind
+  DIR_BIND9_RUN=/run/named
+  DIR_CHRONY_CONF=/etc/chrony/conf.d
   DIR_CHRONY_LOG=/var/log/chrony
   DIR_CHRONY_NTSDUMP=/var/lib/chrony
-  DIR_CHRONY_SRC=/etc/chrony/sources.d
-  DIR_CHRONY_CONF=/etc/chrony/conf.d
-  DIR_CHRONY_SOCK=/var/lib/samba/ntp_signd
   DIR_CHRONY_RUN=/run/chrony
+  DIR_CHRONY_SOCK=/var/lib/samba/ntp_signd
+  DIR_CHRONY_SRC=/etc/chrony/sources.d
+  DIR_SAMBA_CSHARE=/var/lib/samba/share_c
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba
   DIR_SAMBA_ETC=/etc/samba
-  DIR_SAMBA_CSHARE=/var/lib/samba/share_c
-  FILE_SAMBA_LOG=/var/log/samba/smb.log
+  FILE_CHRONY=/etc/chrony/chrony.conf
+  FILE_CHRONY_DRIFT=/var/lib/chrony/chrony.drift
+  FILE_CHRONY_KEY=/etc/chrony/chrony.keys
   FILE_KRB5=/etc/krb5.conf
   FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
-  FILE_CHRONY_DRIFT=/var/lib/chrony/chrony.drift
-  FILE_CHRONY=/etc/chrony/chrony.conf
-  FILE_CHRONY_KEY=/etc/chrony/chrony.keys
   FILE_OPENVPNCONF=/docker.ovpn
+  FILE_SAMBA_LOG=/var/log/samba/smb.log
+  # Alpine /etc/supervisord.conf
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
+  # Alpine /etc/supervisor.d/*.ini
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
-  DIR_BIND9=/etc/bind
-  DIR_BIND9_RUN=/run/named
-  DIR_BIND9_LOG=/var/log/bind
 
   DIR_EXTERNAL="${DIR_SAMBA_ETC}/external"
   DIR_EXTERNAL_BIND9="${DIR_EXTERNAL}/bind"
@@ -210,6 +212,9 @@ config() {
   # shellcheck source=/dev/null
   . /"${DIR_SCRIPTS}"/helper.sh
 
+  # If grep ID /etc/os-release != alpine 
+  # BINDUSER=root
+  # Chronyuser=chrony
   BINDUSERGROUP="bind"
   CHRONYUSERGROUP="_chrony"
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
@@ -293,6 +298,7 @@ appSetup () {
   sed -e "s:{{ CHRONY_START_PARAM }}:${CHRONY_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
   # Configure /etc/nsswitch.conf 
+  # Alpine does not have one
   sed -i "s,passwd:.*,passwd:         files winbind,g" "${FILE_NSSWITCH}"
   sed -i "s,group:.*,group:          files winbind,g" "${FILE_NSSWITCH}"
   sed -i "s,hosts:.*,hosts:          files dns,g" "${FILE_NSSWITCH}"
@@ -337,7 +343,7 @@ appSetup () {
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#NAMERESOLVEORDER
   set -- "$@" "--option=name resolve order = wins host bcast"
   # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
-  set -- "$@" "--option=password hash userPassword schemes = CryptSHA256 CryptSHA512"
+  #set -- "$@" "--option=password hash userPassword schemes = CryptSHA256 CryptSHA512"
   # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes also for idmap
   set -- "$@" "--option=template shell = /bin/false" "--option=template homedir = /dev/null"
   set -- "$@" "--option=eventlog list = Samba"
