@@ -6,13 +6,21 @@ ENV DEBIAN_FRONTEND=noninteractive \
 	DIR_LDIF=/ldif \
 	DIR_GPO=/gpo 
 
-RUN apk --no-cache --update add bind chrony samba-dc ldb-tools tzdata supervisor && rm -rf /etc/samba/smb.conf
-#  && rm -rf /etc/samba/smb.conf \
-#  && rm -rf /var/lib/samba \
-#  && rm -rf /var/log/samba \
-#  && ln -s /samba/etc /etc/samba \
-#  && ln -s /samba/lib /var/lib/samba \
-#  && ln -s /samba/log /var/log/samba
+RUN apk --no-cache --update add bind chrony samba-dc ldb-tools tzdata supervisor \
+	&& rm -rf /etc/bind /etc/chrony /etc/chrony /etc/nsswitch.conf /etc/samba /etc/supervisord.conf /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba \
+	&& mkdir -p /data/etc/bind /data/etc/chrony /data/etc/samba /data/etc/supervisor /data/lib/bind /data/lib/chrony /data/lib/samba /data/log/bind /data/log/chrony /data/log/samba 
+	&& ln -s /data/etc/bind /etc/bind \
+	&& ln -s /data/etc/chrony /etc/chrony \
+	&& ln -s /data/etc/nsswitch.conf /etc/
+	&& ln -s /data/etc/samba /etc/samba \
+	&& ln -s /data/etc/supervisor /etc/supervisor \
+	&& ln -s /data/lib/bind /var/lib/bind \
+	&& ln -s /data/lib/chrony /var/lib/chrony \
+	&& ln -s /data/lib/samba /var/lib/samba \
+	&& ln -s /data/log/bind /var/log/bind \
+	&& ln -s /data/log/chrony /var/log/chrony \
+    && ln -s /data/log/samba /var/log/samba \
+	
 
 COPY /ldif $DIR_LDIF
 COPY /etc /etc/
