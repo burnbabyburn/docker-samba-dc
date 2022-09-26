@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 	DIR_LDIF=/ldif \
 	DIR_GPO=/gpo 
 
-RUN apk --no-cache --update add chrony samba-dc ldb-tools tzdata supervisor && rm -rf /etc/samba/smb.conf
+RUN apk --no-cache --update add bind chrony samba-dc ldb-tools tzdata supervisor && rm -rf /etc/samba/smb.conf
 #  && rm -rf /etc/samba/smb.conf \
 #  && rm -rf /var/lib/samba \
 #  && rm -rf /var/log/samba \
