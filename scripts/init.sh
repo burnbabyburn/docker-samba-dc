@@ -558,7 +558,7 @@ appSetup () {
       SetKeyValueFilePattern 'printcap name' '/dev/null'
       SetKeyValueFilePattern 'disable spoolss' 'yes'
     fi
-
+    SetKeyValueFilePattern 'allow insecure wide links' 'yes'
     # Stop VPN & write supervisor service
     if [ "${JOIN_SITE_VPN}" = true ]; then
       if [ -n "${VPNPID}" ]; then kill "${VPNPID}"; fi
