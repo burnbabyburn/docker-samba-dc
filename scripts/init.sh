@@ -558,7 +558,7 @@ appSetup () {
       SetKeyValueFilePattern 'printcap name' '/dev/null'
       SetKeyValueFilePattern 'disable spoolss' 'yes'
     fi
-    SetKeyValueFilePattern 'allow insecure wide links' 'yes'
+
     # Stop VPN & write supervisor service
     if [ "${JOIN_SITE_VPN}" = true ]; then
       if [ -n "${VPNPID}" ]; then kill "${VPNPID}"; fi
@@ -571,9 +571,12 @@ appSetup () {
 }
 
 appFirstStart () {
-  for file in /etc/samba/conf.d/*.conf; do
-    SetKeyValueFilePattern 'include' "$file"
-  done
+
+  if [ -d /etc/samba/conf.d/ ]; then
+    for file in /etc/samba/conf.d/*.conf; do
+      SetKeyValueFilePattern 'include' "$file"
+    done
+  fi
   update-ca-certificates
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}" &
   # new samba version: if HOSTIP is set, samba does not create dns entries for other internal interfaces.Thus many samba-tool operations fail.
