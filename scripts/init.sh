@@ -190,10 +190,15 @@ config() {
   . /"${DIR_SCRIPTS}"/helper.sh
 
   # If grep ID /etc/os-release != alpine 
-  # BINDUSER=root
+  # BINDUSER=named
   # Chronyuser=chrony
-  BINDUSERGROUP="bind"
-  CHRONYUSERGROUP="_chrony"
+  if [ ! "$(grep '^ID' /etc/os-release | cut -d '=' -f2)" = 'alpine' ]; then
+    BINDUSERGROUP="bind"
+    CHRONYUSERGROUP="_chrony"
+  else
+    BINDUSERGROUP="named"
+    CHRONYUSERGROUP="chrony"
+  fi
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
   
   SAMBA_START_PARAM="--no-process-group --configfile ${FILE_SAMBA_CONF}"
