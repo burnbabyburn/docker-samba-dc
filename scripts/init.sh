@@ -198,7 +198,7 @@ config() {
   else
     cat /etc/passwd
 	cat /etc/group
-    BINDUSERGROUP="named"
+    BINDUSERGROUP="bind"
     CHRONYUSERGROUP="chrony"
   fi
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
