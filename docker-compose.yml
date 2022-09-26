@@ -12,14 +12,16 @@ networks:
 
 services:
   samba:
-    context: .
-    dockerfile: Dockerfile.alpine
+    build: .
+#    build:
+#      context: .
+#      dockerfile: Dockerfile.alpine
     container_name: samba-dc01
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - './samba-dc01/tls:/var/lib/samba/private/tls'
-      - './samba-dc01/data:/var/lib/samba/'
-      - './samba-dc01/log:/var/log/samba'
+#      - /etc/localtime:/etc/localtime:ro
+#      - './samba-dc01/tls:/var/lib/samba/private/tls'
+#      - './samba-dc01/data:/var/lib/samba/'
+#      - './samba-dc01/log:/var/log/samba'
     environment:
       - TZ=Europe/Berlin
       - DOMAIN=SAM.DOM
@@ -88,10 +90,10 @@ services:
     build: .
     container_name: samba-dc02
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - './samba-dc02/tls:/var/lib/samba/private/tls'
-      - './samba-dc02/data:/var/lib/samba/'
-      - './samba-dc02/log:/var/log/samba'
+#      - /etc/localtime:/etc/localtime:ro
+#      - './samba-dc02/tls:/var/lib/samba/private/tls'
+#      - './samba-dc02/data:/var/lib/samba/'
+#      - './samba-dc02/log:/var/log/samba'
     environment:
       - TZ=Europe/Berlin
       - DOMAIN=SAM.DOM

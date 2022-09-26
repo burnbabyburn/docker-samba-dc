@@ -283,10 +283,10 @@ appSetup () {
 
   # Configure /etc/nsswitch.conf 
   # Alpine does not have one
-  sed -i "s,passwd:.*,passwd:         files winbind,g" "${FILE_NSSWITCH}"
-  sed -i "s,group:.*,group:          files winbind,g" "${FILE_NSSWITCH}"
-  sed -i "s,hosts:.*,hosts:          files dns,g" "${FILE_NSSWITCH}"
-  sed -i "s,networks:.*,networks:      files dns,g" "${FILE_NSSWITCH}"
+#  sed -i "s,passwd:.*,passwd:         files winbind,g" "${FILE_NSSWITCH}"
+#  sed -i "s,group:.*,group:          files winbind,g" "${FILE_NSSWITCH}"
+#  sed -i "s,hosts:.*,hosts:          files dns,g" "${FILE_NSSWITCH}"
+#  sed -i "s,networks:.*,networks:      files dns,g" "${FILE_NSSWITCH}"
   
   # Configure Bind9 files
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
