@@ -27,7 +27,7 @@ RUN apt-get update \
     && rm -rf /tmp/* /var/tmp/* \
 	&& rm -rf /etc/samba \
     && rm -rf /var/log/samba \
-	&& mkdir -p /data/{etc/{bind,chrony,supversior,samba},lib,log/{samba,bind,chrony}}
+	&& mkdir -p /data/{etc/{bind,chrony,supversior,samba},lib,log/{samba,bind,chrony}} \
     && ln -s /data/etc/samba /etc/samba \
     && ln -s /data/lib/samba /var/lib/samba \
     && ln -s /data/log/samba /var/log/samba \
