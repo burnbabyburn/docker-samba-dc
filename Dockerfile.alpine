@@ -6,8 +6,8 @@ ENV DIR_SAMBA_CONF=/data/etc/samba/conf.d \
 	DIR_GPO=/gpo 
 
 RUN apk --no-cache --update add bind chrony samba-dc ldb-tools tzdata supervisor \
-	&& rm -rf /etc/bind /etc/chrony /etc/chrony /etc/nsswitch.conf /etc/samba /etc/supervisord.conf /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor \
-	&& mkdir -p /data/etc/bind /data/etc/chrony /data/etc/samba /data/etc/supervisor /data/lib/bind /data/lib/chrony /data/lib/samba /data/log/bind /data/log/chrony /data/log/samba /data/log/supervisor \
+	&& rm -rf /etc/bind /etc/chrony /etc/chrony /etc/nsswitch.conf /etc/samba /etc/supervisord.conf /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor \
+	&& mkdir -p /data/etc/bind /data/etc/chrony /data/etc/samba /data/etc/supervisor /data/var/cache/bind /data/var/cache/samba /data/lib/bind /data/lib/chrony /data/lib/samba /data/log/bind /data/log/chrony /data/log/samba /data/log/supervisor \
 	&& ln -s /data/etc/bind /etc/bind \
 	&& ln -s /data/etc/chrony /etc/chrony \
 	&& ln -s /data/etc/nsswitch.conf /etc/ \
@@ -19,7 +19,9 @@ RUN apk --no-cache --update add bind chrony samba-dc ldb-tools tzdata supervisor
 	&& ln -s /data/log/bind /var/log/bind \
 	&& ln -s /data/log/chrony /var/log/chrony \
     && ln -s /data/log/samba /var/log/samba \
-	&& ln -s /data/log/supervisor /var/log/supervisor
+	&& ln -s /data/log/supervisor /var/log/supervisor \
+	&& ln -s /data/var/cache/bind /var/cache/bind \
+	&& ln -s /data/var/cache/samba /var/cache/samba
 
 COPY /ldif $DIR_LDIF
 COPY /etc /data/etc

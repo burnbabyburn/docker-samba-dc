@@ -80,6 +80,7 @@ config() {
   DIR_BIND9=/etc/bind
   DIR_BIND9_LOG=/var/log/bind
   DIR_BIND9_RUN=/run/named
+  DIR_BIND9_CACHE=/var/cache/bind
   DIR_CHRONY_CONF=/etc/chrony/conf.d
   DIR_CHRONY_LOG=/var/log/chrony
   DIR_CHRONY_NTSDUMP=/var/lib/chrony
@@ -248,6 +249,9 @@ appSetup () {
   if [ ! -f "${FILE_KRB5}" ]; then rm -f "${FILE_KRB5}"; fi
 
   # PID and session.key dir for bind9
+  if [ ! -d "${DIR_BIND9_CACHE}" ]; then mkdir "${DIR_BIND9_CACHE}"; fi
+  chown -R "root":"${BINDUSERGROUP}" "${DIR_BIND9_CACHE}"
+  
   if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "${DIR_BIND9_RUN}"; fi
   chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"
 
