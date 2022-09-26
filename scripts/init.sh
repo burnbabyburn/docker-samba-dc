@@ -198,6 +198,7 @@ config() {
   else
     BINDUSERGROUP="named"
     CHRONYUSERGROUP="chrony"
+	export LDB_MODULES_PATH=/usr/lib/samba/ldb/
   fi
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
   
