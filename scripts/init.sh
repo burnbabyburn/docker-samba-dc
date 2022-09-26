@@ -242,6 +242,9 @@ appSetup () {
     printf "%s" "${TZ}" >/etc/timezone
   fi
   
+  # We removed the initial /etc/bind dir so we need to generate a new rndc.key
+  rndc-confgen -a -u "${BINDUSERGROUP}"
+  
   ## Setup filesystem and config files
   # Setup external dir - Backup dir for configs
   if [ ! -d "${DIR_EXTERNAL}" ]; then mkdir "${DIR_EXTERNAL}"; fi
