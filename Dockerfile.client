@@ -10,7 +10,7 @@ RUN apt-get update \
     && rm -rf /var/lib/{apt,dpkg,cache,log}/ \
     && rm -fr /tmp/* /var/tmp/*
 
-COPY /scripts/ubuntu-join-domain.sh $DIR_SCRIPTS/ubuntu-join-domain.sh
+COPY /scripts/ubuntu-join-domain.sh /scripts/ubuntu-join-domain.sh
 
 RUN chmod -R +x /scripts/
 
