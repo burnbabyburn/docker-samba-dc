@@ -18,16 +18,16 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 RUN apt-get update \
     && apt-get upgrade -y \
-	&& apt-get install -y bind9 chrony pkg-config attr acl samba smbclient tdb-tools ldb-tools ldap-utils winbind libnss-winbind libpam-winbind libpam-krb5 krb5-user supervisor dnsutils
-	#openssl for dh key
+	&& apt-get install -y bind9 chrony pkg-config attr acl samba smbclient tdb-tools ldb-tools ldap-utils winbind libnss-winbind libpam-winbind libpam-krb5 krb5-user supervisor dnsutils \
+	#openssl for dh key \
     # line below is for multi-site config (ping is for testing later) \
     #&& apt-get install -y openvpn inetutils-ping \   
     && apt-get clean autoclean \
     && apt-get autoremove --yes \
-     rm -rf /var/lib/{apt,dpkg,cache,log,samba}/ \
+    && rm -rf /var/lib/{apt,dpkg,cache,log,samba}/ \
     && rm -rf /tmp/* /var/tmp/* \
 	&& rm -rf /etc/samba /var/log/samba /etc/chrony /etc/bind /var/lib/samba /var/log/bind /etc/chrony /var/log/chrony /etc/supervisor \
-	&& mkdir -p /data/{etc/{bind,chrony,supervisor,samba},lib,log/{samba,bind,chrony}} \
+	&& mkdir -p /data/etc/bind /data/etc/chrony /data/etc/supervisor /data/etc/samba /data/lib/samba /data/log/samba /data/log/bind /data/log/chrony \
     && ln -s /data/etc/samba /etc/samba \
     && ln -s /data/lib/samba /var/lib/samba \
     && ln -s /data/log/samba /var/log/samba \
