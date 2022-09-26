@@ -250,7 +250,7 @@ appSetup () {
 
   # PID and session.key dir for bind9
   if [ ! -d "${DIR_BIND9_CACHE}" ]; then mkdir "${DIR_BIND9_CACHE}"; fi
-  chown -R "root":"${BINDUSERGROUP}" "${DIR_BIND9_CACHE}"
+  chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_CACHE}"
   
   if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "${DIR_BIND9_RUN}"; fi
   chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"
