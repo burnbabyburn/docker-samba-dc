@@ -314,12 +314,14 @@ appSetup () {
   if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ FILE_CHRONY_PID }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_PID }}:${FILE_CHRONY_PID}:" -i "${FILE_CHRONY}"; fi
-  if  [ ! -f "${FILE_CHRONY_TIMESRC}" ]; then
+  #if  [ ! -f "${FILE_CHRONY_TIMESRC}" ]; then
+  if  [ ! -f "${FILE_CHRONY}" ]; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
     for DC in $DCs
     do
       # valid entries need to end with newline (\n)
-      printf "server %s iburst\n" "${DC}" >> "${FILE_CHRONY_TIMESRC}"
+  #    printf "server %s iburst\n" "${DC}" >> "${FILE_CHRONY_TIMESRC}"
+      printf "server %s iburst\n" "${DC}" >> "${FILE_CHRONY}"
     done
   fi
 

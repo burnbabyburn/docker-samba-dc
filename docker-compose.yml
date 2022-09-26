@@ -41,7 +41,7 @@ services:
       - ENABLE_DYNAMIC_PORTRANGE=49152-49170
       - ENABLE_INSECURELDAP=true
       - ENABLE_LAPS_SCHEMA=true
-      - ENABLE_LOGS=true
+#      - ENABLE_LOGS=true
       - ENABLE_MSCHAPV2=true
       - ENABLE_RFC2307=true
       - TLS_ENABLE=false
@@ -101,7 +101,7 @@ services:
       - ENABLE_DNSFORWARDER=172.101.1.100
       - ENABLE_DYNAMIC_PORTRANGE=49152-49170
       - ENABLE_INSECURELDAP=false
-      - ENABLE_LOGS=false
+      - ENABLE_LOGS=true
       - ENABLE_MSCHAPV2=true
       - TLS_ENABLE=false
       - DEBUG_ENABLE=true
