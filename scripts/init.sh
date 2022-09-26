@@ -277,6 +277,10 @@ appSetup () {
   chown -R bind "${DIR_BIND9_LOG}/"
   chmod u+rw "${DIR_BIND9_LOG}"
   
+  #Fileperm on /etc/bind
+  chown -R root:bind "${DIR_BIND9}/"
+  chmod -R 755 "${DIR_BIND9}"
+  
   #Configure /etc/supervisor/conf.d/supervisord.conf
   sed -e "s:{{ SAMBA_START_PARAM }}:${SAMBA_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ BIND9_START_PARAM }}:${BIND9_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
