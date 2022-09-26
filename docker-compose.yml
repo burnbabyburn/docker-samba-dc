@@ -77,14 +77,7 @@ services:
 #      - dc01 dc01.ad.chaos:192.168.1.45
     hostname: dockersamba01
     domainname: SAM.DOM
-#    cap_add:
-#      - NET_ADMIN
-#      - SYS_NICE
-#      - SYS_RESOURCE
-#      - SYS_TIME
-#    devices:
-#      - /dev/net/tun
-#    privileged: true
+    privileged: true
 
   samba-join:
     build: .
@@ -144,14 +137,7 @@ services:
 #      - dc01 dc01.ad.chaos:192.168.1.45
     hostname: dockersamba02
     domainname: SAM.DOM
-#    cap_add:
-#      - NET_ADMIN
-#      - SYS_NICE
-#      - SYS_RESOURCE
-#      - SYS_TIME
-#    devices:
-#      - /dev/net/tun
-#    privileged: true
+    privileged: true
 
 #  samba-join:
 #    build:
