@@ -128,6 +128,7 @@ config() {
   FILE_CHRONY_PID="${DIR_CHRONY_RUN}/chronyd.pid"
   FILE_CHRONY_TIMESRC="${DIR_CHRONY_SRC}/my.sources"
   FILE_EXTERNAL_CHRONY_CONF="${DIR_EXTERNAL}/chrony.conf"
+  FILE_EXTERNAL_CHRONY_TIMESRC="${DIR_EXTERNAL}/my.sources"
   FILE_EXTERNAL_KRB5_CONF="${DIR_EXTERNAL}/krb5.conf"
   FILE_EXTERNAL_NSSWITCH="${DIR_EXTERNAL}/nsswitch.conf"
   FILE_EXTERNAL_SAMBA_CONF="${DIR_EXTERNAL}/smb.conf"
@@ -255,7 +256,6 @@ appSetup () {
   ## Setup filesystem and config files
   # Setup external dir - Backup dir for configs
   if [ ! -d "${DIR_EXTERNAL}" ]; then mkdir "${DIR_EXTERNAL}"; fi
-  if [ ! -d "${DIR_EXTERNAL_BIND9}" ]; then mkdir "${DIR_EXTERNAL_BIND9}"; fi
   # Remove krb5.conf will be replaced by a samba generated one
   if [ ! -f "${FILE_KRB5}" ]; then rm -f "${FILE_KRB5}"; fi
 
