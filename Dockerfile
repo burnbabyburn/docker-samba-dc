@@ -39,7 +39,7 @@ RUN apt-get update \
 	&& ln -s /data/etc/nsswitch.conf /etc/
 
 COPY /ldif $DIR_LDIF
-COPY /etc /data/
+COPY /etc /data/etc
 COPY /scripts $DIR_SCRIPTS
 #COPY /conf.d/ $DIR_SAMBA_CONF
 COPY /gpo /$DIR_GPO
