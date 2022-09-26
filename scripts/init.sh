@@ -272,11 +272,11 @@ appSetup () {
   touch "${FILE_BIND9_LOG_RPZ}"
   touch "${FILE_BIND9_LOG_ZONE_TRANSFERS}"
   # Slash is importants
-  chown -R bind "${DIR_BIND9_LOG}/"
+  chown -R "${BINDUSERGROUP}" "${DIR_BIND9_LOG}/"
   chmod u+rw "${DIR_BIND9_LOG}"
   
   #Fileperm on /etc/bind
-  chown -R root:bind "${DIR_BIND9}/"
+  chown -R root:"${BINDUSERGROUP}" "${DIR_BIND9}/"
   chmod -R 755 "${DIR_BIND9}"
   
   #Configure /etc/supervisor/conf.d/supervisord.conf
@@ -303,7 +303,7 @@ appSetup () {
   # Fatal error : Could not open /run/chrony/chronyd.pid : Permission denied
   # INFO exited: chrony (exit status 1; not expected)
   # Wrong owner of /run/chrony (UID != 102) - the azure image complains but with a chowned dir chrony just crashes
-  if ! uname -a | grep -q "azure"; then chown _chrony:_chrony "${DIR_CHRONY_RUN}"; fi
+  if ! uname -a | grep -q "azure"; then chown "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_RUN}"; fi
   if grep -q "{{ DIR_CHRONY_CONF }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONF }}:${DIR_CHRONY_CONF}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_NTSDUMP }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_NTSDUMP }}:${DIR_CHRONY_NTSDUMP}:" -i "${FILE_CHRONY}"; fi
