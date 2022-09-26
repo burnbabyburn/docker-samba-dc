@@ -196,6 +196,8 @@ config() {
     BINDUSERGROUP="bind"
     CHRONYUSERGROUP="_chrony"
   else
+    cat /etc/passwd
+	cat /etc/group
     BINDUSERGROUP="named"
     CHRONYUSERGROUP="chrony"
   fi
