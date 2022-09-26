@@ -566,7 +566,7 @@ appSetup () {
     fi
   fi
   # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
-  backupConfig
+#  backupConfig
   appFirstStart
 }
 
@@ -627,7 +627,7 @@ appFirstStart () {
 
 appStart () {
   update-ca-certificates
-  restoreConfig
+#  restoreConfig
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}"
 }
 

@@ -26,7 +26,7 @@ RUN apt-get update \
     && apt-get autoremove --yes \
     && rm -rf /var/lib/{apt,dpkg,cache,log,samba}/ \
     && rm -rf /tmp/* /var/tmp/* \
-	&& rm -rf /etc/samba /var/log/samba /etc/chrony /etc/bind /var/lib/samba /var/log/bind /etc/chrony /var/log/chrony /etc/supervisor \
+	&& rm -rf /etc/samba /var/log/samba /etc/chrony /etc/bind /var/lib/samba /var/log/bind /etc/chrony /var/log/chrony /etc/supervisor /etc/nsswitch.conf \
 	&& mkdir -p /data/etc/bind /data/etc/chrony /data/etc/supervisor /data/etc/samba /data/lib/samba /data/log/samba /data/log/bind /data/log/chrony \
     && ln -s /data/etc/samba /etc/samba \
     && ln -s /data/lib/samba /var/lib/samba \
@@ -35,10 +35,11 @@ RUN apt-get update \
 	&& ln -s /data/log/bind /var/log/bind \
 	&& ln -s /data/etc/chrony /etc/chrony \
 	&& ln -s /data/log/chrony /var/log/chrony \
-	&& ln -s /data/etc/supervisor /etc/supervisor
+	&& ln -s /data/etc/supervisor /etc/supervisor \
+	&& ln -s /data/etc/nsswitch.conf /etc/
 
 COPY /ldif $DIR_LDIF
-COPY /etc /etc/
+COPY /etc /data/
 COPY /scripts $DIR_SCRIPTS
 #COPY /conf.d/ $DIR_SAMBA_CONF
 COPY /gpo /$DIR_GPO
