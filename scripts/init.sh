@@ -203,9 +203,9 @@ config() {
   CHRONYUSERGROUP="_chrony"
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
   
-  SAMBA_START_PARAM="--no-process-group"
-  CHRONY_START_PARAM="-n -u ${CHRONYUSERGROUP}"
-  BIND9_START_PARAM="-f -u ${BINDUSERGROUP}"
+  SAMBA_START_PARAM="--no-process-group --configfile ${FILE_SAMBA_CONF}"
+  CHRONY_START_PARAM="-n -u ${CHRONYUSERGROUP} -f ${FILE_CHRONY}"
+  BIND9_START_PARAM="-f -u ${BINDUSERGROUP} -c ${FILE_BIND9_CONF}"
   
   if cat /sys/module/ipv6/parameters/disable;then
     #sed -e "s/listen-on-v6 { any; };/listen-on-v6 { none; };/" -i "${FILE_BIND9_OPTIONS}"
