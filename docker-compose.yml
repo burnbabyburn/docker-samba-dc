@@ -2,7 +2,7 @@ version: '3.3'
 
 networks:
   samba-net:
-    name: samba-net
+#    name: samba-net
     driver: bridge
     ipam:
      config:
