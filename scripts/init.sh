@@ -273,7 +273,8 @@ appSetup () {
   touch "${FILE_BIND9_LOG_RATE_LIMITING}"
   touch "${FILE_BIND9_LOG_RPZ}"
   touch "${FILE_BIND9_LOG_ZONE_TRANSFERS}"
-  chown -R bind "${DIR_BIND9_LOG}"
+  # Slash is importants
+  chown -R bind "${DIR_BIND9_LOG}/"
   chmod u+rw "${DIR_BIND9_LOG}"
   
   #Configure /etc/supervisor/conf.d/supervisord.conf
