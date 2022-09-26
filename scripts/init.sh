@@ -198,7 +198,7 @@ config() {
   else
     BINDUSERGROUP="named"
     CHRONYUSERGROUP="chrony"
-	export LDB_MODULES_PATH=/usr/lib/samba/ldb/
+	export LDB_MODULES_PATH="/usr/lib/samba/ldb/"
   fi
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
   
@@ -522,7 +522,7 @@ appSetup () {
     cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
     if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "${DIR_CHRONY_SOCK}"; fi
     chmod 750 "${DIR_CHRONY_SOCK}"
-    chown root:_chrony "${DIR_CHRONY_SOCK}"
+    chown root:"${CHRONYUSERGROUP}" "${DIR_CHRONY_SOCK}"
 	
 	if [ ! -d "${DIR_SAMBA_CSHARE}" ]; then
       mkdir -p "${DIR_SAMBA_EVENTLOG}"
