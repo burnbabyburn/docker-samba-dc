@@ -20,8 +20,6 @@ jobs:
         run: docker ps -a
       - name: Check logs DC01
         run: docker logs samba-dc01
-      - name: Get debian_version
-        run: docker exec --tty samba-dc01 /usr/bin/cat /etc/debian_version
       - name: Get os-release
         run: docker exec --tty samba-dc01 /usr/bin/cat /etc/os-release
       - name: Get kernel

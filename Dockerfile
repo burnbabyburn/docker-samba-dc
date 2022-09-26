@@ -11,7 +11,7 @@
 FROM ubuntu:devel
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    DIR_SAMBA_CONF=/etc/samba/conf.d \
+    DIR_SAMBA_CONF=/data/etc/samba/conf.d \
 	DIR_SCRIPTS=/scripts \
 	DIR_LDIF=/ldif \
 	DIR_GPO=/gpo 

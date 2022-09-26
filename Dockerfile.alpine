@@ -1,7 +1,6 @@
 FROM alpine
 
-ENV DEBIAN_FRONTEND=noninteractive \
-    DIR_SAMBA_CONF=/etc/samba/conf.d \
+ENV DIR_SAMBA_CONF=/data/etc/samba/conf.d \
 	DIR_SCRIPTS=/scripts \
 	DIR_LDIF=/ldif \
 	DIR_GPO=/gpo 
@@ -23,7 +22,7 @@ RUN apk --no-cache --update add bind chrony samba-dc ldb-tools tzdata supervisor
 	&& ln -s /data/log/supervisor /var/log/supervisor
 
 COPY /ldif $DIR_LDIF
-COPY /etc /etc/
+COPY /etc /data/etc
 COPY /scripts $DIR_SCRIPTS
 COPY /conf.d/ $DIR_SAMBA_CONF
 COPY /gpo /$DIR_GPO
