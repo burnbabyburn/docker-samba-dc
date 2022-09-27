@@ -194,6 +194,8 @@ config() {
   # If grep ID /etc/os-release != alpine
   # BINDUSER=named
   # Chronyuser=chrony
+  cat /etc/os-release
+  cat /etc/passwd
   if [ ! "$(grep '^ID' /etc/os-release | cut -d '=' -f2)" = 'alpine' ]; then
     BINDUSERGROUP="bind"
     CHRONYUSERGROUP="_chrony"
@@ -222,7 +224,7 @@ config() {
     SAMBA_START_PARAM="${SAMBA_START_PARAM} -i ${SAMBA_DEBUG_OPTION}"
   else
     BIND9_START_PARAM="${BIND9_START_PARAM} -g ${SAMBA_DEBUG_OPTION}"
-    SAMBA_START_PARAM="${SAMBA_START_PARAM} -F --debug-stdout -d ${DEBUG_LEVEL}"
+    SAMBA_START_PARAM="${SAMBA_START_PARAM} -F --debug-stdout ${SAMBA_DEBUG_OPTION}"
     CHRONY_START_PARAM="${CHRONY_START_PARAM} -dd -L ${DEBUG_LEVEL}"
   fi
   if ! printf "%s" "${BIND_INTERFACES}" | grep "127.0.0.1\|lo\|::1" >> /dev/null; then
