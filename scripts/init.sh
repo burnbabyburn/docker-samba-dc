@@ -163,7 +163,7 @@ config() {
     export ENABLE_DNSFORWARDER="${ENABLE_DNSFORWARDER_FORMATED}"
   fi
 
-  if [ ! "$(printf "%s" "${BIND9_VALIDATE_EXCEPT}" | sed -e "s/^.*\(.\)$/\1/")" = ';' ]; then
+  if  [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ] && [ ! "$(printf "%s" "${BIND9_VALIDATE_EXCEPT}" | sed -e "s/^.*\(.\)$/\1/")" = ';' ]; then
     BIND9_VALIDATE_EXCEPT_FORMATED=""
     # Do not add "" to BIND9_VALIDATE_EXCEPT
     for except in ${BIND9_VALIDATE_EXCEPT}; do
