@@ -247,7 +247,7 @@ appSetup () {
 
   # We removed the initial /etc/bind dir so we need to generate a new rndc.key
   rndc-confgen -a
-  chown "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${ FILE_BIND9_RNDC_KEY}"
+  chown "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${FILE_BIND9_RNDC_KEY}"
 
   chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF}"
   chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_LOCAL}"
