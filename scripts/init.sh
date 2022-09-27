@@ -194,17 +194,15 @@ config() {
   # If grep ID /etc/os-release != alpine
   # BINDUSER=named
   # Chronyuser=chrony
-  cat /etc/os-release
-  cat /etc/passwd
-  if [ ! "$(grep '^ID=' /etc/os-release | cut -d '=' -f2)" = 'alpine' ]; then
-    BINDUSERGROUP="bind"
-    CHRONYUSERGROUP="_chrony"
-	SED_PARAM="--follow-symlinks -e"
-  else
+  if [ $(grep "^ID=" "/etc/os-release" | cut -d '=' -f2) = "alpine" ]; then
     BINDUSERGROUP="named"
     CHRONYUSERGROUP="chrony"
 	SED_PARAM="-e"
     export LDB_MODULES_PATH="/usr/lib/samba/ldb/"
+  else
+    BINDUSERGROUP="bind"
+    CHRONYUSERGROUP="_chrony"
+	SED_PARAM="--follow-symlinks -e"
   fi
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
 
