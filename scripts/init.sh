@@ -204,6 +204,9 @@ config() {
     CHRONYUSERGROUP="_chrony"
 	SED_PARAM='--follow-symlinks -e'
   fi
+  #chrony as root in docker action
+  if ! uname -a | grep -q "azure"; then CHRONYUSERGROUP="root"; fi
+
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
 
   SAMBA_START_PARAM="--no-process-group --configfile ${FILE_SAMBA_CONF}"
@@ -323,7 +326,7 @@ appSetup () {
     if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_RUN})"; fi
     chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_RUN}"
     chmod 750 "${DIR_CHRONY_RUN}"
-	chown -LR "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}/"
+	#chown -LR "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}/"
   fi
 
   #Configure /etc/supervisor/conf.d/supervisord.conf
