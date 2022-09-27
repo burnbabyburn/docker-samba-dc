@@ -428,7 +428,7 @@ appSetup () {
   fi
 
   # If external/smb.conf doesn't exist, this is new container with empty volume, we're not just moving to a new container
-  if [ ! -f "${FILE_EXTERNAL_SAMBA_CONF}" ]; then
+  if [ ! -f "${/data/setup.done}" ]; then
     if [ -f "${FILE_SAMBA_CONF}" ]; then mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig; fi
     if [ "${JOIN}" = true ]; then
       set -- "$@" "${LDOMAIN}"
@@ -617,6 +617,7 @@ appSetup () {
   fi
   # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
 #  backupConfig
+touch /data/setup.done
   appFirstStart
 }
 
@@ -634,12 +635,12 @@ appFirstStart () {
   # running a samba_dnsupdate manually adds the missing entries.
   s=1
   until [ $s = 0 ]; do
-    host -t A "${HOSTNAME}.${LDOMAIN}" && smbclient -N -L 127.0.0.1 >> /dev/null && s=0 && break || s=$? printf "Waiting for samba to start" && sleep 10s
+    host -t A "${HOSTNAME}.${LDOMAIN}" && smbclient -N -L 127.0.0.1 "${SAMBA_DEBUG_OPTION}" >> /dev/null && s=0 && break || s=$? printf "Waiting for samba to start" && sleep 10s
   done; (exit $s)
   #printf "DNS: Testing Dynamic DNS Updates"; if ! samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}"; then printf "DNS: Testing Dynamic DNS Updates FAILED"; exit 1; fi
   #Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
   printf "rpcclient: Connect as %s" "${DOMAIN_USER}"; if ! rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1; then printf "rpcclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
-  printf "smbclient: Connect as %s" "${DOMAIN_USER}"; if ! smbclient -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L 127.0.0.1 >> /dev/null; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
+  printf "smbclient: Connect as %s" "${DOMAIN_USER}"; if ! smbclient -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L 127.0.0.1 "${SAMBA_DEBUG_OPTION}" >> /dev/null; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
   printf "Kerberos: Connect as %s" "${DOMAIN_USER}"; if printf "%s" "${DOMAIN_PASS}" | kinit -V "${DOMAIN_USER}"; then printf 'OK'; klist; kdestroy; else printf "Kerberos: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
   echo "NTP: Check timesource and sync"; if ! chronyc sources || ! chronyc tracking; then printf "NTP: Check timesource and sync FAILED"; exit 1; fi
   printf "DNS: Check _ldap._tcp.%s" "${LDOMAIN}"; if ! host -t SRV _ldap._tcp."${LDOMAIN}"; then printf "DNS: Check _ldap._tcp.%s FAILED" "${LDOMAIN}"; exit 1; fi
