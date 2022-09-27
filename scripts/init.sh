@@ -298,8 +298,10 @@ appSetup () {
 
   #Setup chrony log dir
   if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "${DIR_CHRONY_LOG}"; fi
-  chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LOG}"
+  chown -LR "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LOG}/"
   chmod 750 "${DIR_CHRONY_LOG}";
+  ls -ahl /data/log/chrony
+  ls -ahl /var/log/chrony
 
   if [ ! -d "${DIR_CHRONY_LIB}" ]; then mkdir "${DIR_CHRONY_LIB}"; fi
   chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LIB}"
