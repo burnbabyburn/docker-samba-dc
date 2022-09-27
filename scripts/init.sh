@@ -617,6 +617,7 @@ appSetup () {
   fi
   # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
 #  backupConfig
+ls -ahl /etc/
 touch /data/setup.done
   appFirstStart
 }

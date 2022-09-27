@@ -1,0 +1,99 @@
+version: '3.7'
+
+networks:
+  samba-net:
+    name: samba-net2
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 172.102.0.0/16
+    driver_opts:
+      com.docker.network.bridge.name: br_samba
+
+#volumes:
+#  samba01:
+#  samba02:
+
+services:
+  samba-alpine:
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
+    container_name: samba-alpine-dc01
+#    volumes:
+#      - 'samba01:/data'
+    environment:
+      - TZ=Europe/Berlin
+      - DOMAIN=ALPINESAM.DOM
+      - DOMAIN_NETBIOS=WORKGROUP
+      - DOMAIN_PASS=Pa11w0rd!
+#      - HOSTIP=${HOST_IP}
+      - HOSTNAME=dc01
+      - JOIN=false
+#      - JOIN_SITE=Site0
+      - NTPSERVERLIST=0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org
+      - FEATURE_RECYCLEBIN=true
+      - FEATURE_KERBEROS_TGT=true
+      - DISABLE_MD5=true
+      - DISABLE_PWCOMPLEXITY=true
+      - ENABLE_CUPS=false
+      - ENABLE_DNSFORWARDER=8.8.8.8
+      - ENABLE_DYNAMIC_PORTRANGE=49152-49170
+      - ENABLE_INSECURELDAP=true
+      - ENABLE_LAPS_SCHEMA=true
+#      - ENABLE_LOGS=true
+      - ENABLE_MSCHAPV2=true
+      - ENABLE_RFC2307=true
+      - TLS_ENABLE=false
+      - DEBUG_ENABLE=true
+      - DEBUG_LEVEL=1
+      - BIND_INTERFACES_ENABLE=false
+      - BIND_INTERFACES=eth1
+    networks:
+      samba-net2:
+        ipv4_address: 172.102.1.100
+    dns_search:
+      - SAM.DOM
+    dns:
+      - 127.0.0.1
+    hostname: dockersamba01
+    domainname: ALPINESAM.DOM
+    privileged: true
+
+  samba-alpine-join:
+    build: .
+    container_name: samba-alpine-dc02
+#    volumes:
+#      - 'samba02:/data'
+    environment:
+      - TZ=Europe/Berlin
+      - DOMAIN=ALPINESAM.DOM
+      - DOMAIN_NETBIOS=WORKGROUP
+      - DOMAIN_PASS=Pa11w0rd!
+#      - HOSTNAME=dc02
+      - JOIN=true
+#      - JOIN_SITE=Site1
+      - NTPSERVERLIST=172.102.1.100
+      - DISABLE_MD5=true
+#      - ENABLE_CUPS=false
+      - ENABLE_DNSFORWARDER=172.102.1.100
+      - ENABLE_DYNAMIC_PORTRANGE=49152-49170
+      - ENABLE_INSECURELDAP=false
+      - ENABLE_LOGS=true
+      - ENABLE_MSCHAPV2=true
+      - TLS_ENABLE=false
+      - DEBUG_ENABLE=true
+      - DEBUG_LEVEL=1
+      - BIND_INTERFACES_ENABLE=false
+      - BIND_INTERFACES=eth1
+    networks:
+      samba-net2:
+        ipv4_address: 172.102.2.200
+    dns_search:
+      - SAM.DOM
+    dns:
+      - 127.0.0.1
+      - 172.102.1.100
+    hostname: dockersamba02
+    domainname: ALPINESAM.DOM
+    privileged: true
