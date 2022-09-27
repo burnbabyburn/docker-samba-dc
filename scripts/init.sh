@@ -322,7 +322,7 @@ appSetup () {
   # Configure Bind9 files
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
-  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]; then sed -e "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
+  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ] && grep -q "validate-except" "${FILE_BIND9_CONF_OPTIONS}"; then sed -e "/^[[:space:]]*}/i\  validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
   cat "${FILE_BIND9_CONF_OPTIONS}"
   # https://www.elastic2ls.com/blog/loading-from-master-file-managed-keys-bind-failed/
   if ! grep -q "/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi
