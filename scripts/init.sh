@@ -301,8 +301,8 @@ appSetup () {
   if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_LOG})"; fi
   chown -LR "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LOG}/"
   chmod 750 "${DIR_CHRONY_LOG}";
-  ls -ahl /data/log/chrony
-  ls -ahl /var/log/chrony
+ ls -ahl /etc/chrony
+ ls -ahl /data/etc/chrony
 
   if [ ! -d "${DIR_CHRONY_LIB}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_LIB})"; fi
   chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LIB}"
@@ -611,8 +611,6 @@ appSetup () {
   fi
   # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
 #  backupConfig
- ls -ahl /etc/chrony
- ls -ahl /data/etc/chrony
   appFirstStart
 }
 
