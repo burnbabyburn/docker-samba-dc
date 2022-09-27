@@ -301,16 +301,15 @@ appSetup () {
   chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}"
   chmod 755 "${DIR_CHRONY_RUN}"
   chmod 644 "${FILE_CHRONY}"
+
+  if [ ! -f "${FILE_CHRONY_KEY}" ]; then chronyc keygen 1 SHA1 256 >> "$(readlink -f ${FILE_CHRONY_KEY})"; fi
   chmod 640 "${FILE_CHRONY_KEY}"
 
   #Setup chrony log dir
   if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_LOG})"; fi
   chown -LR "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LOG}/"
   chmod 750 "${DIR_CHRONY_LOG}"
- ls -ahl /etc/chrony
- ls -ahl /data/etc/chrony
-  ls -ahl /data/etc/
-ls -ahl /etc/
+
   if [ ! -d "${DIR_CHRONY_LIB}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_LIB})"; fi
   chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LIB}"
   chmod 750 "${DIR_CHRONY_LIB}"
@@ -337,10 +336,10 @@ ls -ahl /etc/
   # Configure Bind9 files
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed ${SED_PARAM} "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
-  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ] && grep -q "validate-except" "${FILE_BIND9_CONF_OPTIONS}"; then sed ${SED_PARAM} "/^[[:space:]]*}/i\  validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
+  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ] && ! grep -q "validate-except" "${FILE_BIND9_CONF_OPTIONS}"; then sed ${SED_PARAM} "/^[[:space:]]*}/i\  validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
   cat "${FILE_BIND9_CONF_OPTIONS}"
   # https://www.elastic2ls.com/blog/loading-from-master-file-managed-keys-bind-failed/
-  if ! grep -q "/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi
+  #if ! grep -q "/data/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi
 
   # Configure chrony files
   if grep -q "{{ DIR_CHRONY_CONFD }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ DIR_CHRONY_CONFD }}:${DIR_CHRONY_CONFD}:" -i "${FILE_CHRONY}"; fi
@@ -559,7 +558,7 @@ ls -ahl /etc/
     cp "${FILE_BIND9_CONF_GEN_SAMBA}" "${FILE_BIND9_CONF_SAMBA}"
 	chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_SAMBA}"
     if ! grep -q "${FILE_BIND9_CONF_SAMBA}" "${FILE_BIND9_CONF_LOCAL}";then
-	  printf "include \"%s\";" "${FILE_BIND9_CONF_SAMBA}" > "${FILE_BIND9_CONF_LOCAL}"
+	  printf "include \"%s\";" "${FILE_BIND9_CONF_SAMBA}" >> "${FILE_BIND9_CONF_LOCAL}"
 	fi
     sed ${SED_PARAM} "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_CONF_SAMBA}"
 	chown -L root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_SAMBA}"
