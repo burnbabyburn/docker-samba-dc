@@ -75,36 +75,33 @@ config() {
   IMAP_GID_START=${IMAP_GID_START:-$IMAP_ID_START}
 
   # DIR_GPO, DIR_SAMBA_CONF, DIR_LDIF and DIR_SCRIPTS need to be changed in the Dockerfile
-  
+
   # File and directory locations
   DIR_BIND9=/etc/bind
+  DIR_BIND9_CACHE=/var/cache/bind
+  DIR_BIND9_LIB=/var/lib/bind
   DIR_BIND9_LOG=/var/log/bind
   DIR_BIND9_RUN=/run/named
-  DIR_BIND9_CACHE=/var/cache/bind
-  DIR_CHRONY_CONF=/etc/chrony/conf.d
+  DIR_CHRONY=/etc/chrony
+  DIR_CHRONY_LIB=/var/lib/chrony
   DIR_CHRONY_LOG=/var/log/chrony
-  DIR_CHRONY_NTSDUMP=/var/lib/chrony
   DIR_CHRONY_RUN=/run/chrony
   DIR_CHRONY_SOCK=/var/lib/samba/ntp_signd
   DIR_CHRONY_SRC=/etc/chrony/sources.d
+  DIR_SAMBA_CACHE=/var/cache/samba
   DIR_SAMBA_CSHARE=/var/lib/samba/share_c
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba
   DIR_SAMBA_ETC=/etc/samba
-  FILE_CHRONY=/etc/chrony/chrony.conf
   FILE_CHRONY_DRIFT=/var/lib/chrony/chrony.drift
-  FILE_CHRONY_KEY=/etc/chrony/chrony.keys
   FILE_KRB5=/etc/krb5.conf
   FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
   FILE_OPENVPNCONF=/docker.ovpn
   FILE_SAMBA_LOG=/var/log/samba/smb.log
-  # Alpine /etc/supervisord.conf
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
-  # Alpine /etc/supervisor.d/*.ini
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
 
-  DIR_EXTERNAL="${DIR_SAMBA_ETC}/external"
-  DIR_EXTERNAL_BIND9="${DIR_EXTERNAL}/bind"
+  DIR_CHRONY_CONFD="${DIR_CHRONY}/conf.d"
   DIR_SAMBA_ADMIN="${DIR_SAMBA_CSHARE}/windows"
   DIR_SAMBA_EVENTLOG="${DIR_SAMBA_ADMIN}/system32/config"
   DIR_SAMBA_NETLOGON="${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts"
@@ -112,8 +109,10 @@ config() {
   DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private"
   DIR_SAMBA_SYSVOL="${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}"
   FILE_BIND9_CONF="${DIR_BIND9}/named.conf"
+  FILE_BIND9_CONF_GEN_SAMBA="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
   FILE_BIND9_CONF_LOCAL="${DIR_BIND9}/named.conf.local"
   FILE_BIND9_CONF_LOG="${DIR_BIND9}/log.conf"
+  FILE_BIND9_CONF_OPTIONS="${DIR_BIND9}/named.conf.options"
   FILE_BIND9_LOG_AUTH_SERVERS="${DIR_BIND9_LOG}/auth_servers"
   FILE_BIND9_LOG_CLIENT_SECURITY="${DIR_BIND9_LOG}/client_security"
   FILE_BIND9_LOG_DDNS="${DIR_BIND9_LOG}/ddns"
@@ -125,9 +124,9 @@ config() {
   FILE_BIND9_LOG_RATE_LIMITING="${DIR_BIND9_LOG}/rate_limiting"
   FILE_BIND9_LOG_RPZ="${DIR_BIND9_LOG}/rpz"
   FILE_BIND9_LOG_ZONE_TRANSFERS="${DIR_BIND9_LOG}/zone_transfers"
-  FILE_BIND9_OPTIONS="${DIR_BIND9}/named.conf.options"
-  FILE_BIND9_SAMBA_CONF="${DIR_BIND9}/samba-named.conf"
-  FILE_BIND9_SAMBA_GENCONF="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
+  FILE_BIND9_RNDC_KEY="${DIR_BIND9}/rndc.key"
+  FILE_CHRONY="${DIR_CHRONY}/chrony.conf"
+  FILE_CHRONY_KEY="${DIR_CHRONY}/chrony.keys"
   FILE_CHRONY_PID="${DIR_CHRONY_RUN}/chronyd.pid"
   FILE_PKI_CA="${DIR_SAMBA_PRIVATE}/tls/ca.pem"
   FILE_PKI_CERT="${DIR_SAMBA_PRIVATE}/tls/cert.pem"
@@ -190,7 +189,7 @@ config() {
   # shellcheck source=/dev/null
   . /"${DIR_SCRIPTS}"/helper.sh
 
-  # If grep ID /etc/os-release != alpine 
+  # If grep ID /etc/os-release != alpine
   # BINDUSER=named
   # Chronyuser=chrony
   if [ ! "$(grep '^ID' /etc/os-release | cut -d '=' -f2)" = 'alpine' ]; then
@@ -199,17 +198,17 @@ config() {
   else
     BINDUSERGROUP="named"
     CHRONYUSERGROUP="chrony"
-	export LDB_MODULES_PATH="/usr/lib/samba/ldb/"
+    export LDB_MODULES_PATH="/usr/lib/samba/ldb/"
   fi
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
-  
+
   SAMBA_START_PARAM="--no-process-group --configfile ${FILE_SAMBA_CONF}"
   CHRONY_START_PARAM="-n -u ${CHRONYUSERGROUP} -f ${FILE_CHRONY}"
   BIND9_START_PARAM="-f -u ${BINDUSERGROUP} -c ${FILE_BIND9_CONF}"
-  
+
   if cat /sys/module/ipv6/parameters/disable;then
-    #sed -e "s/listen-on-v6 { any; };/listen-on-v6 { none; };/" -i "${FILE_BIND9_OPTIONS}"
-	BIND9_START_PARAM="${BIND9_START_PARAM} -4"
+    #sed -e "s/listen-on-v6 { any; };/listen-on-v6 { none; };/" -i "${FILE_BIND9_CONF_OPTIONS}"
+    BIND9_START_PARAM="${BIND9_START_PARAM} -4"
     CHRONY_START_PARAM="${CHRONY_START_PARAM} -4"
   else
     if [ "${HOSTIPV6}" != "NONE" ]; then set -- "$@" "--host-ip6=${HOSTIPV6}";  fi
@@ -218,11 +217,11 @@ config() {
   # if file loging is active, named can not log to stdout (-g), samba needs to be run with -i instead of -F
   if [ "${ENABLE_LOGS}" = true ]; then
     BIND9_START_PARAM="${BIND9_START_PARAM} ${SAMBA_DEBUG_OPTION}"
-	SAMBA_START_PARAM="${SAMBA_START_PARAM} -i ${SAMBA_DEBUG_OPTION}"
+    SAMBA_START_PARAM="${SAMBA_START_PARAM} -i ${SAMBA_DEBUG_OPTION}"
   else
     BIND9_START_PARAM="${BIND9_START_PARAM} -g ${SAMBA_DEBUG_OPTION}"
-	SAMBA_START_PARAM="${SAMBA_START_PARAM} -F --debug-stdout -d ${DEBUG_LEVEL}"
-	CHRONY_START_PARAM="${CHRONY_START_PARAM} -dd -L ${DEBUG_LEVEL}"
+    SAMBA_START_PARAM="${SAMBA_START_PARAM} -F --debug-stdout -d ${DEBUG_LEVEL}"
+    CHRONY_START_PARAM="${CHRONY_START_PARAM} -dd -L ${DEBUG_LEVEL}"
   fi
   if ! printf "%s" "${BIND_INTERFACES}" | grep "127.0.0.1\|lo\|::1" >> /dev/null; then
     printf "
@@ -241,34 +240,22 @@ appSetup () {
     cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
     printf "%s" "${TZ}" >/etc/timezone
   fi
-  
-  # We removed the initial /etc/bind dir so we need to generate a new rndc.key
-  rndc-confgen -a -u "${BINDUSERGROUP}"
-  
+
   ## Setup filesystem and config files
-  # Setup external dir - Backup dir for configs
-  if [ ! -d "${DIR_EXTERNAL}" ]; then mkdir "${DIR_EXTERNAL}"; fi
   # Remove krb5.conf will be replaced by a samba generated one
   if [ ! -f "${FILE_KRB5}" ]; then rm -f "${FILE_KRB5}"; fi
 
-  # PID and session.key dir for bind9
-  if [ ! -d "${DIR_BIND9_CACHE}" ]; then mkdir "${DIR_BIND9_CACHE}"; fi
-  chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_CACHE}"
-  chmod 775 "${DIR_BIND9_CACHE}";
-  
-  if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "${DIR_BIND9_RUN}"; fi
-  chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"
+  # We removed the initial /etc/bind dir so we need to generate a new rndc.key
+  rndc-confgen -a
+  chown "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${ FILE_BIND9_RNDC_KEY}"
 
-  # PID and chronyd.sock dir for chrony
-  if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "${DIR_CHRONY_RUN}"; fi
-  chmod 750 "${DIR_CHRONY_RUN}";
-
-  #Setup chrony log dir
-  if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "${DIR_CHRONY_LOG}"; fi
-  chown "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LOG}"
+  chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF}"
+  chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_LOCAL}"
+  chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_LOG}"
+  chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_OPTIONS}"
+  chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_GEN_SAMBA}"
 
   # Setup bind9 log dir and logfiles
-  if [ ! -d "${DIR_BIND9_LOG}" ]; then mkdir "${DIR_BIND9_LOG}"; fi
   touch "${FILE_BIND9_LOG_AUTH_SERVERS}"
   touch "${FILE_BIND9_LOG_CLIENT_SECURITY}"
   touch "${FILE_BIND9_LOG_DDNS}"
@@ -280,42 +267,69 @@ appSetup () {
   touch "${FILE_BIND9_LOG_RATE_LIMITING}"
   touch "${FILE_BIND9_LOG_RPZ}"
   touch "${FILE_BIND9_LOG_ZONE_TRANSFERS}"
-  # Slash is importants
-  chown -R "${BINDUSERGROUP}" "${DIR_BIND9_LOG}/"
-  chmod u+rw "${DIR_BIND9_LOG}"
-  
+
+  chown -LR root:"${BINDUSERGROUP}" "${DIR_BIND9_LOG}"
+  chmod 770 "${DIR_BIND9_LOG}";
+
   #Fileperm on /etc/bind
-  chown -R root:"${BINDUSERGROUP}" "${DIR_BIND9}/"
-  chmod -R 755 "${DIR_BIND9}"
-  
+  chown -L root:"${BINDUSERGROUP}" "${DIR_BIND9}"
+  chmod 755 "${DIR_BIND9}"
+  chmod g=s "${DIR_BIND9}"
+
+  # PID and session.key dir for bind9
+  # -R leads to only chowning the symlink not the folder behind it
+  chown -L root:"${BINDUSERGROUP}" "${DIR_BIND9_CACHE}"
+  chmod 775 "${DIR_BIND9_CACHE}";
+
+  chown -L root:"${BINDUSERGROUP}" "${DIR_BIND9_LIB}"
+  chmod 775 "${DIR_BIND9_LIB}";
+
+  if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "${DIR_BIND9_RUN}"; fi
+  chown -L root:"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"
+  chmod 770 "${DIR_BIND9_RUN}";
+
+  if [ ! -d "${DIR_CHRONY}" ]; then mkdir "${DIR_CHRONY}"; fi
+  chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}"
+
+  #Setup chrony log dir
+  if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "${DIR_CHRONY_LOG}"; fi
+  chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LOG}"
+  chmod 750 "${DIR_CHRONY_LOG}";
+
+  if [ ! -d "${DIR_CHRONY_LIB}" ]; then mkdir "${DIR_CHRONY_LIB}"; fi
+  chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LIB}"
+  chmod 750 "${DIR_CHRONY_LIB}";
+
+  if [ ! -d "${DIR_CHRONY_CONFD}" ]; then mkdir "${DIR_CHRONY_CONFD}"; fi
+  if [ ! -d "${DIR_CHRONY_SRC}" ]; then mkdir "${DIR_CHRONY_SRC}"; fi
+
+  # If used on azure image chrony breaks (github actions)
+  # Fatal error : Could not open /run/chrony/chronyd.pid : Permission denied
+  # INFO exited: chrony (exit status 1; not expected)
+  # Wrong owner of /run/chrony (UID != 102) - the azure image complains but with a chowned dir chrony just crashes
+  if ! uname -a | grep -q "azure"; then
+    # PID and chronyd.sock dir for chrony
+    if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "${DIR_CHRONY_RUN}"; fi
+    chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_RUN}"
+    chmod 750 "${DIR_CHRONY_RUN}";
+  fi
+
   #Configure /etc/supervisor/conf.d/supervisord.conf
   sed -e "s:{{ SAMBA_START_PARAM }}:${SAMBA_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ BIND9_START_PARAM }}:${BIND9_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   sed -e "s:{{ CHRONY_START_PARAM }}:${CHRONY_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
-  # Configure /etc/nsswitch.conf 
-  # Alpine does not have one
-#  sed -i "s,passwd:.*,passwd:         files winbind,g" "${FILE_NSSWITCH}"
-#  sed -i "s,group:.*,group:          files winbind,g" "${FILE_NSSWITCH}"
-#  sed -i "s,hosts:.*,hosts:          files dns,g" "${FILE_NSSWITCH}"
-#  sed -i "s,networks:.*,networks:      files dns,g" "${FILE_NSSWITCH}"
-  
   # Configure Bind9 files
-  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_OPTIONS}"; fi
+  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
-  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]; then sed -e "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_OPTIONS}"; fi
+  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ]; then sed -e "/^[[:space:]]*}/i\      validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
   # https://www.elastic2ls.com/blog/loading-from-master-file-managed-keys-bind-failed/
   if ! grep -q "/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi
 
   # Configure chrony files
-  # If used on azure image chrony breaks (github actions)
-  # Fatal error : Could not open /run/chrony/chronyd.pid : Permission denied
-  # INFO exited: chrony (exit status 1; not expected)
-  # Wrong owner of /run/chrony (UID != 102) - the azure image complains but with a chowned dir chrony just crashes
-  if ! uname -a | grep -q "azure"; then chown "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_RUN}"; fi
-  if grep -q "{{ DIR_CHRONY_CONF }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONF }}:${DIR_CHRONY_CONF}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_CONFD }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONFD }}:${DIR_CHRONY_CONFD}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_NTSDUMP }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_NTSDUMP }}:${DIR_CHRONY_NTSDUMP}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_LIB }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LIB }}:${DIR_CHRONY_LIB}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
@@ -335,7 +349,7 @@ appSetup () {
   set -- "--dns-backend=BIND9_DLZ" \
          "--option=server services=-dns" \
          "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool" \
-		 "--option=enable asu support = no"
+         "--option=enable asu support = no"
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#NAMERESOLVEORDER
   set -- "$@" "--option=name resolve order = wins host bcast"
   # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
@@ -372,7 +386,7 @@ appSetup () {
     set -- "$@" "--option=log file = ${FILE_SAMBA_LOG}"
     set -- "$@" "--option=max log size = 10000"
     set -- "$@" "--option=log level = ${DEBUG_LEVEL}"
-	set -- "$@" "--option=logging = file"
+    set -- "$@" "--option=logging = file"
     sed -i '/log[[:space:]]/s/^#//g' "$FILE_CHRONY"
     printf "include \"%s\";\n" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
   fi
@@ -406,7 +420,7 @@ appSetup () {
       set -- "$@" "DC"
       set -- "$@" "-U${DOMAIN_NETBIOS}\\${DOMAIN_USER}"
       set -- "$@" "--password=${DOMAIN_PASS}"
-	  s=1
+      s=1
       until [ $s = 0 ]; do
         samba-tool domain join "$@" && s=0 && break || s=$? && printf "Couldn't join...trying again in 10s" && sleep 10s
       done; (exit $s)
@@ -463,7 +477,7 @@ appSetup () {
       fi
 
       if [ "${FEATURE_KERBEROS_TGT}" = true ]; then EnableChangeKRBTGTSupervisord; fi
-	  if [ "${ENABLE_EVENTLOG_SAMBA}" = true ] && [ "${ENABLE_LOGS}" = true ]; then EnableEventlogSupervisord; fi
+      if [ "${ENABLE_EVENTLOG_SAMBA}" = true ] && [ "${ENABLE_LOGS}" = true ]; then EnableEventlogSupervisord; fi
 
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
       if [ "${ENABLE_RFC2307}" = true ]; then
@@ -477,7 +491,7 @@ appSetup () {
       # https://wiki.samba.org/index.php/Samba_AD_schema_extensions
       # https://gist.github.com/hsw0/5132d5dabd4384108b48
       if [ "${FEATURE_SCHEMA_SSH}" = true ]; then
-	    printf "Trying to add SSH LDAP-Schema to AD"
+        printf "Trying to add SSH LDAP-Schema to AD"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SSH1}.j2" > "${FILE_SAMBA_SCHEMA_SSH1}"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
@@ -489,7 +503,7 @@ appSetup () {
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH3}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
       fi
       if [ "${FEATURE_SCHEMA_SUDO}" = true ]; then
-	    printf "Trying to add SUDO LDAP-Schema to AD"
+        printf "Trying to add SUDO LDAP-Schema to AD"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SUDO1}.j2" > "${FILE_SAMBA_SCHEMA_SUDO1}"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
@@ -500,7 +514,7 @@ appSetup () {
       # https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507'
       # Microsoft Local Administrator Password Solution (LAPS) https://www.microsoft.com/en-us/download/details.aspx?id=46899
       if [ "${FEATURE_SCHEMA_LAPS}" = true ]; then
-	    printf "Trying to add LAPS LDAP-Schema to AD"
+        printf "Trying to add LAPS LDAP-Schema to AD"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
           "${FILE_SAMBA_SCHEMA_LAPS1}.j2" > "${FILE_SAMBA_SCHEMA_LAPS1}"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
@@ -517,25 +531,24 @@ appSetup () {
       if [ "${DOMAIN_PWD_MAX_AGE}" != 43 ]; then samba-tool domain passwordsettings set --max-pwd-age="$DOMAIN_PWD_MAX_AGE" "${SAMBA_DEBUG_OPTION}"; fi
       if [ "${DOMAIN_PWD_MIN_AGE}" != 1 ]; then samba-tool domain passwordsettings set --min-pwd-age="$DOMAIN_PWD_MIN_AGE" "${SAMBA_DEBUG_OPTION}"; fi
       if [ "${DOMAIN_PWD_MIN_LENGTH}" != 7 ]; then samba-tool domain passwordsettings set --min-pwd-length="$DOMAIN_PWD_MIN_LENGTH" "${SAMBA_DEBUG_OPTION}"; fi
-	  if [ "${DOMAIN_PWD_ADMIN_NO_EXP}" = true ] && [ "${FEATURE_SCHEMA_LAPS}" = false ]; then samba-tool user setexpiry "${DOMAIN_USER}" --noexpiry "${SAMBA_DEBUG_OPTION}"; fi 
+      if [ "${DOMAIN_PWD_ADMIN_NO_EXP}" = true ] && [ "${FEATURE_SCHEMA_LAPS}" = false ]; then samba-tool user setexpiry "${DOMAIN_USER}" --noexpiry "${SAMBA_DEBUG_OPTION}"; fi
     fi
-	# End of join or provision
+    # End of join or provision
 
     ## Configure files generated by SAMBA setup
     # Add Debug to dynamically loadable zones (DLZ)
-    cp "${FILE_BIND9_SAMBA_GENCONF}" "${FILE_BIND9_SAMBA_CONF}"
-    printf "include \"%s\";" "${FILE_BIND9_SAMBA_CONF}" > "${FILE_BIND9_CONF_LOCAL}"
-    sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_SAMBA_CONF}"
-	
-    cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
+    printf "include \"%s\";" "${FILE_BIND9_CONF_GEN_SAMBA}" > "${FILE_BIND9_CONF_LOCAL}"
+    sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_CONF_GEN_SAMBA}"
+
+    ln -s "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
     if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "${DIR_CHRONY_SOCK}"; fi
     chmod 750 "${DIR_CHRONY_SOCK}"
     chown root:"${CHRONYUSERGROUP}" "${DIR_CHRONY_SOCK}"
-	
-	if [ ! -d "${DIR_SAMBA_CSHARE}" ]; then
+
+    if [ ! -d "${DIR_SAMBA_CSHARE}" ]; then
       mkdir -p "${DIR_SAMBA_EVENTLOG}"
       mkdir -p "${DIR_SAMBA_ADMIN}"
-	  mkdir -p "${DIR_SAMBA_PRINTDRIVER}"
+      mkdir -p "${DIR_SAMBA_PRINTDRIVER}"
     fi
 
     # https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
@@ -570,8 +583,8 @@ appSetup () {
       SetKeyValueFilePattern 'printcap name' '/dev/null'
       SetKeyValueFilePattern 'disable spoolss' 'yes'
     fi
-	
-	#Create symlink for wsdd2
+
+    #Create symlink for wsdd2
     ln -s /etc/samba/etc/samba/smb.conf  /etc/samba/
     # Stop VPN & write supervisor service
     if [ "${JOIN_SITE_VPN}" = true ]; then
