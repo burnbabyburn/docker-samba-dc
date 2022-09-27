@@ -428,7 +428,7 @@ appSetup () {
   fi
 
   # If external/smb.conf doesn't exist, this is new container with empty volume, we're not just moving to a new container
-  if [ ! -f "${/data/setup.done}" ]; then
+  if [ ! -f "/data/setup.done" ]; then
     if [ -f "${FILE_SAMBA_CONF}" ]; then mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig; fi
     if [ "${JOIN}" = true ]; then
       set -- "$@" "${LDOMAIN}"
