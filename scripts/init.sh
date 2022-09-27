@@ -271,7 +271,7 @@ appSetup () {
   touch "${FILE_BIND9_LOG_RPZ}"
   touch "${FILE_BIND9_LOG_ZONE_TRANSFERS}"
 
-  chown -LR root:"${BINDUSERGROUP}" "${DIR_BIND9_LOG}"
+  chown -LR root:"${BINDUSERGROUP}" "${DIR_BIND9_LOG}/"
   chmod 770 "${DIR_BIND9_LOG}";
 
   #Fileperm on /etc/bind
