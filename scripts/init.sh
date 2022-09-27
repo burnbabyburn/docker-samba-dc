@@ -274,7 +274,7 @@ appSetup () {
   #Fileperm on /etc/bind
   chown -L root:"${BINDUSERGROUP}" "${DIR_BIND9}"
   chmod 755 "${DIR_BIND9}"
-  chmod g=s "${DIR_BIND9}"
+  chmod g=rxs "${DIR_BIND9}"
 
   # PID and session.key dir for bind9
   # -R leads to only chowning the symlink not the folder behind it
