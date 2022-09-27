@@ -196,7 +196,7 @@ config() {
   # Chronyuser=chrony
   cat /etc/os-release
   cat /etc/passwd
-  if [ ! "$(grep '^ID' /etc/os-release | cut -d '=' -f2)" = 'alpine' ]; then
+  if [ ! "$(grep '^ID=' /etc/os-release | cut -d '=' -f2)" = 'alpine' ]; then
     BINDUSERGROUP="bind"
     CHRONYUSERGROUP="_chrony"
   else
@@ -322,27 +322,27 @@ appSetup () {
   fi
 
   #Configure /etc/supervisor/conf.d/supervisord.conf
-  sed -e "s:{{ SAMBA_START_PARAM }}:${SAMBA_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  sed -e "s:{{ BIND9_START_PARAM }}:${BIND9_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  sed -e "s:{{ CHRONY_START_PARAM }}:${CHRONY_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -i --follow-symlinks -e "s:{{ SAMBA_START_PARAM }}:${SAMBA_START_PARAM}:" "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -i --follow-symlinks -e "s:{{ BIND9_START_PARAM }}:${BIND9_START_PARAM}:" "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -i --follow-symlinks -e "s:{{ CHRONY_START_PARAM }}:${CHRONY_START_PARAM}:" "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
   # Configure Bind9 files
-  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
+  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed -i --follow-symlinks -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" "${FILE_BIND9_CONF_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
-  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ] && grep -q "validate-except" "${FILE_BIND9_CONF_OPTIONS}"; then sed -e "/^[[:space:]]*}/i\  validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
+  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ] && grep -q "validate-except" "${FILE_BIND9_CONF_OPTIONS}"; then sed -i --follow-symlinks -e "/^[[:space:]]*}/i\  validate-except { ${BIND9_VALIDATE_EXCEPT} };" "${FILE_BIND9_CONF_OPTIONS}"; fi
   cat "${FILE_BIND9_CONF_OPTIONS}"
   # https://www.elastic2ls.com/blog/loading-from-master-file-managed-keys-bind-failed/
   if ! grep -q "/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi
 
   # Configure chrony files
-  if grep -q "{{ DIR_CHRONY_CONFD }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONFD }}:${DIR_CHRONY_CONFD}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_LIB }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LIB }}:${DIR_CHRONY_LIB}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_PID }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_PID }}:${FILE_CHRONY_PID}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_CONFD }}" "${FILE_CHRONY}"; then sed -i --follow-symlinks -e "s:{{ DIR_CHRONY_CONFD }}:${DIR_CHRONY_CONFD}:" "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_LIB }}" "${FILE_CHRONY}"; then sed -i --follow-symlinks -e "s:{{ DIR_CHRONY_LIB }}:${DIR_CHRONY_LIB}:" "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -i --follow-symlinks -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed -i --follow-symlinks -e "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed -i --follow-symlinks -e "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -i --follow-symlinks -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed -i --follow-symlinks -e "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_PID }}" "${FILE_CHRONY}"; then sed -i --follow-symlinks -e "s:{{ FILE_CHRONY_PID }}:${FILE_CHRONY_PID}:" "${FILE_CHRONY}"; fi
   #if  [ ! -f "${FILE_CHRONY_TIMESRC}" ]; then
   DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
   for DC in $DCs
@@ -395,7 +395,7 @@ appSetup () {
     set -- "$@" "--option=max log size = 10000"
     set -- "$@" "--option=log level = ${DEBUG_LEVEL}"
     set -- "$@" "--option=logging = file"
-    sed -i '/log[[:space:]]/s/^#//g' "$FILE_CHRONY"
+    sed -i --follow-symlinks -e '/log[[:space:]]/s/^#//g' "$FILE_CHRONY"
     if ! grep -q "${FILE_BIND9_CONF_LOG}" "${FILE_BIND9_CONF}";then
 	  printf "include \"%s\";\n" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
 	fi
@@ -552,7 +552,7 @@ appSetup () {
     if ! grep -q "${FILE_BIND9_CONF_SAMBA}" "${FILE_BIND9_CONF_LOCAL}";then
 	  printf "include \"%s\";" "${FILE_BIND9_CONF_SAMBA}" > "${FILE_BIND9_CONF_LOCAL}"
 	fi
-    sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_CONF_SAMBA}"
+    sed -i --follow-symlinks -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" "${FILE_BIND9_CONF_SAMBA}"
 	chown -L root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_SAMBA}"
 
     cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
