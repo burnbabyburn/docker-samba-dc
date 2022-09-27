@@ -323,6 +323,7 @@ appSetup () {
     if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_RUN})"; fi
     chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_RUN}"
     chmod 750 "${DIR_CHRONY_RUN}"
+	chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}"
   fi
 
   #Configure /etc/supervisor/conf.d/supervisord.conf
