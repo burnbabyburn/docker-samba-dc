@@ -297,9 +297,6 @@ appSetup () {
   chown -L root:"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"
   chmod 770 "${DIR_BIND9_RUN}"
 
-  if [ ! -d "${DIR_CHRONY}" ]; then mkdir "$(readlink -f ${DIR_CHRONY})"; fi
-  chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}"
-  chmod 755 "${DIR_CHRONY_RUN}"
   chmod 644 "${FILE_CHRONY}"
 
   if [ ! -f "${FILE_CHRONY_KEY}" ]; then chronyc keygen 1 SHA1 256 >> "$(readlink -f ${FILE_CHRONY_KEY})"; fi
@@ -337,7 +334,7 @@ appSetup () {
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed ${SED_PARAM} "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
   if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ] && ! grep -q "validate-except" "${FILE_BIND9_CONF_OPTIONS}"; then sed ${SED_PARAM} "/^[[:space:]]*}/i\  validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
-  cat "${FILE_BIND9_CONF_OPTIONS}"
+
   # https://www.elastic2ls.com/blog/loading-from-master-file-managed-keys-bind-failed/
   #if ! grep -q "/data/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi
 
