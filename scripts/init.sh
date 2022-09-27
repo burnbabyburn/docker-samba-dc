@@ -541,7 +541,7 @@ appSetup () {
     printf "include \"%s\";" "${FILE_BIND9_CONF_GEN_SAMBA}" > "${FILE_BIND9_CONF_LOCAL}"
     sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_CONF_GEN_SAMBA}"
 
-    ln -s "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
+    cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
     if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "${DIR_CHRONY_SOCK}"; fi
     chmod 750 "${DIR_CHRONY_SOCK}"
     chown -L root:"${CHRONYUSERGROUP}" "${DIR_CHRONY_SOCK}"
