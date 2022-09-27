@@ -323,7 +323,7 @@ appSetup () {
     if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_RUN})"; fi
     chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_RUN}"
     chmod 750 "${DIR_CHRONY_RUN}"
-	chown -LR "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}"
+	chown -LR "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}/"
   fi
 
   #Configure /etc/supervisor/conf.d/supervisord.conf
@@ -620,7 +620,6 @@ appSetup () {
 #  backupConfig
 ls -ahl /etc/
 ls -ahl /data/etc/chrony/
-cat /etc/bind/named.conf
 touch /data/setup.done
   appFirstStart
 }
