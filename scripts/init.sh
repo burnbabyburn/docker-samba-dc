@@ -328,8 +328,8 @@ appSetup () {
 
   # Configure chrony files
   if grep -q "{{ DIR_CHRONY_CONFD }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONFD }}:${DIR_CHRONY_CONFD}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_LIB }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LIB }}:${DIR_CHRONY_LIB}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
