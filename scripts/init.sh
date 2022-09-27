@@ -400,7 +400,7 @@ appSetup () {
     set -- "$@" "--option=max log size = 10000"
     set -- "$@" "--option=log level = ${DEBUG_LEVEL}"
     set -- "$@" "--option=logging = file"
-    sed ${SED_PARAM} '/log[[:space:]]/s/^#//g' -i "$FILE_CHRONY"
+    sed '/log[[:space:]]/s/^#//g' -i "$FILE_CHRONY"
     if ! grep -q "${FILE_BIND9_CONF_LOG}" "${FILE_BIND9_CONF}";then
 	  printf "include \"%s\";\n" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
 	fi
@@ -620,6 +620,7 @@ appSetup () {
 #  backupConfig
 ls -ahl /etc/
 ls -ahl /data/etc/chrony/
+cat /etc/bind/named.conf
 touch /data/setup.done
   appFirstStart
 }
