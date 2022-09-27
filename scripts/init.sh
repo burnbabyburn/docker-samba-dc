@@ -295,7 +295,7 @@ appSetup () {
   chmod 770 "${DIR_BIND9_RUN}";
 
   if [ ! -d "${DIR_CHRONY}" ]; then mkdir "$(readlink -f ${DIR_CHRONY})"; fi
-  chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}"
+  #chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}"
 
   #Setup chrony log dir
   if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_LOG})"; fi
@@ -438,8 +438,8 @@ appSetup () {
       done; (exit $s)
 
       # Netlogon & sysvol readonly on secondary DC
-      if [ ! -d "${DIR_SAMBA_NETLOGON}" ]; then mkdir "${DIR_SAMBA_NETLOGON}"; fi
-      if [ ! -d "${DIR_SAMBA_SYSVOL}" ]; then mkdir "${DIR_SAMBA_SYSVOL}"; fi
+      if [ ! -d "${DIR_SAMBA_NETLOGON}" ]; then mkdir "$(readlink -f ${DIR_SAMBA_NETLOGON})"; fi
+      if [ ! -d "${DIR_SAMBA_SYSVOL}" ]; then mkdir "$(readlink -f ${DIR_SAMBA_SYSVOL})"; fi
       {
         printf '\n'
         printf '[netlogon]\n'
@@ -558,14 +558,14 @@ appSetup () {
 	chown -L root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_SAMBA}"
 
     cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
-    if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "${DIR_CHRONY_SOCK}"; fi
+    if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "$(readlink -f ${DIR_CHRONY_SOCK})"; fi
     chmod 750 "${DIR_CHRONY_SOCK}"
     chown -LR root:"${CHRONYUSERGROUP}" "${DIR_CHRONY_SOCK}"
 
     if [ ! -d "${DIR_SAMBA_CSHARE}" ]; then
-      mkdir -p "${DIR_SAMBA_EVENTLOG}"
-      mkdir -p "${DIR_SAMBA_ADMIN}"
-      mkdir -p "${DIR_SAMBA_PRINTDRIVER}"
+      mkdir -p "$(readlink -f ${DIR_SAMBA_EVENTLOG})"
+      mkdir -p "$(readlink -f ${DIR_SAMBA_ADMIN})"
+      mkdir -p "$(readlink -f ${DIR_SAMBA_PRINTDRIVER})"
     fi
 
     # https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
@@ -578,7 +578,7 @@ appSetup () {
       SetKeyValueFilePattern 'cups encrypt' 'no'
       SetKeyValueFilePattern 'cups options' '\"raw media=a4\"'
       SetKeyValueFilePattern '#cups server' "${CUPS_SERVER}:${CUPS_PORT}"
-      if [ ! -d "${DIR_SAMBA_PRINTDRIVER}" ]; then mkdir -p "${DIR_SAMBA_PRINTDRIVER}"; fi
+      if [ ! -d "${DIR_SAMBA_PRINTDRIVER}" ]; then mkdir -p "$(readlink -f ${DIR_SAMBA_PRINTDRIVER})"; fi
       {
         printf '\n'
         printf '[printers]\n'
@@ -611,6 +611,8 @@ appSetup () {
   fi
   # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
 #  backupConfig
+ ls -ahl /etc/chrony
+ ls -ahl /data/etc/chrony
   appFirstStart
 }
 
