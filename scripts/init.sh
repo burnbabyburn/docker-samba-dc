@@ -303,7 +303,8 @@ appSetup () {
   chmod 750 "${DIR_CHRONY_LOG}";
  ls -ahl /etc/chrony
  ls -ahl /data/etc/chrony
-
+  ls -ahl /data/etc/
+ls -ahl /etc/
   if [ ! -d "${DIR_CHRONY_LIB}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_LIB})"; fi
   chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LIB}"
   chmod 750 "${DIR_CHRONY_LIB}";
@@ -562,10 +563,11 @@ appSetup () {
     chmod 750 "${DIR_CHRONY_SOCK}"
     chown -LR root:"${CHRONYUSERGROUP}" "${DIR_CHRONY_SOCK}"
 
+    # We need readlink -m cause the top dir do not exist yet
     if [ ! -d "${DIR_SAMBA_CSHARE}" ]; then
-      mkdir -p "$(readlink -f ${DIR_SAMBA_EVENTLOG})"
-      mkdir -p "$(readlink -f ${DIR_SAMBA_ADMIN})"
-      mkdir -p "$(readlink -f ${DIR_SAMBA_PRINTDRIVER})"
+      mkdir -p "$(readlink -m ${DIR_SAMBA_EVENTLOG})"
+      mkdir -p "$(readlink -m ${DIR_SAMBA_ADMIN})"
+      mkdir -p "$(readlink -m ${DIR_SAMBA_PRINTDRIVER})"
     fi
 
     # https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
@@ -578,7 +580,7 @@ appSetup () {
       SetKeyValueFilePattern 'cups encrypt' 'no'
       SetKeyValueFilePattern 'cups options' '\"raw media=a4\"'
       SetKeyValueFilePattern '#cups server' "${CUPS_SERVER}:${CUPS_PORT}"
-      if [ ! -d "${DIR_SAMBA_PRINTDRIVER}" ]; then mkdir -p "$(readlink -f ${DIR_SAMBA_PRINTDRIVER})"; fi
+      if [ ! -d "${DIR_SAMBA_PRINTDRIVER}" ]; then mkdir -p "$(readlink -m ${DIR_SAMBA_PRINTDRIVER})"; fi
       {
         printf '\n'
         printf '[printers]\n'
