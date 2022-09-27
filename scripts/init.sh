@@ -621,6 +621,7 @@ appSetup () {
 ls -ahl /etc/
 ls -ahl /data/etc/chrony/
 touch /data/setup.done
+cat /etc/passwd
   appFirstStart
 }
 
