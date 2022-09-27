@@ -543,8 +543,8 @@ appSetup () {
 
     ln -s "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
     if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "${DIR_CHRONY_SOCK}"; fi
-    chmod -L 750 "${DIR_CHRONY_SOCK}"
-    chown root:"${CHRONYUSERGROUP}" "${DIR_CHRONY_SOCK}"
+    chmod 750 "${DIR_CHRONY_SOCK}"
+    chown -L root:"${CHRONYUSERGROUP}" "${DIR_CHRONY_SOCK}"
 
     if [ ! -d "${DIR_SAMBA_CSHARE}" ]; then
       mkdir -p "${DIR_SAMBA_EVENTLOG}"
