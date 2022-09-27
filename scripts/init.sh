@@ -244,6 +244,9 @@ appSetup () {
     cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
     printf "%s" "${TZ}" >/etc/timezone
   fi
+  
+  #wsdd2 symlink
+  ln -s /data/etc/samba/smb.conf /data/smb.conf
 
   ## Setup filesystem and config files
   # Remove krb5.conf will be replaced by a samba generated one
