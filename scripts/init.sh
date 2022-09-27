@@ -344,7 +344,7 @@ ls -ahl /etc/
   if grep -q "{{ DIR_CHRONY_LIB }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ DIR_CHRONY_LIB }}:${DIR_CHRONY_LIB}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" - i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ FILE_CHRONY_PID }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ FILE_CHRONY_PID }}:${FILE_CHRONY_PID}:" -i "${FILE_CHRONY}"; fi
@@ -635,12 +635,12 @@ appFirstStart () {
   # running a samba_dnsupdate manually adds the missing entries.
   s=1
   until [ $s = 0 ]; do
-    host -t A "${HOSTNAME}.${LDOMAIN}" && smbclient -N -L LOCALHOST >> /dev/null && s=0 && break || s=$? printf "Waiting for samba to start" && sleep 10s
+    host -t A "${HOSTNAME}.${LDOMAIN}" && smbclient -N -L 127.0.0.1 >> /dev/null && s=0 && break || s=$? printf "Waiting for samba to start" && sleep 10s
   done; (exit $s)
   printf "DNS: Testing Dynamic DNS Updates"; if ! samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}"; then printf "DNS: Testing Dynamic DNS Updates FAILED"; exit 1; fi
   #Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
   printf "rpcclient: Connect as %s" "${DOMAIN_USER}"; if ! rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1; then printf "rpcclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
-  printf "smbclient: Connect as %s" "${DOMAIN_USER}"; if ! smbclient -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L LOCALHOST >> /dev/null; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
+  printf "smbclient: Connect as %s" "${DOMAIN_USER}"; if ! smbclient -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L 127.0.0.1 >> /dev/null; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
   printf "Kerberos: Connect as %s" "${DOMAIN_USER}"; if printf "%s" "${DOMAIN_PASS}" | kinit -V "${DOMAIN_USER}"; then printf 'OK'; klist; kdestroy; else printf "Kerberos: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
   echo "NTP: Check timesource and sync"; if ! chronyc sources || ! chronyc tracking; then printf "NTP: Check timesource and sync FAILED"; exit 1; fi
   printf "DNS: Check _ldap._tcp.%s" "${LDOMAIN}"; if ! host -t SRV _ldap._tcp."${LDOMAIN}"; then printf "DNS: Check _ldap._tcp.%s FAILED" "${LDOMAIN}"; exit 1; fi
