@@ -243,7 +243,7 @@ appSetup () {
 
   ## Setup filesystem and config files
   # Remove krb5.conf will be replaced by a samba generated one
-  if [ ! -f "${FILE_KRB5}" ]; then rm -f "${FILE_KRB5}"; fi
+  if [ -f "${FILE_KRB5}" ]; then rm -f "${FILE_KRB5}"; fi
 
   # We removed the initial /etc/bind dir so we need to generate a new rndc.key
   rndc-confgen -a
@@ -542,7 +542,7 @@ appSetup () {
 
     ln -s "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
     if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "${DIR_CHRONY_SOCK}"; fi
-    chmod 750 "${DIR_CHRONY_SOCK}"
+    chmod -L 750 "${DIR_CHRONY_SOCK}"
     chown root:"${CHRONYUSERGROUP}" "${DIR_CHRONY_SOCK}"
 
     if [ ! -d "${DIR_SAMBA_CSHARE}" ]; then
@@ -585,7 +585,7 @@ appSetup () {
     fi
 
     #Create symlink for wsdd2
-    ln -s /etc/samba/etc/samba/smb.conf  /etc/samba/
+    #ln -s /etc/samba/smb.conf  /etc/samba/
     # Stop VPN & write supervisor service
     if [ "${JOIN_SITE_VPN}" = true ]; then
       if [ -n "${VPNPID}" ]; then kill "${VPNPID}"; fi
