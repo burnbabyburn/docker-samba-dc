@@ -76,10 +76,10 @@ SetKeyValueFilePattern() {
   if [ "${DEBUG_ENABLE}" = true ]; then printf "%s" "$ESCAPED_PATTERN"; echo "$ESCAPED_REPLACE"; fi
   if ! grep -R "^[#]*\s*$1[[:space:]]=.*" "$FILE" > /dev/null; then
     echo "Key: $1 not found. APPENDING $1 = $2 after $PATTERN"
-    sed -i "/^$ESCAPED_PATTERN"'/a\\t'"$1 = $ESCAPED_REPLACE" "$FILE"
+    sed ${SED_PARAM}  "/^$ESCAPED_PATTERN"'/a\\t'"$1 = $ESCAPED_REPLACE" -i "$FILE"
   else
     echo "Key: $1 found. SETTING $1 = $2"
-    sed -ir "s/^[#]*\s*$1[[:space:]]=.*/\\t$1 = $ESCAPED_REPLACE/" "$FILE"
+    sed ${SED_PARAM} -r "s/^[#]*\s*$1[[:space:]]=.*/\\t$1 = $ESCAPED_REPLACE/" -i "$FILE"
   fi
 }
 
