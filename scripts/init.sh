@@ -204,14 +204,15 @@ config() {
     CHRONYUSERGROUP="_chrony"
 	SED_PARAM='--follow-symlinks -e'
   fi
-  #chrony as root in docker action
-  if ! uname -a | grep -q "azure"; then CHRONYUSERGROUP="root"; fi
 
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
 
   SAMBA_START_PARAM="--no-process-group --configfile ${FILE_SAMBA_CONF}"
   CHRONY_START_PARAM="-n -u ${CHRONYUSERGROUP} -f ${FILE_CHRONY}"
   BIND9_START_PARAM="-f -u ${BINDUSERGROUP} -c ${FILE_BIND9_CONF}"
+
+  #chrony as root in docker action
+  if ! uname -a | grep -q "azure"; then ad=$(CHRONY_START_PARAM $CHRONY_START_PARAM | sed "s/-u _chrony//")="root"; fi
 
   if cat /sys/module/ipv6/parameters/disable;then
     #sed -e "s/listen-on-v6 { any; };/listen-on-v6 { none; };/" -i "${FILE_BIND9_CONF_OPTIONS}"
@@ -644,7 +645,7 @@ appFirstStart () {
   until [ $s = 0 ]; do
     host -t A "${HOSTNAME}.${LDOMAIN}" && smbclient -N -L 127.0.0.1 "${SAMBA_DEBUG_OPTION}" >> /dev/null && s=0 && break || s=$? printf "Waiting for samba to start" && sleep 10s
   done; (exit $s)
-  #printf "DNS: Testing Dynamic DNS Updates"; if ! samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}"; then printf "DNS: Testing Dynamic DNS Updates FAILED"; exit 1; fi
+  printf "DNS: Testing Dynamic DNS Updates"; if ! samba_dnsupdate --verbose --use-samba-tool "${SAMBA_DEBUG_OPTION}"; then printf "DNS: Testing Dynamic DNS Updates FAILED"; exit 1; fi
   #Test - e.g. https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
   printf "rpcclient: Connect as %s" "${DOMAIN_USER}"; if ! rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1; then printf "rpcclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
   printf "smbclient: Connect as %s" "${DOMAIN_USER}"; if ! smbclient -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L 127.0.0.1 "${SAMBA_DEBUG_OPTION}" >> /dev/null; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
