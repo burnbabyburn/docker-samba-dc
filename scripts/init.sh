@@ -244,6 +244,11 @@ config() {
 }
 
 appSetup () {
+  ls /etc/selinux
+  cat /etc/selinux/config
+  ls -laZ /etc/chrony.conf
+  getenforce
+  
   if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
     printf 'Set timezone'
     cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
