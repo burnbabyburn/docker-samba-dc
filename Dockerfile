@@ -24,33 +24,31 @@ RUN apt-get update \
     #&& apt-get install -y openvpn inetutils-ping \   
     && apt-get clean autoclean \
     && apt-get autoremove --yes \
-    && rm -rf /var/lib/{apt,dpkg,cache,log}/ \
-	&& rm -rf /tmp/* /var/tmp/* 
+#    && rm -rf /var/lib/{apt,dpkg,cache,log}/ \
+	&& rm -rf /tmp/* /var/tmp/* \
+    && rm -rf /var/lib/{apt,dpkg,cache,log,samba}/ \
+	&& rm -rf /etc/bind /etc/chrony /etc/chrony /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor \
+	&& mkdir -p /data/etc/bind /data/etc/chrony /data/etc/samba /data/etc/supervisor /data/cache/bind /data/cache/samba /data/lib/bind /data/lib/chrony /data/lib/samba /data/log/bind /data/log/chrony /data/log/samba /data/log/supervisor \
+	&& ln -s /data/etc/bind /etc/bind \
+	&& ln -s /data/etc/chrony /etc/chrony \
+	&& ln -s /data/etc/nsswitch.conf /etc/ \
+	&& ln -s /data/etc/samba /etc/samba \
+	&& ln -s /data/etc/supervisor /etc/supervisor \
+	&& ln -s /data/lib/bind /var/lib/bind \
+	&& ln -s /data/lib/chrony /var/lib/chrony \
+	&& ln -s /data/lib/samba /var/lib/samba \
+	&& ln -s /data/log/bind /var/log/bind \
+	&& ln -s /data/log/chrony /var/log/chrony \
+    && ln -s /data/log/samba /var/log/samba \
+	&& ln -s /data/log/supervisor /var/log/supervisor \
+	&& ln -s /data/cache/bind /var/cache/bind \
+	&& ln -s /data/cache/samba /var/cache/samba
 
-#    && rm -rf /var/lib/{apt,dpkg,cache,log,samba}/ \
-#	&& rm -rf /etc/bind /etc/chrony /etc/chrony /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor \
-#	&& mkdir -p /data/etc/bind /data/etc/chrony /data/etc/samba /data/etc/supervisor /data/cache/bind /data/cache/samba /data/lib/bind /data/lib/chrony /data/lib/samba /data/log/bind /data/log/chrony /data/log/samba /data/log/supervisor \
-#	&& ln -s /data/etc/bind /etc/bind \
-#	&& ln -s /data/etc/chrony /etc/chrony \
-#	&& ln -s /data/etc/nsswitch.conf /etc/ \
-#	&& ln -s /data/etc/samba /etc/samba \
-#	&& ln -s /data/etc/supervisor /etc/supervisor \
-#	&& ln -s /data/lib/bind /var/lib/bind \
-#	&& ln -s /data/lib/chrony /var/lib/chrony \
-#	&& ln -s /data/lib/samba /var/lib/samba \
-#	&& ln -s /data/log/bind /var/log/bind \
-#	&& ln -s /data/log/chrony /var/log/chrony \
-#    && ln -s /data/log/samba /var/log/samba \
-#	&& ln -s /data/log/supervisor /var/log/supervisor \
-#	&& ln -s /data/cache/bind /var/cache/bind \
-#	&& ln -s /data/cache/samba /var/cache/samba
-
-RUN mkdir /data
-COPY /ldif /data/ldif
+COPY /ldif $DIR_LDIF
 COPY /etc /data/etc
-COPY /scripts /data/scripts
+COPY /scripts $DIR_SCRIPTS
 #COPY /conf.d/ $DIR_SAMBA_CONF
-COPY /gpo /data/gpo
+COPY /gpo $DIR_GPO
 #COPY --from=builder ${src} /tmp/
 
 RUN chmod -R +x /data/scripts/
