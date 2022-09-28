@@ -2,7 +2,7 @@
 # samba-dc02 is the second domain controller joining the domain of dc01. Hostname is dockersamba02
 # domain is sam.dom
 name: Docker Compose Actions Workflow
-on: 0
+on: push
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -20,16 +20,6 @@ jobs:
         run: docker ps -a
       - name: Check logs DC01
         run: docker logs samba-dc01
-      - name: Get debian_version
-        run: docker exec --tty samba-dc01 /usr/bin/cat /etc/debian_version
-      - name: Get os-release
-        run: docker exec --tty samba-dc01 /usr/bin/cat /etc/os-release
-      - name: Get kernel
-        run: docker exec --tty samba-dc01 /usr/bin/uname -a  
-      - name: who am i
-        run: docker exec --tty samba-dc01 /usr/bin/whoami
-      - name: show users
-        run: docker exec --tty samba-dc01 /usr/bin/cat /etc/passwd
       - name: Check DC01 NTP
         run: docker exec --tty samba-dc01 /usr/bin/chronyc sources && /usr/bin/chronyc tracking
       - name: Check DC01 named
