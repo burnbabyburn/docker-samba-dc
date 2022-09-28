@@ -245,6 +245,8 @@ config() {
 
 appSetup () {
   ls -laZ /etc/chrony/chrony.conf
+  ls -ahl /etc
+  ls -ahl /etc/chrony
   
   if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
     printf 'Set timezone'
