@@ -136,6 +136,12 @@ services:
     hostname: dockersamba02
     domainname: SAM.DOM
     privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_NICE
+      - SYS_RESOURCE
+      - SYS_TIME
+
 
 #  samba-join:
 #    build:
