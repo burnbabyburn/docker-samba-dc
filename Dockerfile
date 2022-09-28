@@ -32,9 +32,6 @@ RUN apt-get update \
 	&& cp -aR --preserve=all /var/lib/bind /backup/lib \
 	&& cp -aR --preserve=all /var/lib/chrony /backup/lib \
 	&& cp -aR --preserve=all /var/lib/samba /backup/lib \
-	&& cp -aR --preserve=all /var/log/chrony /backup/log \
-	&& cp -aR --preserve=all /var/log/samba /backup/log \
-	&& cp -aR --preserve=all /var/log/supervisor /backup/log \
 	&& rm -rf /etc/bind /etc/chrony /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor \
 	&& mkdir -p /data/etc/bind /data/etc/chrony /data/etc/samba /data/etc/supervisor /data/cache/bind /data/cache/samba /data/lib/bind /data/lib/chrony /data/lib/samba /data/log/bind /data/log/chrony /data/log/samba /data/log/supervisor \
 	&& ln -s /data/etc/bind /etc/bind \
