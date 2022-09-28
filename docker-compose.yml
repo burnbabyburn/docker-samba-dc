@@ -21,8 +21,8 @@ services:
 #      context: .
 #      dockerfile: Dockerfile.alpine
     container_name: samba-dc01
-#    volumes:
-#      - 'samba01:/data'
+    volumes:
+      - 'samba01:/data'
     environment:
       - TZ=Europe/Berlin
       - DOMAIN=SAM.DOM

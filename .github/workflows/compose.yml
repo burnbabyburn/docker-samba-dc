@@ -2,7 +2,7 @@
 # samba-dc02 is the second domain controller joining the domain of dc01. Hostname is dockersamba02
 # domain is sam.dom
 name: Docker Compose Actions Workflow
-on: push
+on: 0
 jobs:
   test:
     runs-on: ubuntu-latest

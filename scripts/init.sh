@@ -208,11 +208,11 @@ config() {
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
 
   SAMBA_START_PARAM="--no-process-group --configfile ${FILE_SAMBA_CONF}"
-  CHRONY_START_PARAM="-n -u ${CHRONYUSERGROUP} -f ${FILE_CHRONY}"
+  CHRONY_START_PARAM="-n -u ${CHRONYUSERGROUP}"
   BIND9_START_PARAM="-f -u ${BINDUSERGROUP} -c ${FILE_BIND9_CONF}"
 
   #chrony as root in docker action
-  if ! uname -a | grep -q "azure"; then CHRONY_START_PARAM=$(CHRONY_START_PARAM $CHRONY_START_PARAM | sed "s/-u _chrony//")="root"; fi
+  if uname -a | grep -q "azure"; then CHRONY_START_PARAM="$(echo "${CHRONY_START_PARAM}" | sed "s/-u _chrony //")"; fi
 
   if cat /sys/module/ipv6/parameters/disable;then
     #sed -e "s/listen-on-v6 { any; };/listen-on-v6 { none; };/" -i "${FILE_BIND9_CONF_OPTIONS}"
@@ -322,13 +322,15 @@ appSetup () {
   # Fatal error : Could not open /run/chrony/chronyd.pid : Permission denied
   # INFO exited: chrony (exit status 1; not expected)
   # Wrong owner of /run/chrony (UID != 102) - the azure image complains but with a chowned dir chrony just crashes
-  if ! uname -a | grep -q "azure"; then
+  #if ! uname -a | grep -q "azure"; then
     # PID and chronyd.sock dir for chrony
     if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_RUN})"; fi
     chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_RUN}"
     chmod 750 "${DIR_CHRONY_RUN}"
-	#chown -LR "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}/"
-  fi
+	#Test for azure
+	chown -LR "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}/"
+	chmod -R 777 ${DIR_CHRONY}
+  #fi
 
   #Configure /etc/supervisor/conf.d/supervisord.conf
   sed ${SED_PARAM} "s:{{ SAMBA_START_PARAM }}:${SAMBA_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
@@ -368,7 +370,7 @@ appSetup () {
          "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool" \
          "--option=enable asu support = no"
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#NAMERESOLVEORDER
-  set -- "$@" "--option=name resolve order = wins host bcast"
+  #set -- "$@" "--option=name resolve order = wins host bcast"
   # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
   #set -- "$@" "--option=password hash userPassword schemes = CryptSHA256 CryptSHA512"
   # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes also for idmap
@@ -566,7 +568,7 @@ appSetup () {
 	chown -L root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_SAMBA}"
 
     cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
-    if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "$(readlink -f ${DIR_CHRONY_SOCK})"; fi
+    #if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "$(readlink -f ${DIR_CHRONY_SOCK})"; fi
     chmod 750 "${DIR_CHRONY_SOCK}"
     chown -LR root:"${CHRONYUSERGROUP}" "${DIR_CHRONY_SOCK}"
 
@@ -622,8 +624,6 @@ appSetup () {
   fi
   # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
 #  backupConfig
-ls -ahl /etc/
-ls -ahl /data/etc/chrony/
 touch /data/setup.done
 cat /etc/passwd
   appFirstStart
@@ -650,7 +650,7 @@ appFirstStart () {
   printf "rpcclient: Connect as %s" "${DOMAIN_USER}"; if ! rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1; then printf "rpcclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
   printf "smbclient: Connect as %s" "${DOMAIN_USER}"; if ! smbclient -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L 127.0.0.1 "${SAMBA_DEBUG_OPTION}" >> /dev/null; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
   printf "Kerberos: Connect as %s" "${DOMAIN_USER}"; if printf "%s" "${DOMAIN_PASS}" | kinit -V "${DOMAIN_USER}"; then printf 'OK'; klist; kdestroy; else printf "Kerberos: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
-  echo "NTP: Check timesource and sync"; if ! chronyc sources || ! chronyc tracking; then printf "NTP: Check timesource and sync FAILED"; exit 1; fi
+  #echo "NTP: Check timesource and sync"; if ! chronyc sources || ! chronyc tracking; then printf "NTP: Check timesource and sync FAILED"; exit 1; fi
   printf "DNS: Check _ldap._tcp.%s" "${LDOMAIN}"; if ! host -t SRV _ldap._tcp."${LDOMAIN}"; then printf "DNS: Check _ldap._tcp.%s FAILED" "${LDOMAIN}"; exit 1; fi
   printf "DNS: Check _kerberos._udp.%s" "${LDOMAIN}"; if ! host -t SRV _kerberos._udp."${LDOMAIN}"; then printf "DNS: Check _kerberos._udp.%s FAILED" "${LDOMAIN}"; exit 1; fi
   printf "HOST: Check record %s.%s" "${HOSTNAME}" "${LDOMAIN}"; if ! host -t A "${HOSTNAME}.${LDOMAIN}"; then printf "HOST: Check record %s.%s FAILED" "${HOSTNAME}" "${LDOMAIN}"; exit 1; fi
