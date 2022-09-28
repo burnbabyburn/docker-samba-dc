@@ -620,7 +620,7 @@ appSetup () {
     fi
 
     #Create symlink for wsdd2
-    ln -s /etc/samba/smb.conf  /etc/samba/
+    #ln -s /etc/samba/smb.conf  /etc/samba/
     # Stop VPN & write supervisor service
     if [ "${JOIN_SITE_VPN}" = true ]; then
       if [ -n "${VPNPID}" ]; then kill "${VPNPID}"; fi
@@ -630,7 +630,6 @@ appSetup () {
   # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
 #  backupConfig
 touch /data/setup.done
-cat /etc/passwd
   appFirstStart
 }
 
