@@ -54,7 +54,7 @@ RUN apt-get update \
 	&& apt-get clean autoclean \
     && apt-get autoremove --yes \
     && rm -rf /var/lib/{apt,dpkg,cache,log}/ \
-	&& rm -rf /tmp/* /var/tmp/* \
+	&& rm -rf /tmp/* /var/tmp/*
 
 COPY /ldif $DIR_LDIF
 COPY /etc /data/etc
