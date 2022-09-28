@@ -212,7 +212,7 @@ config() {
   BIND9_START_PARAM="-f -u ${BINDUSERGROUP} -c ${FILE_BIND9_CONF}"
 
   #chrony as root in docker action
-  if uname -a | grep -q "azure"; then CHRONY_START_PARAM="$(echo "${CHRONY_START_PARAM}" | sed "s/-u _chrony //")"; fi
+  #if uname -a | grep -q "azure"; then CHRONY_START_PARAM="$(echo "${CHRONY_START_PARAM}" | sed "s/-u _chrony //")"; fi
 
   if cat /sys/module/ipv6/parameters/disable;then
     #sed -e "s/listen-on-v6 { any; };/listen-on-v6 { none; };/" -i "${FILE_BIND9_CONF_OPTIONS}"
