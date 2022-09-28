@@ -38,6 +38,7 @@ config() {
   DOMAIN_PWD_MIN_AGE=${DOMAIN_PWD_MIN_AGE:-1}
   DOMAIN_PWD_MIN_LENGTH=${DOMAIN_PWD_MIN_LENGTH:-7}
   DOMAIN_USER=${DOMAIN_USER:-Administrator}
+  ENABLE_BIND9=${ENABLE_BIND9:-false}
   ENABLE_CUPS=${ENABLE_CUPS:-false}
   ENABLE_DNSFORWARDER=${ENABLE_DNSFORWARDER:-NONE}
   ENABLE_DYNAMIC_PORTRANGE=${ENABLE_DYNAMIC_PORTRANGE:-NONE}
@@ -368,10 +369,14 @@ appSetup () {
   done
 
   # Configure Options "Array" for samba setup
+  if [ "${ENABLE_BIND9}" = true ]; then
+    set -- "--dns-backend=BIND9_DLZ" \
+           "--option=server services=-dns"
+  else 
+    set -- "--dns-backend=internal" 
+  fi
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#ENABLEASUSUPPORT
-  set -- "--dns-backend=BIND9_DLZ" \
-         "--option=server services=-dns" \
-         "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool" \
+  set -- "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool" \
          "--option=enable asu support = no"
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#NAMERESOLVEORDER
   #set -- "$@" "--option=name resolve order = wins host bcast"

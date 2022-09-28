@@ -31,6 +31,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `DOMAIN_PWD_ADMIN_NO_EXP`   | true                                          |   X   | If enabled Domain Admin PW will not expire. Auto set to false if FEATURE_SCHEMA_LAPS` is enabled  |
 | `DOMAIN_USER`               | Administrator                                 |       | Best leave at default. unknown consequences  |
 | `DOMAIN`                    | SAMDOM.LOCAL                                  |       | Your Domain Name            |
+| `ENABLE_BIND9`              | false                                         |       | Enable Bind9 - Bind9 is always installed. You may enable it if you need it, otherwise use internal DNS  |
 | `ENABLE_CUPS`               | false                                         |       | Enable CUPS - cups is not installed but setup in smb.conf modify Dockerfile  |
 | `ENABLE_DNSFORWARDER`       | NONE                                          |       | Ip of upstream dns server. If not set, no upstream dns will be avaible.  |
 | `ENABLE_DYNAMIC_PORTRANGE`  | 49152-65535                                   |       | Set range of [dynamic rpc ports](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#RPCSERVERDYNAMICPORTRANGE). Usefull on limited res. or RProxy |
