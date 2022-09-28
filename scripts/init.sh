@@ -208,9 +208,9 @@ config() {
 
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
 
-  SAMBA_START_PARAM="--no-process-group --configfile ${FILE_SAMBA_CONF}"
-  CHRONY_START_PARAM="-n -u ${CHRONYUSERGROUP}"
-  BIND9_START_PARAM="-f -u ${BINDUSERGROUP} -c ${FILE_BIND9_CONF}"
+  SAMBA_START_PARAM="--no-process-group --configfile $(readlink -f ${FILE_SAMBA_CONF})"
+  CHRONY_START_PARAM="-n -u ${CHRONYUSERGROUP} -f $(readlink -f ${FILE_CHRONY})"
+  BIND9_START_PARAM="-f -u ${BINDUSERGROUP} -c $(readlink -f ${FILE_BIND9_CONF})"
 
   #chrony as root in docker action
   #if uname -a | grep -q "azure"; then CHRONY_START_PARAM="$(echo "${CHRONY_START_PARAM}" | sed "s/-u _chrony //")"; fi
