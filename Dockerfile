@@ -22,10 +22,6 @@ RUN apt-get update \
 	#openssl for dh key \
     # line below is for multi-site config (ping is for testing later) \
     #&& apt-get install -y openvpn inetutils-ping \   
-    && apt-get clean autoclean \
-    && apt-get autoremove --yes \
-    && rm -rf /var/lib/{apt,dpkg,cache,log}/ \
-	&& rm -rf /tmp/* /var/tmp/* \
 	&& mkdir /backup /backup/etc /backup/lib /backup/log /backup/cache \
 	&& cp -aR --preserve=all /etc/bind /backup/etc \
 	&& cp -aR --preserve=all /etc/chrony /backup/etc \
@@ -36,7 +32,6 @@ RUN apt-get update \
 	&& cp -aR --preserve=all /var/lib/bind /backup/lib \
 	&& cp -aR --preserve=all /var/lib/chrony /backup/lib \
 	&& cp -aR --preserve=all /var/lib/samba /backup/lib \
-	&& cp -aR --preserve=all /var/log/bind /backup/log \
 	&& cp -aR --preserve=all /var/log/chrony /backup/log \
 	&& cp -aR --preserve=all /var/log/samba /backup/log \
 	&& cp -aR --preserve=all /var/log/supervisor /backup/log \
@@ -55,7 +50,11 @@ RUN apt-get update \
     && ln -s /data/log/samba /var/log/samba \
 	&& ln -s /data/log/supervisor /var/log/supervisor \
 	&& ln -s /data/cache/bind /var/cache/bind \
-	&& ln -s /data/cache/samba /var/cache/samba
+	&& ln -s /data/cache/samba /var/cache/samba \
+	&& apt-get clean autoclean \
+    && apt-get autoremove --yes \
+    && rm -rf /var/lib/{apt,dpkg,cache,log}/ \
+	&& rm -rf /tmp/* /var/tmp/* \
 
 COPY /ldif $DIR_LDIF
 COPY /etc /data/etc
