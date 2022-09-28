@@ -310,14 +310,18 @@ appSetup () {
   if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_LOG})"; fi
   chown -LR "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LOG}/"
   chmod 750 "${DIR_CHRONY_LOG}"
+  chmod g=rxs "${DIR_CHRONY_LOG}"
 
   if [ ! -d "${DIR_CHRONY_LIB}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_LIB})"; fi
   chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LIB}"
-  chmod 750 "${DIR_CHRONY_LIB}"
+  chmod 755 "${DIR_CHRONY_LIB}"
 
   if [ ! -d "${DIR_CHRONY_CONFD}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_CONFD})"; fi
   if [ ! -d "${DIR_CHRONY_SRC}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_SRC})"; fi
-
+  
+  if [ ! -d "${DIR_SAMBA_CACHE}" ]; then mkdir "$(readlink -f ${DIR_SAMBA_CACHE})"; fi
+  chmod 755 "${DIR_SAMBA_CACHE}"
+  
   # If used on azure image chrony breaks (github actions)
   # Fatal error : Could not open /run/chrony/chronyd.pid : Permission denied
   # INFO exited: chrony (exit status 1; not expected)
@@ -328,8 +332,8 @@ appSetup () {
     chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_RUN}"
     chmod 750 "${DIR_CHRONY_RUN}"
 	#Test for azure
-	chown -LR "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}/"
-	chmod -R 777 ${DIR_CHRONY}
+	chown -LR "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}"
+	chmod -R 755 ${DIR_CHRONY}
   #fi
 
   #Configure /etc/supervisor/conf.d/supervisord.conf
