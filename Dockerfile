@@ -67,4 +67,4 @@ EXPOSE 42 53 53/udp 88 88/udp 135 137-138/udp 139 389 389/udp 445 464 464/udp 63
 WORKDIR /
 
 HEALTHCHECK CMD smbcontrol smbd num-children || exit 1
-ENTRYPOINT ["sh", "/data/scripts/init.sh"]
+ENTRYPOINT ["sh", "$DIR_SCRIPTS/init.sh"]
