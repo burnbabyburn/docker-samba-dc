@@ -216,3 +216,17 @@ EnableEventlogSupervisord () {
     echo "priority=1"
   } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
 }
+
+EnableBind9 () {
+  {
+    echo ""
+	echo ""
+    echo "[program:bind9]"
+    echo "command=/usr/sbin/named {{ BIND9_START_PARAM }}"
+    echo "stdout_logfile=/dev/fd/1"
+    echo "stdout_logfile_maxbytes=0"
+    echo "stdout_logfile_backups=0"
+    echo "redirect_stderr=true"
+    echo "priority=10"
+  } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
+}

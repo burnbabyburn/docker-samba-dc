@@ -372,6 +372,7 @@ appSetup () {
   if [ "${ENABLE_BIND9}" = true ]; then
     set -- "--dns-backend=BIND9_DLZ" \
            "--option=server services=-dns"
+	EnableBind9
   else 
     set -- "--dns-backend=internal" 
   fi
