@@ -24,10 +24,23 @@ RUN apt-get update \
     #&& apt-get install -y openvpn inetutils-ping \   
     && apt-get clean autoclean \
     && apt-get autoremove --yes \
-#    && rm -rf /var/lib/{apt,dpkg,cache,log}/ \
+    && rm -rf /var/lib/{apt,dpkg,cache,log}/ \
 	&& rm -rf /tmp/* /var/tmp/* \
-    && rm -rf /var/lib/{apt,dpkg,cache,log,samba}/ \
-	&& rm -rf /etc/bind /etc/chrony /etc/chrony /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor \
+	&& mkdir /backup /backup/etc /backup/lib /backup/log /backup/cache \
+	&& cp -aR --preserve=all /etc/bind /backup/etc \
+	&& cp -aR --preserve=all /etc/chrony /backup/etc \
+	&& cp -aR --preserve=all /etc/samba /backup/etc \
+	&& cp -aR --preserve=all /etc/supervisor /backup/etc \
+	&& cp -aR --preserve=all /var/cache/bind  /backup/cache \
+	&& cp -aR --preserve=all /var/cache/samba  /backup/cache \
+	&& cp -aR --preserve=all /var/lib/bind /backup/lib \
+	&& cp -aR --preserve=all /var/lib/chrony /backup/lib \
+	&& cp -aR --preserve=all /var/lib/samba /backup/lib \
+	&& cp -aR --preserve=all /var/log/bind /backup/log \
+	&& cp -aR --preserve=all /var/log/chrony /backup/log \
+	&& cp -aR --preserve=all /var/log/samba /backup/log \
+	&& cp -aR --preserve=all /var/log/supervisor /backup/log \
+	&& rm -rf /etc/bind /etc/chrony /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor \
 	&& mkdir -p /data/etc/bind /data/etc/chrony /data/etc/samba /data/etc/supervisor /data/cache/bind /data/cache/samba /data/lib/bind /data/lib/chrony /data/lib/samba /data/log/bind /data/log/chrony /data/log/samba /data/log/supervisor \
 	&& ln -s /data/etc/bind /etc/bind \
 	&& ln -s /data/etc/chrony /etc/chrony \
@@ -51,7 +64,7 @@ COPY /scripts $DIR_SCRIPTS
 COPY /gpo $DIR_GPO
 #COPY --from=builder ${src} /tmp/
 
-RUN chmod -R +x /data/scripts/
+RUN chmod -R +x $DIR_SCRIPTS
 
 EXPOSE 42 53 53/udp 88 88/udp 135 137-138/udp 139 389 389/udp 445 464 464/udp 636 3268-3269 49152-65535
 

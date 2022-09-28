@@ -568,7 +568,8 @@ appSetup () {
 	chown -L root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_SAMBA}"
 
     cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
-    #if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "$(readlink -f ${DIR_CHRONY_SOCK})"; fi
+
+    if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "$(readlink -f ${DIR_CHRONY_SOCK})"; fi
     chmod 750 "${DIR_CHRONY_SOCK}"
     chown -LR root:"${CHRONYUSERGROUP}" "${DIR_CHRONY_SOCK}"
 
@@ -615,7 +616,7 @@ appSetup () {
     fi
 
     #Create symlink for wsdd2
-    #ln -s /etc/samba/smb.conf  /etc/samba/
+    ln -s /etc/samba/smb.conf  /etc/samba/
     # Stop VPN & write supervisor service
     if [ "${JOIN_SITE_VPN}" = true ]; then
       if [ -n "${VPNPID}" ]; then kill "${VPNPID}"; fi
@@ -650,11 +651,11 @@ appFirstStart () {
   printf "rpcclient: Connect as %s" "${DOMAIN_USER}"; if ! rpcclient -cgetusername "-U${DOMAIN_USER}%${DOMAIN_PASS}" "${SAMBA_DEBUG_OPTION}" 127.0.0.1; then printf "rpcclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
   printf "smbclient: Connect as %s" "${DOMAIN_USER}"; if ! smbclient -U"${DOMAIN_USER}%${DOMAIN_PASS}" -L 127.0.0.1 "${SAMBA_DEBUG_OPTION}" >> /dev/null; then printf "smbclient: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
   printf "Kerberos: Connect as %s" "${DOMAIN_USER}"; if printf "%s" "${DOMAIN_PASS}" | kinit -V "${DOMAIN_USER}"; then printf 'OK'; klist; kdestroy; else printf "Kerberos: Connect as %s FAILED" "${DOMAIN_USER}"; exit 1; fi
-  #echo "NTP: Check timesource and sync"; if ! chronyc sources || ! chronyc tracking; then printf "NTP: Check timesource and sync FAILED"; exit 1; fi
+  echo "NTP: Check timesource and sync"; if ! chronyc sources || ! chronyc tracking; then printf "NTP: Check timesource and sync FAILED"; exit 1; fi
   printf "DNS: Check _ldap._tcp.%s" "${LDOMAIN}"; if ! host -t SRV _ldap._tcp."${LDOMAIN}"; then printf "DNS: Check _ldap._tcp.%s FAILED" "${LDOMAIN}"; exit 1; fi
   printf "DNS: Check _kerberos._udp.%s" "${LDOMAIN}"; if ! host -t SRV _kerberos._udp."${LDOMAIN}"; then printf "DNS: Check _kerberos._udp.%s FAILED" "${LDOMAIN}"; exit 1; fi
   printf "HOST: Check record %s.%s" "${HOSTNAME}" "${LDOMAIN}"; if ! host -t A "${HOSTNAME}.${LDOMAIN}"; then printf "HOST: Check record %s.%s FAILED" "${HOSTNAME}" "${LDOMAIN}"; exit 1; fi
-  #printf "DNS: Check Reverse resolution of IP:%s" "${IP}"; if ! dig -x "${IP}"; then printf "DNS: Check Reverse resolution of IP:%s FAILED" "${IP}"; exit 1; fi
+  printf "DNS: Check Reverse resolution of IP:%s" "${IP}"; if ! dig -x "${IP}"; then printf "DNS: Check Reverse resolution of IP:%s FAILED" "${IP}"; exit 1; fi
 
   if [ "${JOIN}" = false ]; then
     GetAllCidrCreateSubnet
