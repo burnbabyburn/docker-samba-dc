@@ -161,9 +161,9 @@ config() {
   FILE_KRB5_LOGDEFAULT=/var/log/krb5libs.log
   FILE_KRB5_KRB5KDC=/var/log/krb5kdc.log
   FILE_KRB5_ADMINLOG=/var/log/kadmind.log
-
   FILE_NSSWITCH=/etc/nsswitch.conf
   FILE_OPENVPNCONF=/docker.ovpn
+  FILE_SETUP_DONE=/data/setup.done
 
   # Supervisor files
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
@@ -228,7 +228,7 @@ config() {
   # Wrong owner of /run/chrony (UID != 102) - the azure image complains but with a chowned dir chrony just crashes
   #if ! uname -a | grep -q "azure"; then
   # PID and chronyd.sock dir for chrony
-  if ! uname -a | grep -q "azure"; then CHRONYUSERGROUP=chrony; fi
+  if ! uname -a | grep -q "azure"; then CHRONYUSERGROUP=root; fi
 
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
 
@@ -463,7 +463,7 @@ appSetup () {
   fi
 
   # If external/smb.conf doesn't exist, this is new container with empty volume, we're not just moving to a new container
-  if [ ! -f "/data/setup.done" ]; then
+  if [ ! -f "${FILE_SETUP_DONE}" ]; then
     if [ -f "${FILE_SAMBA_CONF}" ]; then mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig; fi
     if [ "${JOIN}" = true ]; then
       set -- "$@" "${LDOMAIN}"
@@ -667,7 +667,7 @@ appSetup () {
   fi
   # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
 #  backupConfig
-touch /data/setup.done
+touch "${FILE_SETUP_DONE}"
   appFirstStart
 }
 
@@ -739,7 +739,7 @@ appStart () {
 config
 cp /data/etc/chrony/chrony.conf "${FILE_CHRONY}"
 # If the supervisor conf isn't there, we're spinning up a new container
-if [ -f "${FILE_EXTERNAL_SAMBA_CONF}" ]; then
+if [ -f "${FILE_SETUP_DONE}" ]; then
   appStart
 else
   appSetup || exit 1
