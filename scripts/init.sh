@@ -228,7 +228,7 @@ config() {
   # Wrong owner of /run/chrony (UID != 102) - the azure image complains but with a chowned dir chrony just crashes
   #if ! uname -a | grep -q "azure"; then
   # PID and chronyd.sock dir for chrony
-  if ! uname -a | grep -q "azure"; then CHRONYUSERGROUP=root; fi
+  if uname -a | grep -q "azure"; then CHRONYUSERGROUP=root; fi
 
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
 
