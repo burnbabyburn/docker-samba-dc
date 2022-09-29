@@ -83,6 +83,7 @@ config() {
   DIR_BIND9_LIB=/var/lib/bind
   DIR_BIND9_LOG=/var/log/bind
   DIR_BIND9_RUN=/run/named
+
   DIR_CHRONY=/etc/chrony
   DIR_CHRONY_LIB=/var/lib/chrony
   DIR_CHRONY_LOG=/var/log/chrony
@@ -93,7 +94,7 @@ config() {
   DIR_SAMBA_CSHARE=/var/lib/samba/share_c
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba
   DIR_SAMBA_ETC=/etc/samba
-  FILE_CHRONY_DRIFT=/var/lib/chrony/chrony.drift
+  FILE_CHRONY_DRIFT="${DIR_CHRONY_LIB}/chrony.drift"
   FILE_KRB5=/etc/krb5.conf
   FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
@@ -213,8 +214,6 @@ config() {
   BIND9_START_PARAM="-f -u ${BINDUSERGROUP} -c $(readlink -f ${FILE_BIND9_CONF})"
 
   #chrony as root in docker action
-  #if uname -a | grep -q "azure"; then CHRONY_START_PARAM="$(echo "${CHRONY_START_PARAM}" | sed "s/-u _chrony //")"; fi
-  if uname -a | grep -q "azure"; then CHRONY_START_PARAM="${CHRONY_START_PARAM} -x"; fi
   if cat /sys/module/ipv6/parameters/disable;then
     #sed -e "s/listen-on-v6 { any; };/listen-on-v6 { none; };/" -i "${FILE_BIND9_CONF_OPTIONS}"
     BIND9_START_PARAM="${BIND9_START_PARAM} -4"
@@ -244,10 +243,6 @@ config() {
 }
 
 appSetup () {
-  ls -laZ /etc/chrony/chrony.conf
-  ls -ahl /etc
-  ls -ahl /etc/chrony
-  
   if [ ! -f /etc/timezone ] && [ -n "${TZ}" ]; then
     printf 'Set timezone'
     cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
