@@ -13,6 +13,7 @@ trap 'backupConfig' TERM
 # https://github.com/samba-team/samba/blob/master/docs-xml/Samba-EventLog-HOWTO.txt <= Didn't work
 # https://wiki.samba.org/index.php/Setting_up_Audit_Logging
 # SetKeyValueFilePattern - helper bugs out if file is not smb.conf - regex issues
+# Bind IP = edit named.conf.options
 
 config() {
   # Environment VARS for setup
@@ -94,7 +95,7 @@ config() {
   DIR_SAMBA_CSHARE=/var/lib/samba/share_c
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba
   DIR_SAMBA_ETC=/etc/samba
-  FILE_CHRONY_DRIFT="${DIR_CHRONY_LIB}/chrony.drift"
+  
   FILE_KRB5=/etc/krb5.conf
   FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
@@ -110,10 +111,10 @@ config() {
   DIR_SAMBA_PRINTDRIVER="${DIR_SAMBA_ADMIN}/system32/spool/drivers"
   DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private"
   DIR_SAMBA_SYSVOL="${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}"
+
   FILE_BIND9_CONF="${DIR_BIND9}/named.conf"
   FILE_BIND9_CONF_DEF_ZONE="${DIR_BIND9}/named.conf.default-zones"
   FILE_BIND9_CONF_GEN_SAMBA="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
-  FILE_BIND9_CONF_LOCAL="${DIR_BIND9}/named.conf.local"
   FILE_BIND9_CONF_LOG="${DIR_BIND9}/log.conf"
   FILE_BIND9_CONF_OPTIONS="${DIR_BIND9}/named.conf.options"
   FILE_BIND9_CONF_SAMBA="${DIR_BIND9}/samba-named.conf"
@@ -129,7 +130,10 @@ config() {
   FILE_BIND9_LOG_RPZ="${DIR_BIND9_LOG}/rpz"
   FILE_BIND9_LOG_ZONE_TRANSFERS="${DIR_BIND9_LOG}/zone_transfers"
   FILE_BIND9_RNDC_KEY="${DIR_BIND9}/rndc.key"
+  FILE_BIND9_DNSROOT_KEY="${DIR_BIND9}/bind.keys"
+
   FILE_CHRONY="${DIR_CHRONY}/chrony.conf"
+  FILE_CHRONY_DRIFT="${DIR_CHRONY_LIB}/chrony.drift"
   FILE_CHRONY_KEY="${DIR_CHRONY}/chrony.keys"
   FILE_CHRONY_PID="${DIR_CHRONY_RUN}/chronyd.pid"
   FILE_PKI_CA="${DIR_SAMBA_PRIVATE}/tls/ca.pem"
@@ -215,7 +219,7 @@ config() {
 
   #chrony as root in docker action
   if cat /sys/module/ipv6/parameters/disable;then
-    #sed -e "s/listen-on-v6 { any; };/listen-on-v6 { none; };/" -i "${FILE_BIND9_CONF_OPTIONS}"
+    sed -e "s/listen-on-v6 { any; };/listen-on-v6 { none; };/" -i "${FILE_BIND9_CONF_OPTIONS}"
     BIND9_START_PARAM="${BIND9_START_PARAM} -4"
     CHRONY_START_PARAM="${CHRONY_START_PARAM} -4"
   else
@@ -249,8 +253,8 @@ appSetup () {
     printf "%s" "${TZ}" >/etc/timezone
   fi
   
-  #wsdd2 symlink
-  ln -s /data/etc/samba/smb.conf /data/smb.conf
+  #Create symlink for wsdd2 - wsdd2 container expects file in root of volume and we cant mount to /
+  ln -s /etc/samba/smb.conf /data/smb.conf
 
   ## Setup filesystem and config files
   # Remove krb5.conf will be replaced by a samba generated one
@@ -261,7 +265,6 @@ appSetup () {
   chown "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${FILE_BIND9_RNDC_KEY}"
 
   chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF}"
-  chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_LOCAL}"
   chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_LOG}"
   chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_OPTIONS}"
   chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_DEF_ZONE}"
@@ -317,7 +320,11 @@ appSetup () {
   chmod 755 "${DIR_CHRONY_LIB}"
 
   if [ ! -d "${DIR_CHRONY_CONFD}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_CONFD})"; fi
+  chmod 755 "${DIR_CHRONY_CONFD}"
+
   if [ ! -d "${DIR_CHRONY_SRC}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_SRC})"; fi
+
+  chmod 755 "${DIR_CHRONY_SRC}"
   
   if [ ! -d "${DIR_SAMBA_CACHE}" ]; then mkdir "$(readlink -f ${DIR_SAMBA_CACHE})"; fi
   chmod 755 "${DIR_SAMBA_CACHE}"
@@ -331,10 +338,6 @@ appSetup () {
     if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_RUN})"; fi
     chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_RUN}"
     chmod 750 "${DIR_CHRONY_RUN}"
-	#Test for azure
-	chown -LR "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY}"
-	chmod -R 755 ${DIR_CHRONY}
-  #fi
 
   #Configure /etc/supervisor/conf.d/supervisord.conf
   sed ${SED_PARAM} "s:{{ SAMBA_START_PARAM }}:${SAMBA_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
@@ -345,9 +348,8 @@ appSetup () {
   if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed ${SED_PARAM} "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
   if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ] && ! grep -q "validate-except" "${FILE_BIND9_CONF_OPTIONS}"; then sed ${SED_PARAM} "/^[[:space:]]*}/i\  validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
-
-  # https://www.elastic2ls.com/blog/loading-from-master-file-managed-keys-bind-failed/
-  #if ! grep -q "/data/etc/bind/bind.keys" "${FILE_BIND9_CONF}"; then printf "include \"/etc/bind/bind.keys\";" >> "${FILE_BIND9_CONF}"; fi
+  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed ${SED_PARAM} "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
+  if grep -q "{{ DIR_BIND9_CACHE }}" "${FILE_BIND9_CONF_OPTIONS}"; then sed ${SED_PARAM} "s:{{ DIR_BIND9_CACHE }}:${DIR_BIND9_CACHE}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
 
   # Configure chrony files
   if grep -q "{{ DIR_CHRONY_CONFD }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ DIR_CHRONY_CONFD }}:${DIR_CHRONY_CONFD}:" -i "${FILE_CHRONY}"; fi
@@ -358,7 +360,7 @@ appSetup () {
   if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" -i "${FILE_CHRONY}"; fi
   if grep -q "{{ FILE_CHRONY_PID }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ FILE_CHRONY_PID }}:${FILE_CHRONY_PID}:" -i "${FILE_CHRONY}"; fi
-  #if  [ ! -f "${FILE_CHRONY_TIMESRC}" ]; then
+
   DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
   for DC in $DCs
   do
@@ -565,13 +567,17 @@ appSetup () {
       if [ "${DOMAIN_PWD_ADMIN_NO_EXP}" = true ] && [ "${FEATURE_SCHEMA_LAPS}" = false ]; then samba-tool user setexpiry "${DOMAIN_USER}" --noexpiry "${SAMBA_DEBUG_OPTION}"; fi
     fi
     # End of join or provision
+	
+	if [ -f "${FILE_BIND9_CONF_OPTIONS}" ]; then printf "include \"%s\";" "${FILE_BIND9_CONF_OPTIONS}" >> "${FILE_BIND9_CONF}"; fi
+    if [ -f "${FILE_BIND9_CONF_DEF_ZONE}" ]; then printf "include \"%s\";" "${FILE_BIND9_CONF_DEF_ZONE}" >> "${FILE_BIND9_CONF}"; fi
+    if [ -f "${FILE_BIND9_DNSROOT_KEY}" ]; then printf "include \"%s\";" "${FILE_BIND9_DNSROOT_KEY}" >> "${FILE_BIND9_CONF}"; fi
 
     ## Configure files generated by SAMBA setup
     # Add Debug to dynamically loadable zones (DLZ)
     cp "${FILE_BIND9_CONF_GEN_SAMBA}" "${FILE_BIND9_CONF_SAMBA}"
 	chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_SAMBA}"
-    if ! grep -q "${FILE_BIND9_CONF_SAMBA}" "${FILE_BIND9_CONF_LOCAL}";then
-	  printf "include \"%s\";" "${FILE_BIND9_CONF_SAMBA}" >> "${FILE_BIND9_CONF_LOCAL}"
+    if ! grep -q "${FILE_BIND9_CONF_SAMBA}" "${FILE_BIND9_CONF}";then
+	  printf "include \"%s\";" "${FILE_BIND9_CONF_SAMBA}" >> "${FILE_BIND9_CONF}"
 	fi
     sed ${SED_PARAM} "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_CONF_SAMBA}"
 	chown -L root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_SAMBA}"
@@ -624,8 +630,6 @@ appSetup () {
       SetKeyValueFilePattern 'disable spoolss' 'yes'
     fi
 
-    #Create symlink for wsdd2
-    #ln -s /etc/samba/smb.conf  /etc/samba/
     # Stop VPN & write supervisor service
     if [ "${JOIN_SITE_VPN}" = true ]; then
       if [ -n "${VPNPID}" ]; then kill "${VPNPID}"; fi
@@ -704,7 +708,7 @@ appStart () {
 
 ######### BEGIN MAIN function #########
 config
-
+cp /data/etc/chrony/chrony.conf "${FILE_CHRONY}"
 # If the supervisor conf isn't there, we're spinning up a new container
 if [ -f "${FILE_EXTERNAL_SAMBA_CONF}" ]; then
   appStart

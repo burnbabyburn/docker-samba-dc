@@ -3,7 +3,7 @@
 acl internals { any; };
 
 options {
-  directory "/var/cache/bind";
+  directory "{{ DIR_BIND9_CACHE }}";
   version "Go Away 0.0.7";
   notify no;
   empty-zones-enable no;
