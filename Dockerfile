@@ -30,7 +30,6 @@ RUN apt-get update \
 	&& rm -rf /etc/bind /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor \
 	&& mkdir -p /data/etc/bind /data/etc/chrony /data/etc/samba /data/etc/supervisor /data/cache/bind /data/cache/samba /data/lib/bind /data/lib/chrony /data/lib/samba /data/log/bind /data/log/chrony /data/log/samba /data/log/supervisor \
 	# Symlink crashes github actions works fine otherwise
-	&& cp /data/etc/chrony/chrony.conf /etc/chrony/chrony.conf \
 	&& ln -s /data/etc/bind /etc/bind \
 	&& ln -s /data/etc/nsswitch.conf /etc/ \
 	&& ln -s /data/etc/samba /etc/samba \
