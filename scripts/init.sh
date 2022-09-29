@@ -76,42 +76,15 @@ config() {
   IMAP_UID_START=${IMAP_UID_START:-$IMAP_ID_START}
   IMAP_GID_START=${IMAP_GID_START:-$IMAP_ID_START}
 
-  # DIR_GPO, DIR_SAMBA_CONF, DIR_LDIF and DIR_SCRIPTS need to be changed in the Dockerfile
-
   # File and directory locations
+  # Note: DIR_GPO, DIR_SAMBA_CONF, DIR_LDIF and DIR_SCRIPTS need to be changed in the Dockerfile
+  # Bind9/Named directories
   DIR_BIND9=/etc/bind
   DIR_BIND9_CACHE=/var/cache/bind
   DIR_BIND9_LIB=/var/lib/bind
   DIR_BIND9_LOG=/var/log/bind
   DIR_BIND9_RUN=/run/named
-
-  DIR_CHRONY=/etc/chrony
-  DIR_CHRONY_LIB=/var/lib/chrony
-  DIR_CHRONY_LOG=/var/log/chrony
-  DIR_CHRONY_RUN=/run/chrony
-  DIR_CHRONY_SOCK=/var/lib/samba/ntp_signd
-  DIR_CHRONY_SRC=/etc/chrony/sources.d
-  DIR_SAMBA_CACHE=/var/cache/samba
-  DIR_SAMBA_CSHARE=/var/lib/samba/share_c
-  DIR_SAMBA_DATA_PREFIX=/var/lib/samba
-  DIR_SAMBA_ETC=/etc/samba
-  
-  FILE_KRB5=/etc/krb5.conf
-  FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
-  FILE_NSSWITCH=/etc/nsswitch.conf
-  FILE_OPENVPNCONF=/docker.ovpn
-  FILE_SAMBA_LOG=/var/log/samba/smb.log
-  FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
-  FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
-
-  DIR_CHRONY_CONFD="${DIR_CHRONY}/conf.d"
-  DIR_SAMBA_ADMIN="${DIR_SAMBA_CSHARE}/windows"
-  DIR_SAMBA_EVENTLOG="${DIR_SAMBA_ADMIN}/system32/config"
-  DIR_SAMBA_NETLOGON="${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts"
-  DIR_SAMBA_PRINTDRIVER="${DIR_SAMBA_ADMIN}/system32/spool/drivers"
-  DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private"
-  DIR_SAMBA_SYSVOL="${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}"
-
+  # Bind9 files
   FILE_BIND9_CONF="${DIR_BIND9}/named.conf"
   FILE_BIND9_CONF_DEF_ZONE="${DIR_BIND9}/named.conf.default-zones"
   FILE_BIND9_CONF_GEN_SAMBA="${DIR_SAMBA_DATA_PREFIX}/bind-dns/named.conf"
@@ -132,17 +105,42 @@ config() {
   FILE_BIND9_RNDC_KEY="${DIR_BIND9}/rndc.key"
   FILE_BIND9_DNSROOT_KEY="${DIR_BIND9}/bind.keys"
 
+  # Chrony directories
+  DIR_CHRONY=/etc/chrony
+  DIR_CHRONY_CONFD="${DIR_CHRONY}/conf.d"
+  DIR_CHRONY_LIB=/var/lib/chrony
+  DIR_CHRONY_LOG=/var/log/chrony
+  DIR_CHRONY_RUN=/run/chrony
+  DIR_CHRONY_SOCK=/var/lib/samba/ntp_signd
+  DIR_CHRONY_SRC=/etc/chrony/sources.d
+  # Chrony files
   FILE_CHRONY="${DIR_CHRONY}/chrony.conf"
   FILE_CHRONY_DRIFT="${DIR_CHRONY_LIB}/chrony.drift"
   FILE_CHRONY_KEY="${DIR_CHRONY}/chrony.keys"
   FILE_CHRONY_PID="${DIR_CHRONY_RUN}/chronyd.pid"
-  FILE_PKI_CA="${DIR_SAMBA_PRIVATE}/tls/ca.pem"
-  FILE_PKI_CERT="${DIR_SAMBA_PRIVATE}/tls/cert.pem"
-  FILE_PKI_CRL="${DIR_SAMBA_PRIVATE}/tls/crl.pem"
-  FILE_PKI_DH="${DIR_SAMBA_PRIVATE}/tls/dh.key"
-  FILE_PKI_INT="${DIR_SAMBA_PRIVATE}/tls/intermediate.pem"
-  FILE_PKI_KEY="${DIR_SAMBA_PRIVATE}/tls/key.pem"
+
+  # Samba directories
+  DIR_SAMBA_CACHE=/var/cache/samba
+  DIR_SAMBA_CSHARE=/var/lib/samba/share_c
+  DIR_SAMBA_DATA_PREFIX=/var/lib/samba
+  DIR_SAMBA_ETC=/etc/samba
+  DIR_SAMBA_LOG=/var/log/samba
+  DIR_SAMBA_ADMIN="${DIR_SAMBA_CSHARE}/windows"
+  DIR_SAMBA_EVENTLOG="${DIR_SAMBA_ADMIN}/system32/config"
+  DIR_SAMBA_NETLOGON="${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts"
+  DIR_SAMBA_PRINTDRIVER="${DIR_SAMBA_ADMIN}/system32/spool/drivers"
+  DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private"
+  DIR_SAMBA_SYSVOL="${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}"
+  # Samba files
   FILE_SAMBA_CONF="${DIR_SAMBA_ETC}/smb.conf"
+  FILE_SAMBA_LOG="${DIR_SAMBA_LOG}/smb.log"
+  FILE_SAMBA_PKI_CA="${DIR_SAMBA_PRIVATE}/tls/ca.pem"
+  FILE_SAMBA_PKI_CERT="${DIR_SAMBA_PRIVATE}/tls/cert.pem"
+  FILE_SAMBA_PKI_CRL="${DIR_SAMBA_PRIVATE}/tls/crl.pem"
+  FILE_SAMBA_PKI_DH="${DIR_SAMBA_PRIVATE}/tls/dh.key"
+  FILE_SAMBA_PKI_INT="${DIR_SAMBA_PRIVATE}/tls/intermediate.pem"
+  FILE_SAMBA_PKI_KEY="${DIR_SAMBA_PRIVATE}/tls/key.pem"
+  FILE_SAMBA_SAMLDB="${DIR_SAMBA_PRIVATE}/sam.ldb"
   FILE_SAMBA_SCHEMA_LAPS1="${DIR_LDIF}/laps-1.ldif"
   FILE_SAMBA_SCHEMA_LAPS2="${DIR_LDIF}/laps-2.ldif"
   FILE_SAMBA_SCHEMA_RFC="${DIR_LDIF}/RFC_Domain_User_Group.ldif"
@@ -154,7 +152,16 @@ config() {
   FILE_SAMBA_SCHEMA_WINSREPL="${DIR_LDIF}/wins.ldif"
   FILE_SAMBA_USER_MAP="${DIR_SAMBA_ETC}/user.map"
   FILE_SAMBA_WINSLDB="${DIR_SAMBA_PRIVATE}/wins_config.ldb"
-  FILE_SAMLDB="${DIR_SAMBA_PRIVATE}/sam.ldb"
+
+  # misc config files
+  FILE_KRB5=/etc/krb5.conf
+  FILE_KRB5_WINBINDD=/var/lib/samba/private/krb5.conf
+  FILE_NSSWITCH=/etc/nsswitch.conf
+  FILE_OPENVPNCONF=/docker.ovpn
+
+  # Supervisor files
+  FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
+  FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
 
   # if hostname contains FQDN cut the rest
   if printf "%s" "${HOSTNAME}" | grep -q "\."; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1); fi
@@ -424,14 +431,14 @@ appSetup () {
   fi
 
   if [ "${TLS_ENABLE}" = true ]; then
-    if [ ! -f "${FILE_PKI_CERT}" ] && [ ! -f "${FILE_PKI_KEY}" ] && [ ! -f "${FILE_PKI_CA}" ]; then printf "No custom CA found. Samba will autogenerate one"; fi
-    if [ ! -f "${FILE_PKI_DH}" ]; then openssl dhparam -out "${FILE_PKI_DH}" 2048; fi
+    if [ ! -f "${FILE_SAMBA_PKI_CERT}" ] && [ ! -f "${FILE_SAMBA_PKI_KEY}" ] && [ ! -f "${FILE_SAMBA_PKI_CA}" ]; then printf "No custom CA found. Samba will autogenerate one"; fi
+    if [ ! -f "${FILE_SAMBA_PKI_DH}" ]; then openssl dhparam -out "${FILE_SAMBA_PKI_DH}" 2048; fi
     set -- "$@" "--option=tls enabled = yes"
-    set -- "$@" "--option=tls keyfile = $FILE_PKI_KEY"
-    set -- "$@" "--option=tls certfile = $FILE_PKI_CERT"
-    set -- "$@" "--option=tls cafile = $FILE_PKI_CA"
-    set -- "$@" "--option=tls dh params file = $FILE_PKI_DH"
-#    set -- "$@" "--option=tls crlfile = $FILE_PKI_CRL"
+    set -- "$@" "--option=tls keyfile = $FILE_SAMBA_PKI_KEY"
+    set -- "$@" "--option=tls certfile = $FILE_SAMBA_PKI_CERT"
+    set -- "$@" "--option=tls cafile = $FILE_SAMBA_PKI_CA"
+    set -- "$@" "--option=tls dh params file = $FILE_SAMBA_PKI_DH"
+#    set -- "$@" "--option=tls crlfile = $FILE_SAMBA_PKI_CRL"
 #    set -- "$@" "--option=tls verify peer = ca_and_name"
   else
     set -- "$@" "--option=tls enabled = no"
@@ -505,8 +512,8 @@ appSetup () {
 
       # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
       if [ "${FEATURE_RECYCLEBIN}" = true ]; then
-        python3 "${DIR_SCRIPTS}"/enablerecyclebin.py "${FILE_SAMLDB}"
-        if ldbsearch -H "${FILE_SAMLDB}" -s base -b "CN=NTDS Settings,CN=${HOSTNAME},CN=Servers,CN=${JOIN_SITE},CN=Sites,CN=Configuration${LDAP_SUFFIX}" msDS-EnabledFeature | grep -q 'CN=Recycle Bin Feature'; then printf "Optional Feature Recycle Bin Feature OK"; else printf "FAILED"; exit 1; fi
+        python3 "${DIR_SCRIPTS}"/enablerecyclebin.py "${FILE_SAMBA_SAMLDB}"
+        if ldbsearch -H "${FILE_SAMBA_SAMLDB}" -s base -b "CN=NTDS Settings,CN=${HOSTNAME},CN=Servers,CN=${JOIN_SITE},CN=Sites,CN=Configuration${LDAP_SUFFIX}" msDS-EnabledFeature | grep -q 'CN=Recycle Bin Feature'; then printf "Optional Feature Recycle Bin Feature OK"; else printf "FAILED"; exit 1; fi
       fi
 
       if [ "${FEATURE_KERBEROS_TGT}" = true ]; then EnableChangeKRBTGTSupervisord; fi
@@ -515,8 +522,8 @@ appSetup () {
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
       if [ "${ENABLE_RFC2307}" = true ]; then
         setupSchemaRFC2307File
-        ldbmodify -H "${FILE_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
-        if ldbsearch -H "${FILE_SAMLDB}" -s base -b CN="${DOMAIN_NETBIOS}",CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System"${LDAP_SUFFIX}" | grep 'returned 1 records'; then
+        ldbmodify -H "${FILE_SAMBA_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+        if ldbsearch -H "${FILE_SAMBA_SAMLDB}" -s base -b CN="${DOMAIN_NETBIOS}",CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System"${LDAP_SUFFIX}" | grep 'returned 1 records'; then
           printf "Add RFC2307 Attributes for default AD users"; else printf 'FAILED'; exit 1; fi
       fi
       # https://fy.blackhats.net.au/blog/html/2018/04/18/making_samba_4_the_default_ldap_server.html?highlight=samba
@@ -531,9 +538,9 @@ appSetup () {
         "${FILE_SAMBA_SCHEMA_SSH2}.j2" > "${FILE_SAMBA_SCHEMA_SSH2}"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SSH3}.j2" > "${FILE_SAMBA_SCHEMA_SSH3}"
-        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
-        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
-        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH3}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+        ldbmodify -H "${FILE_SAMBA_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+        ldbmodify -H "${FILE_SAMBA_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+        ldbmodify -H "${FILE_SAMBA_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SSH3}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
       fi
       if [ "${FEATURE_SCHEMA_SUDO}" = true ]; then
         printf "Trying to add SUDO LDAP-Schema to AD"
@@ -541,8 +548,8 @@ appSetup () {
         "${FILE_SAMBA_SCHEMA_SUDO1}.j2" > "${FILE_SAMBA_SCHEMA_SUDO1}"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
         "${FILE_SAMBA_SCHEMA_SUDO2}.j2" > "${FILE_SAMBA_SCHEMA_SUDO2}"
-        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SUDO1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
-        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SUDO2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+        ldbmodify -H "${FILE_SAMBA_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SUDO1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+        ldbmodify -H "${FILE_SAMBA_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_SUDO2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
       fi
       # https://www.microsoft.com/en-us/download/confirmation.aspx?id=103507'
       # Microsoft Local Administrator Password Solution (LAPS) https://www.microsoft.com/en-us/download/details.aspx?id=46899
@@ -552,8 +559,8 @@ appSetup () {
           "${FILE_SAMBA_SCHEMA_LAPS1}.j2" > "${FILE_SAMBA_SCHEMA_LAPS1}"
         sed -e "s: {{ LDAP_SUFFIX }}:${LDAP_SUFFIX}:g" \
           "${FILE_SAMBA_SCHEMA_LAPS2}.j2" > "${FILE_SAMBA_SCHEMA_LAPS2}"
-        ldbadd -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
-        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+        ldbadd -H "${FILE_SAMBA_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS1}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
+        ldbmodify -H "${FILE_SAMBA_SAMLDB}" --option="dsdb:schema update allowed"=true "${FILE_SAMBA_SCHEMA_LAPS2}" -U "${DOMAIN_USER}" "${SAMBA_DEBUG_OPTION}"
       fi
 
       if [ "${DOMAIN_ACC_LOCK_DURATION}" != 30 ]; then samba-tool domain passwordsettings set --account-lockout-duration="$DOMAIN_ACC_LOCK_DURATION" "${SAMBA_DEBUG_OPTION}"; fi
