@@ -672,7 +672,6 @@ touch "${FILE_SETUP_DONE}"
 }
 
 appFirstStart () {
-
   if [ -d /etc/samba/conf.d/ ]; then
     for file in /etc/samba/conf.d/*.conf; do
       SetKeyValueFilePattern 'include' "$file"
@@ -731,13 +730,13 @@ appFirstStart () {
 
 appStart () {
   update-ca-certificates
-#  restoreConfig
+  cp /data/etc/chrony/chrony.conf "${FILE_CHRONY}"
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}"
 }
 
 ######### BEGIN MAIN function #########
 config
-cp /data/etc/chrony/chrony.conf "${FILE_CHRONY}"
+
 # If the supervisor conf isn't there, we're spinning up a new container
 if [ -f "${FILE_SETUP_DONE}" ]; then
   appStart
