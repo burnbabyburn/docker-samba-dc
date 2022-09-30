@@ -4,6 +4,11 @@
 * Build test via docker actions
 * Mount custom Samba [global] parameters to files in /etc/samba/smb.conf.d
 
+* Branches:
+  * Bind9=>Bind9 with ntpd
+  * chrony=>chrony without Bind9
+  * test=>chrony,bind9 - script runs fine on alpine and ubuntu Dockerfile and compose provided
+
 # Samba Active Directory Domain Controller for Docker
 
 A well documented, tried and tested Samba Active Directory Domain Controller that works with the standard Windows management tools; built from scratch using internal DNS and kerberos and not based on existing containers.
