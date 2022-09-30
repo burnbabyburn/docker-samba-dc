@@ -1,6 +1,6 @@
 FROM alpine
 
-ENV DIR_GPO=/gpo 
+ENV DIR_GPO=/gpo \
 	DIR_LDIF=/ldif \
 	DIR_SCRIPTS=/scripts \
     DIR_DATA=/data \
