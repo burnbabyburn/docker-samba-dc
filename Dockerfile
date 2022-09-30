@@ -28,7 +28,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt /var/lib/dpkg /var/lib/cache /var/lib/log/ \
 	&& rm -rf /tmp/* /var/tmp/*	\
 	&& mkdir /backup /backup/etc /backup/lib /backup/log /backup/cache \
-	&& rm -rf /etc/bind /etc/krb5.conf /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor \
+	&& rm -rf /etc/bind /etc/chrony /etc/krb5.conf /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor \
 	&& mkdir -p $DIR_DATA/etc/bind $DIR_DATA/etc/chrony $DIR_DATA/etc/samba $DIR_DATA/etc/supervisor $DIR_DATA/cache/bind $DIR_DATA/cache/samba $DIR_DATA/lib/bind $DIR_DATA/lib/chrony $DIR_DATA/lib/samba $DIR_DATA/log/bind \
 	            $DIR_DATA/log/chrony $DIR_DATA/log/samba $DIR_DATA/log/supervisor \
 	# Symlink crashes github actions works fine otherwise

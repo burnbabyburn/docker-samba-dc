@@ -7,7 +7,7 @@ ENV DIR_GPO=/gpo \
     DIR_SAMBA_CONF=$DIR_DATA/etc/samba/conf.d
 
 RUN apk --no-cache --update add krb5 bind chrony samba-dc ldb-tools tzdata supervisor py3-setproctitle samba-winbind-clients samba-winbind-krb5-locator \
-	&& rm -rf /etc/bind /etc/krb5.conf /etc/samba /etc/supervisord.conf /var/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba \
+	&& rm -rf /etc/bind /etc/chrony /etc/krb5.conf /etc/samba /etc/supervisord.conf /var/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba \
 	&& mkdir -p $DIR_DATA/etc/bind $DIR_DATA/etc/chrony $DIR_DATA/etc/samba $DIR_DATA/etc/supervisor $DIR_DATA/cache/bind $DIR_DATA/cache/samba $DIR_DATA/lib/bind $DIR_DATA/lib/chrony \
 	            $DIR_DATA/lib/samba $DIR_DATA/log/bind $DIR_DATA/log/chrony $DIR_DATA/log/samba $DIR_DATA/log/supervisor \
 	&& ln -s $DIR_DATA/etc/bind /etc/bind \
