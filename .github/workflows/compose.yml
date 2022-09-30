@@ -83,7 +83,7 @@ jobs:
       - name: Check running ALPINE containers
         run: docker ps -a
       - name: Check logs ALPINE DC01
-        run: docker logs sambaalpine
+        run: docker logs samba-alpine-dc01
       - name: Get ALPINE os-release
         run: docker exec --tty samba-alpine-dc01 /bin/cat /etc/os-release
       - name: Get ALPINE kernel
