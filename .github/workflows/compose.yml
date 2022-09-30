@@ -75,7 +75,7 @@ jobs:
       - name: Build the ALPINE stack
         run: docker-compose -f docker-compose-alpine.yml build
       - name: Start ALPINE DC01
-        run: docker-compose -f docker-compose-alpine.yml up -d samba-alpine
+        run: docker-compose -f docker-compose-alpine.yml up -d sambaalpine
       - name: Sleep for 30 seconds
         run: sleep 30
       - name: Check ALPINE network
@@ -83,7 +83,7 @@ jobs:
       - name: Check running ALPINE containers
         run: docker ps -a
       - name: Check logs ALPINE DC01
-        run: docker logs samba-alpine
+        run: docker logs sambaalpine
       - name: Get ALPINE os-release
         run: docker exec --tty samba-alpine-dc01 /bin/cat /etc/os-release
       - name: Get ALPINE kernel
@@ -111,7 +111,7 @@ jobs:
       - name: Check ALPINE DC01 Host record
         run: docker exec --tty samba-alpine-dc01 /usr/bin/host -t A DC01.sam.dom
       - name: Start ALPINE DC02
-        run: docker-compose -f docker-compose-alpine up -d samba-alpine-join
+        run: docker-compose -f docker-compose-alpine up -d sambaalpinejoin
       - name: Sleep for 30 seconds
         run: sleep 30
       - name: Check logs ALPINE DC02
