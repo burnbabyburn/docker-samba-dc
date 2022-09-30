@@ -1,14 +1,14 @@
 version: '3.7'
 
 networks:
-  samba-net:
+  samba-net2:
     name: samba-net2
     driver: bridge
     ipam:
      config:
        - subnet: 172.102.0.0/16
     driver_opts:
-      com.docker.network.bridge.name: br_samba
+      com.docker.network.bridge.name: br_samba2
 
 #volumes:
 #  samba01:
