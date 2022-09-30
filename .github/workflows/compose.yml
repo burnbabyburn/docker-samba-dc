@@ -69,10 +69,13 @@ jobs:
       - name: Get all Domain Controllers
         run: docker exec --tty samba-dc02 /usr/bin/ldbsearch -H /var/lib/samba/private/sam.ldb -b"OU=Domain Controllers,DC=sam,DC=dom" "objectClass=computer" cn
       
+      
+      
+      
       - name: Build the ALPINE stack
         run: docker-compose -f docker-compose-alpine.yml build
       - name: Start ALPINE DC01
-        run: docker-compose -f docker-compose.yml up -d samba-alpine
+        run: docker-compose -f docker-compose-alpine.yml up -d samba-alpine
       - name: Sleep for 30 seconds
         run: sleep 30
       - name: Check ALPINE network
@@ -80,33 +83,33 @@ jobs:
       - name: Check running ALPINE containers
         run: docker ps -a
       - name: Check logs ALPINE DC01
-        run: docker logs samba-alpine-dc01
+        run: docker logs samba-alpine
       - name: Get ALPINE os-release
-        run: docker exec --tty samba-dc01 /bin/cat /etc/os-release
+        run: docker exec --tty samba-alpine-dc01 /bin/cat /etc/os-release
       - name: Get ALPINE kernel
-        run: docker exec --tty samba-dc01 /bin/uname -a  
+        run: docker exec --tty samba-alpine-dc01 /bin/uname -a  
       - name: who am i on ALPINE
-        run: docker exec --tty samba-dc01 /usr/bin/whoami
+        run: docker exec --tty samba-alpine-dc01 /usr/bin/whoami
       - name: show ALPINE users
-        run: docker exec --tty samba-dc01 /bin/cat /etc/passwd
+        run: docker exec --tty samba-alpine-dc01 /bin/cat /etc/passwd
       - name: Check ALPINE DC01 NTP
-        run: docker exec --tty samba-dc01 /usr/bin/chronyc sources && /usr/bin/chronyc tracking
+        run: docker exec --tty samba-alpine-dc01 /usr/bin/chronyc sources && /usr/bin/chronyc tracking
       - name: Check ALPINE DC01 named
-        run: docker exec --tty samba-dc01 /usr/sbin/named-checkconf -p
+        run: docker exec --tty samba-alpine-dc01 /usr/sbin/named-checkconf -p
       - name: Check ALPINE DC01 config
-        run: docker exec --tty samba-dc01 /usr/bin/testparm -vs
+        run: docker exec --tty samba-alpine-dc01 /usr/bin/testparm -vs
       - name: Check ALPINE DC01 processes
-        run: docker exec --tty samba-dc01 /usr/bin/samba-tool processes
+        run: docker exec --tty samba-alpine-dc01 /usr/bin/samba-tool processes
       - name: Check ALPINE DC01 domain
-        run: docker exec --tty samba-dc01 /usr/bin/samba-tool domain info 127.0.0.1
+        run: docker exec --tty samba-alpine-dc01 /usr/bin/samba-tool domain info 127.0.0.1
       - name: Check ALPINE DC01 winbindd
-        run: docker exec --tty samba-dc01 /usr/bin/wbinfo -u
+        run: docker exec --tty samba-alpine-dc01 /usr/bin/wbinfo -u
       - name: Check ALPINE DC01 DNS
-        run: docker exec --tty samba-dc01 /usr/bin/dig +short -t srv _ldap._tcp.sam.dom
+        run: docker exec --tty samba-alpine-dc01 /usr/bin/dig +short -t srv _ldap._tcp.sam.dom
       - name: Check ALPINE DC01 RDNS
-        run: docker exec --tty samba-dc01 /usr/bin/dig -x 172.101.1.100
+        run: docker exec --tty samba-alpine-dc01 /usr/bin/dig -x 172.101.1.100
       - name: Check ALPINE DC01 Host record
-        run: docker exec --tty samba-dc01 /usr/bin/host -t A DC01.sam.dom
+        run: docker exec --tty samba-alpine-dc01 /usr/bin/host -t A DC01.sam.dom
       - name: Start ALPINE DC02
         run: docker-compose -f docker-compose-alpine up -d samba-alpine-join
       - name: Sleep for 30 seconds
@@ -114,26 +117,26 @@ jobs:
       - name: Check logs ALPINE DC02
         run: docker logs samba-alpine-dc02
       - name: Check ALPINE DC02 NTP
-        run: docker exec --tty samba-dc02 /usr/bin/chronyc sources && /usr/bin/chronyc tracking
+        run: docker exec --tty samba-alpine-dc02 /usr/bin/chronyc sources && /usr/bin/chronyc tracking
       - name: Check ALPINE DC02 named
-        run: docker exec --tty samba-dc02 /usr/sbin/named-checkconf -p
+        run: docker exec --tty samba-alpine-dc02 /usr/sbin/named-checkconf -p
       - name: Check ALPINE DC02 config
-        run: docker exec --tty samba-dc02 /usr/bin/testparm -vs
+        run: docker exec --tty samba-alpine-dc02 /usr/bin/testparm -vs
       - name: Check ALPINE DC02 processes
-        run: docker exec --tty samba-dc02 /usr/bin/samba-tool processes
+        run: docker exec --tty samba-alpine-dc02 /usr/bin/samba-tool processes
       - name: Check ALPINE DC02 domain
-        run: docker exec --tty samba-dc02 /usr/bin/samba-tool domain info 127.0.0.1
+        run: docker exec --tty samba-alpine-dc02 /usr/bin/samba-tool domain info 127.0.0.1
       - name: Check ALPINE DC02 winbindd
-        run: docker exec --tty samba-dc02 /usr/bin/wbinfo -u
+        run: docker exec --tty samba-alpine-dc02 /usr/bin/wbinfo -u
       - name: Check ALPINE DC02 DNS
-        run: docker exec --tty samba-dc02 /usr/bin/dig +short -t srv _ldap._tcp.sam.dom
+        run: docker exec --tty samba-alpine-dc02 /usr/bin/dig +short -t srv _ldap._tcp.sam.dom
       - name: Check ALPINE DC02 RDNS
-        run: docker exec --tty samba-dc02 /usr/bin/dig -x 172.101.2.200
+        run: docker exec --tty samba-alpine-dc02 /usr/bin/dig -x 172.101.2.200
       - name: Check ALPINE DC02 Host record
-        run: docker exec --tty samba-dc02 /usr/bin/host -t A dockersamba02.sam.dom
+        run: docker exec --tty samba-alpine-dc02 /usr/bin/host -t A dockersamba02.sam.dom
       - name: Check ALPINE DC02 Host record of ALPINE DC01
-        run: docker exec --tty samba-dc02 /usr/bin/dig +short dc01.sam.dom
+        run: docker exec --tty samba-alpine-dc02 /usr/bin/dig +short dc01.sam.dom
       - name: Check ALPINE DC02 Host record of ALPINE DC02
-        run: docker exec --tty samba-dc02 /usr/bin/dig +short dockersamba02.sam.dom
+        run: docker exec --tty samba-alpine-dc02 /usr/bin/dig +short dockersamba02.sam.dom
       - name: Get all ALPINE Domain Controllers
-        run: docker exec --tty samba-dc02 /usr/bin/ldbsearch -H /var/lib/samba/private/sam.ldb -b"OU=Domain Controllers,DC=alpinesam,DC=dom" "objectClass=computer" cn
+        run: docker exec --tty samba-alpine-dc02 /usr/bin/ldbsearch -H /var/lib/samba/private/sam.ldb -b"OU=Domain Controllers,DC=alpinesam,DC=dom" "objectClass=computer" cn
