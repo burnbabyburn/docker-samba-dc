@@ -17,8 +17,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
 	DIR_SAMBA_CONF=$DIR_DATA/etc/samba/conf.d \
 	DIR_SCRIPTS=/scripts
 
-VOLUME $DIR_DATA
-
 RUN apt-get update \
     && apt-get upgrade -y \
 	&& apt-get install -y bind9 chrony pkg-config attr acl samba smbclient tdb-tools ldb-tools ldap-utils winbind libnss-winbind libpam-winbind libpam-krb5 krb5-user supervisor dnsutils nano python3-setproctitle\
@@ -49,7 +47,6 @@ RUN apt-get update \
 	&& ln -s $DIR_DATA/cache/bind /var/cache/bind \
 	&& ln -s $DIR_DATA/cache/samba /var/cache/samba
 
-
 COPY /ldif $DIR_LDIF
 COPY /etc $DIR_DATA/etc
 COPY /scripts $DIR_SCRIPTS
@@ -58,6 +55,8 @@ COPY /gpo $DIR_GPO
 #COPY --from=builder ${src} /tmp/
 
 RUN chmod -R +x $DIR_SCRIPTS
+
+VOLUME $DIR_DATA
 
 EXPOSE 42 53 53/udp 88 88/udp 135 137-138/udp 139 389 389/udp 445 464 464/udp 636 3268-3269 49152-65535
 

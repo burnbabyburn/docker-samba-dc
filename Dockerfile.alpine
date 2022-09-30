@@ -5,8 +5,6 @@ ENV DIR_GPO=/gpo \
 	DIR_SCRIPTS=/scripts \
     DIR_DATA=/data \
     DIR_SAMBA_CONF=$DIR_DATA/etc/samba/conf.d
-	
-VOLUME $DIR_DATA
 
 RUN apk --no-cache --update add krb5 bind chrony samba-dc ldb-tools tzdata supervisor py3-setproctitle samba-winbind-clients samba-winbind-krb5-locator \
 	&& rm -rf /etc/bind /etc/krb5.conf /etc/samba /etc/supervisord.conf /var/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba \
@@ -35,6 +33,8 @@ COPY /gpo /$DIR_GPO
 #COPY --from=builder ${src} /tmp/
 
 RUN chmod -R +x /scripts/
+
+VOLUME $DIR_DATA
 
 EXPOSE 42 53 53/udp 88 88/udp 135 137-138/udp 139 389 389/udp 445 464 464/udp 636 3268-3269 49152-65535
 
