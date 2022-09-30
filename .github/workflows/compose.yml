@@ -85,13 +85,13 @@ jobs:
       - name: Check logs ALPINE DC01
         run: docker logs samba-alpine-dc01
       - name: Get ALPINE os-release
-        run: docker exec --tty samba-alpine-dc01 /bin/cat /etc/os-release
+        run: docker exec --tty samba-alpine-dc01 /usr/bin/cat /etc/os-release
       - name: Get ALPINE kernel
-        run: docker exec --tty samba-alpine-dc01 /bin/uname -a  
+        run: docker exec --tty samba-alpine-dc01 /usr/bin/uname -a  
       - name: who am i on ALPINE
         run: docker exec --tty samba-alpine-dc01 /usr/bin/whoami
       - name: show ALPINE users
-        run: docker exec --tty samba-alpine-dc01 /bin/cat /etc/passwd
+        run: docker exec --tty samba-alpine-dc01 /usr/bin/cat /etc/passwd
       - name: Check ALPINE DC01 NTP
         run: docker exec --tty samba-alpine-dc01 /usr/bin/chronyc sources && /usr/bin/chronyc tracking
       - name: Check ALPINE DC01 named
