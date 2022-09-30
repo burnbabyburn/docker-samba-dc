@@ -61,7 +61,9 @@ services:
     privileged: true
 
   sambaalpinejoin:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
     container_name: samba-alpine-dc02
 #    volumes:
 #      - 'samba02:/data'
@@ -70,6 +72,7 @@ services:
       - DOMAIN=ALPINESAM.DOM
       - DOMAIN_NETBIOS=WORKGROUP
       - DOMAIN_PASS=Pa11w0rd!
+      - ENABLE_BIND9=true
 #      - HOSTNAME=dc02
       - JOIN=true
 #      - JOIN_SITE=Site1

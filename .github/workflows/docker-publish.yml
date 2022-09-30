@@ -86,5 +86,5 @@ jobs:
           push: true
           tags: docker-ubuntu-samba-dc:alpine
           labels: ${{ steps.meta.outputs.labels }}
-#          cache-from: type=gha
-#          cache-to: type=gha,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

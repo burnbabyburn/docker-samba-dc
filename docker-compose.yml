@@ -42,6 +42,7 @@ services:
       - ENABLE_DYNAMIC_PORTRANGE=49152-49170
       - ENABLE_INSECURELDAP=true
       - ENABLE_LAPS_SCHEMA=true
+      - ENABLE_BIND9=true
 #      - ENABLE_LOGS=true
       - ENABLE_MSCHAPV2=true
       - ENABLE_RFC2307=true
