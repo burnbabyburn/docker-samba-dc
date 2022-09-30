@@ -8,6 +8,7 @@
   * Bind9=>Bind9 with ntpd
   * chrony=>chrony without Bind9
   * test=>chrony,bind9 - script runs fine on alpine and ubuntu Dockerfile and compose provided
+  * My => stable branch without anything of the above.
 
 # Samba Active Directory Domain Controller for Docker
 
