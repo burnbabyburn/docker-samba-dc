@@ -78,7 +78,7 @@ config() {
   IMAP_GID_START=${IMAP_GID_START:-$IMAP_ID_START}
 
   # File and directory locations
-  # Note: DIR_GPO, DIR_SAMBA_CONF, DIR_LDIF and DIR_SCRIPTS need to be changed in the Dockerfile
+  # Note: DIR_DATA, DIR_GPO, DIR_SAMBA_CONF, DIR_LDIF and DIR_SCRIPTS need to be changed in the Dockerfile
 
   # Bind9/Named directories
   DIR_BIND9=/etc/bind
@@ -118,6 +118,7 @@ config() {
   # Chrony files
   FILE_CHRONY="${DIR_CHRONY}/chrony.conf"
   FILE_CHRONY_DRIFT="${DIR_CHRONY_LIB}/chrony.drift"
+  FILE_CHRONY_EXTERNAL="${DIR_DATA}/${FILE_CHRONY}"
   FILE_CHRONY_KEY="${DIR_CHRONY}/chrony.keys"
   FILE_CHRONY_PID="${DIR_CHRONY_RUN}/chronyd.pid"
 
@@ -163,7 +164,7 @@ config() {
   FILE_KRB5_ADMINLOG=/var/log/kadmind.log
   FILE_NSSWITCH=/etc/nsswitch.conf
   FILE_OPENVPNCONF=/docker.ovpn
-  FILE_SETUP_DONE=/data/setup.done
+  FILE_SETUP_DONE="${DIR_DATA}/setup.done"
 
   # Supervisor files
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
@@ -228,7 +229,11 @@ config() {
   # Wrong owner of /run/chrony (UID != 102) - the azure image complains but with a chowned dir chrony just crashes
   #if ! uname -a | grep -q "azure"; then
   # PID and chronyd.sock dir for chrony
-  if uname -a | grep -q "azure"; then CHRONYUSERGROUP=root; fi
+  if uname -a | grep -q "azure"; then 
+    CHRONYUSERGROUP=root
+	unlink "${FILE_CHRONY}"
+	cp "${FILE_CHRONY_EXTERNAL}" "${FILE_CHRONY}" 
+  fi
 
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
 
@@ -273,12 +278,14 @@ appSetup () {
   fi
   
   #Create symlink for wsdd2 - wsdd2 container expects file in root of volume and we cant mount to /
-  ln -s /etc/samba/smb.conf /data/smb.conf
+  ln -s "${FILE_SAMBA_CONF}" "${DIR_DATA}/smb.conf"
 
   ## Setup filesystem and config files
-  # Remove krb5.conf will be replaced by a samba generated one
-  if [ -f "${FILE_KRB5}" ]; then rm -f "${FILE_KRB5}"; fi
-
+  # KRB5.conf
+  sed ${SED_PARAM} "s:{{ HOSTNAME }}:${HOSTNAME}:" -i "${FILE_KRB5}"
+  sed ${SED_PARAM} "s:{{ UDOMAIN }}:${UDOMAIN}:" -i "${FILE_KRB5}"
+  sed ${SED_PARAM} "s:{{ LDOMAIN }}:${LDOMAIN}:" -i "${FILE_KRB5}"
+  
   # We removed the initial /etc/bind dir so we need to generate a new rndc.key
   rndc-confgen -a
   chown "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${FILE_BIND9_RNDC_KEY}"
@@ -438,6 +445,13 @@ appSetup () {
 	  printf "include \"%s\";\n" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
 	# Kerberos logs
 	fi
+    {
+	    echo ""
+	    echo "[logging]"
+        echo "default = FILE:${FILE_KRB5_LOGDEFAULT}"
+        echo "kdc = FILE:${FILE_KRB5_KRB5KDC}"
+        echo "admin_server = FILE:${FILE_KRB5_ADMINLOG}"
+    } >> "${FILE_KRB5}"
   fi
 
   if [ "${TLS_ENABLE}" = true ]; then
@@ -600,18 +614,6 @@ appSetup () {
 	  sed ${SED_PARAM} "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_CONF_SAMBA}"
 	  chown -L root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_SAMBA}"
 	fi
-	
-	# Copy Samba generated krb5 config
-    cp "${FILE_KRB5_WINBINDD}" "${FILE_KRB5}"
-	if [ "${ENABLE_LOGS}" = true ]; then
-      {
-	    echo ""
-	    echo "[logging]"
-        echo "default = FILE:${FILE_KRB5_LOGDEFAULT}"
-        echo "kdc = FILE:${FILE_KRB5_KRB5KDC}"
-        echo "admin_server = FILE:${FILE_KRB5_ADMINLOG}"
-      } >> "${FILE_KRB5}"
-	fi
 
     if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "$(readlink -f ${DIR_CHRONY_SOCK})"; fi
     chmod 750 "${DIR_CHRONY_SOCK}"
@@ -730,7 +732,7 @@ appFirstStart () {
 
 appStart () {
   update-ca-certificates
-  cp /data/etc/chrony/chrony.conf "${FILE_CHRONY}"
+  restoreConfig
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}"
 }
 

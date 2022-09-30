@@ -85,22 +85,22 @@ SetKeyValueFilePattern() {
 
 # https://stackoverflow.com/questions/41451159/how-to-execute-a-script-when-i-terminate-a-docker-container
 backupConfig () {
-  cp -dR --preserve=all "${DIR_BIND9}" "${DIR_EXTERNAL}"
+#  cp -dR --preserve=all "${DIR_BIND9}" "${DIR_EXTERNAL}"
   cp -f "${FILE_CHRONY}" "${FILE_EXTERNAL_CHRONY_CONF}"
-  cp -f "${FILE_CHRONY_TIMESRC}" "${FILE_EXTERNAL_CHRONY_TIMESRC}"
-  cp -f "${FILE_KRB5}" "${FILE_EXTERNAL_KRB5_CONF}"
-  cp -f "${FILE_NSSWITCH}" "${FILE_EXTERNAL_NSSWITCH}"
-  cp -f "${FILE_SAMBA_CONF}" "${FILE_EXTERNAL_SAMBA_CONF}"
-  cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_EXTERNAL_SUPERVISORD_CONF}"
+#  cp -f "${FILE_CHRONY_TIMESRC}" "${FILE_EXTERNAL_CHRONY_TIMESRC}"
+#  cp -f "${FILE_KRB5}" "${FILE_EXTERNAL_KRB5_CONF}"
+#  cp -f "${FILE_NSSWITCH}" "${FILE_EXTERNAL_NSSWITCH}"
+#  cp -f "${FILE_SAMBA_CONF}" "${FILE_EXTERNAL_SAMBA_CONF}"
+#  cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_EXTERNAL_SUPERVISORD_CONF}"
 }
 restoreConfig () {
-  cp -dR --preserve=all "${DIR_EXTERNAL_BIND9}" "${DIR_BIND9}"
+#  cp -dR --preserve=all "${DIR_EXTERNAL_BIND9}" "${DIR_BIND9}"
   cp -f "${FILE_EXTERNAL_CHRONY_CONF}" "${FILE_CHRONY}"
-  cp -f "${FILE_EXTERNAL_CHRONY_TIMESRC}" "${FILE_CHRONY_TIMESRC}"
-  cp -f "${FILE_EXTERNAL_KRB5_CONF}" "${FILE_KRB5}"
-  cp -f "${FILE_EXTERNAL_NSSWITCH}" "${FILE_NSSWITCH}"
-  cp -f "${FILE_EXTERNAL_SAMBA_CONF}" "${FILE_SAMBA_CONF}"
-  cp -f "${FILE_EXTERNAL_SUPERVISORD_CONF}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
+#  cp -f "${FILE_EXTERNAL_CHRONY_TIMESRC}" "${FILE_CHRONY_TIMESRC}"
+#  cp -f "${FILE_EXTERNAL_KRB5_CONF}" "${FILE_KRB5}"
+#  cp -f "${FILE_EXTERNAL_NSSWITCH}" "${FILE_NSSWITCH}"
+#  cp -f "${FILE_EXTERNAL_SAMBA_CONF}" "${FILE_SAMBA_CONF}"
+#  cp -f "${FILE_EXTERNAL_SUPERVISORD_CONF}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
 }
 
 # If Hostname is in CIDR notaion, create a reverse DNS zone and a subnet in $JOIN_SITE (default-First-Site-Name)
