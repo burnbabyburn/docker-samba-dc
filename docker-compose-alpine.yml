@@ -15,7 +15,7 @@ networks:
 #  samba02:
 
 services:
-  samba-alpine:
+  sambaalpine:
     build:
       context: .
       dockerfile: Dockerfile.alpine
@@ -60,7 +60,7 @@ services:
     domainname: ALPINESAM.DOM
     privileged: true
 
-  samba-alpine-join:
+  sambaalpinejoin:
     build: .
     container_name: samba-alpine-dc02
 #    volumes:
