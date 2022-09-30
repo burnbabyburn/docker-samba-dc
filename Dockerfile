@@ -17,6 +17,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
 	DIR_SAMBA_CONF=$DIR_DATA/etc/samba/conf.d \
 	DIR_SCRIPTS=/scripts
 
+VOLUME $DIR_DATA
+
 RUN apt-get update \
     && apt-get upgrade -y \
 	&& apt-get install -y bind9 chrony pkg-config attr acl samba smbclient tdb-tools ldb-tools ldap-utils winbind libnss-winbind libpam-winbind libpam-krb5 krb5-user supervisor dnsutils nano python3-setproctitle\
