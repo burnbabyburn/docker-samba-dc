@@ -230,9 +230,10 @@ config() {
   #if ! uname -a | grep -q "azure"; then
   # PID and chronyd.sock dir for chrony
   if uname -a | grep -q "azure"; then 
+    export LDB_MODULES_PATH="/usr/lib/samba/ldb/"
     CHRONYUSERGROUP=root
-	unlink "${FILE_CHRONY}"
-	cp "${FILE_CHRONY_EXTERNAL}" "${FILE_CHRONY}" 
+	unlink "${DIR_CHRONY}"
+	cp -R "${DIR_DATA}/${DIR_CHRONY}" "${FILE_CHRONY}" 
   fi
 
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"

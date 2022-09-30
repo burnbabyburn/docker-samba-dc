@@ -11,6 +11,7 @@ RUN apk --no-cache --update add krb5 bind chrony samba-dc ldb-tools tzdata super
 	&& mkdir -p $DIR_DATA/etc/bind $DIR_DATA/etc/chrony $DIR_DATA/etc/samba $DIR_DATA/etc/supervisor $DIR_DATA/cache/bind $DIR_DATA/cache/samba $DIR_DATA/lib/bind $DIR_DATA/lib/chrony \
 	            $DIR_DATA/lib/samba $DIR_DATA/log/bind $DIR_DATA/log/chrony $DIR_DATA/log/samba $DIR_DATA/log/supervisor \
 	&& ln -s $DIR_DATA/etc/bind /etc/bind \
+	&& ln -s $DIR_DATA/etc/chrony /etc/chrony \
 	&& ln -s $DIR_DATA/etc/nsswitch.conf /etc/ \
 	&& ln -s $DIR_DATA/etc/krb5.conf /etc/ \
 	&& ln -s $DIR_DATA/etc/samba /etc/samba \
