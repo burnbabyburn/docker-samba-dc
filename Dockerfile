@@ -33,6 +33,7 @@ RUN apt-get update \
 	            $DIR_DATA/log/chrony $DIR_DATA/log/samba $DIR_DATA/log/supervisor \
 	# Symlink crashes github actions works fine otherwise
 	&& ln -s $DIR_DATA/etc/bind /etc/bind \
+	&& ln -s $DIR_DATA/etc/chrony /etc/chrony \
 	&& ln -s $DIR_DATA/etc/nsswitch.conf /etc/ \
 	&& ln -s $DIR_DATA/etc/krb5.conf /etc/ \
 	&& ln -s $DIR_DATA/etc/samba /etc/samba \
