@@ -478,7 +478,7 @@ appSetup () {
 
   # If external/smb.conf doesn't exist, this is new container with empty volume, we're not just moving to a new container
   if [ ! -f "${FILE_SETUP_DONE}" ]; then
-    if [ -f "${FILE_SAMBA_CONF}" ]; then mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig; fi
+   # if [ -f "${FILE_SAMBA_CONF}" ]; then mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig; fi
     if [ "${JOIN}" = true ]; then
       set -- "$@" "${LDOMAIN}"
       set -- "$@" "DC"
@@ -666,10 +666,10 @@ appSetup () {
       if [ -n "${VPNPID}" ]; then kill "${VPNPID}"; fi
       EnableOpenvpnSupervisord
     fi
+	touch "${FILE_SETUP_DONE}"
   fi
   # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
 #  backupConfig
-touch "${FILE_SETUP_DONE}"
   appFirstStart
 }
 
