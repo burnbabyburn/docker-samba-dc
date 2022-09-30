@@ -67,7 +67,7 @@ jobs:
         name: Available platforms
         run: echo ${{ steps.buildx.outputs.platforms }}
       -
-        name: Build and push
+        name: Build and push ubuntu
         uses: docker/build-push-action@v3.1.0
         with:
           context: .
@@ -75,6 +75,16 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+      -
+        name: Build and push alpine
+        uses: docker/build-push-action@v3.1.0
+        with:
+          context: .
+          file: Dockerfile.alpine
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: docker-ubuntu-samba-dc:alpine
           labels: ${{ steps.meta.outputs.labels }}
 #          cache-from: type=gha
 #          cache-to: type=gha,mode=max

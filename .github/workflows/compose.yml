@@ -111,7 +111,7 @@ jobs:
       - name: Check ALPINE DC01 Host record
         run: docker exec --tty samba-alpine-dc01 /usr/bin/host -t A DC01.sam.dom
       - name: Start ALPINE DC02
-        run: docker-compose -f docker-compose-alpine up -d sambaalpinejoin
+        run: docker-compose -f docker-compose-alpine.yml up -d sambaalpinejoin
       - name: Sleep for 30 seconds
         run: sleep 30
       - name: Check logs ALPINE DC02
