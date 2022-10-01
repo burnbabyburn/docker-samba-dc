@@ -14,8 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 	DIR_DATA=/data \
 	DIR_GPO=/gpo \
 	DIR_LDIF=/ldif \
-	DIR_SAMBA_CONF=/etc/samba/conf.d \
-	DIR_SCRIPTS=/script 
+	DIR_SCRIPTS=/scripts
 
 RUN apt-get update \
     && apt-get upgrade -y \
@@ -30,11 +29,10 @@ RUN apt-get update \
 	&& rm -rf /etc/bind /etc/chrony /etc/krb5.conf /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor \
 	&& mkdir $DIR_DATA
 
-COPY /ldif $DIR_LDIF
+COPY $DIR_LDIF $DIR_LDIF
 COPY /etc /etc
-COPY /scripts $DIR_SCRIPTS
-COPY /conf.d/ $DIR_SAMBA_CONF
-COPY /gpo $DIR_GPO
+COPY $DIR_SCRIPT $DIR_SCRIPTS
+COPY $DIR_GPO $DIR_GPO
 #COPY --from=builder ${src} /tmp/
 
 RUN chmod -R +x $DIR_SCRIPTS
