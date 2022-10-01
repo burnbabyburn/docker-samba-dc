@@ -31,7 +31,7 @@ RUN apt-get update \
 
 COPY $DIR_LDIF $DIR_LDIF
 COPY /etc /etc
-COPY $DIR_SCRIPT $DIR_SCRIPTS
+COPY $DIR_SCRIPTS $DIR_SCRIPTS
 COPY $DIR_GPO $DIR_GPO
 #COPY --from=builder ${src} /tmp/
 
