@@ -118,7 +118,6 @@ config() {
   # Chrony files
   FILE_CHRONY="${DIR_CHRONY}/chrony.conf"
   FILE_CHRONY_DRIFT="${DIR_CHRONY_LIB}/chrony.drift"
-  FILE_CHRONY_EXTERNAL="${DIR_DATA}/${FILE_CHRONY}"
   FILE_CHRONY_KEY="${DIR_CHRONY}/chrony.keys"
   FILE_CHRONY_PID="${DIR_CHRONY_RUN}/chronyd.pid"
 
@@ -215,12 +214,10 @@ config() {
   if [ $(grep "^ID=" "/etc/os-release" | cut -d '=' -f2) = "alpine" ]; then
     BINDUSERGROUP="named"
     CHRONYUSERGROUP="chrony"
-	SED_PARAM='-e'
     export LDB_MODULES_PATH="/usr/lib/samba/ldb/"
   else
     BINDUSERGROUP="bind"
     CHRONYUSERGROUP="_chrony"
-	SED_PARAM='--follow-symlinks -e'
   fi
 
   # If used on azure image chrony breaks (github actions)
@@ -232,15 +229,13 @@ config() {
   if uname -a | grep -q "azure"; then 
     export LDB_MODULES_PATH="/usr/lib/samba/ldb/"
     CHRONYUSERGROUP=root
-	unlink "${DIR_CHRONY}"
-	cp -R "${DIR_DATA}/${DIR_CHRONY}" "${FILE_CHRONY}" 
   fi
 
   SAMBA_DEBUG_OPTION="-d ${DEBUG_LEVEL}"
 
-  SAMBA_START_PARAM="--no-process-group --configfile $(readlink -f ${FILE_SAMBA_CONF})"
-  CHRONY_START_PARAM="-n -u ${CHRONYUSERGROUP} -f $(readlink -f ${FILE_CHRONY})"
-  BIND9_START_PARAM="-f -u ${BINDUSERGROUP} -c $(readlink -f ${FILE_BIND9_CONF})"
+  SAMBA_START_PARAM="--no-process-group --configfile ${FILE_SAMBA_CONF}"
+  CHRONY_START_PARAM="-n -u ${CHRONYUSERGROUP} -f ${FILE_CHRONY}"
+  BIND9_START_PARAM="-f -u ${BINDUSERGROUP} -c ${FILE_BIND9_CONF}"
 
   #chrony as root in docker action
   if cat /sys/module/ipv6/parameters/disable;then
@@ -277,15 +272,12 @@ appSetup () {
     cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
     printf "%s" "${TZ}" >/etc/timezone
   fi
-  
-  #Create symlink for wsdd2 - wsdd2 container expects file in root of volume and we cant mount to /
-  ln -s "${FILE_SAMBA_CONF}" "${DIR_DATA}/smb.conf"
 
   ## Setup filesystem and config files
   # KRB5.conf
-  sed ${SED_PARAM} "s:{{ HOSTNAME }}:${HOSTNAME}:" -i "${FILE_KRB5}"
-  sed ${SED_PARAM} "s:{{ UDOMAIN }}:${UDOMAIN}:" -i "${FILE_KRB5}"
-  sed ${SED_PARAM} "s:{{ LDOMAIN }}:${LDOMAIN}:" -i "${FILE_KRB5}"
+  sed "s:{{ HOSTNAME }}:${HOSTNAME}:" -i "${FILE_KRB5}"
+  sed "s:{{ UDOMAIN }}:${UDOMAIN}:" -i "${FILE_KRB5}"
+  sed "s:{{ LDOMAIN }}:${LDOMAIN}:" -i "${FILE_KRB5}"
   
   # We removed the initial /etc/bind dir so we need to generate a new rndc.key
   rndc-confgen -a
@@ -309,7 +301,7 @@ appSetup () {
   touch "${FILE_BIND9_LOG_RPZ}"
   touch "${FILE_BIND9_LOG_ZONE_TRANSFERS}"
 
-  chown -LR "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_LOG}/"
+  chown -R "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${DIR_BIND9_LOG}/"
   chmod 770 "${DIR_BIND9_LOG}"
 
   #Fileperm on /etc/bind
@@ -319,68 +311,68 @@ appSetup () {
 
   # PID and session.key dir for bind9
   # -R leads to only chowning the symlink not the folder behind it
-  if [ ! -d "${DIR_BIND9_CACHE}" ]; then mkdir "$(readlink -f ${DIR_BIND9_CACHE})"; fi
-  chown -L root:"${BINDUSERGROUP}" "${DIR_BIND9_CACHE}"
+  if [ ! -d "${DIR_BIND9_CACHE}" ]; then mkdir "${DIR_BIND9_CACHE}"; fi
+  chown root:"${BINDUSERGROUP}" "${DIR_BIND9_CACHE}"
   chmod 775 "${DIR_BIND9_CACHE}"
 
-  if [ ! -d "${DIR_BIND9_LIB}" ]; then mkdir "$(readlink -f ${DIR_BIND9_LIB})"; fi
-  chown -L root:"${BINDUSERGROUP}" "${DIR_BIND9_LIB}"
+  if [ ! -d "${DIR_BIND9_LIB}" ]; then mkdir "${DIR_BIND9_LIB}"; fi
+  chown root:"${BINDUSERGROUP}" "${DIR_BIND9_LIB}"
   chmod 775 "${DIR_BIND9_LIB}"
 
-  if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "$(readlink -f ${DIR_BIND9_RUN})"; fi
-  chown -L root:"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"
+  if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "${DIR_BIND9_RUN}"; fi
+  chown root:"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"
   chmod 770 "${DIR_BIND9_RUN}"
 
   chmod 644 "${FILE_CHRONY}"
 
-  if [ ! -f "${FILE_CHRONY_KEY}" ]; then chronyc keygen 1 SHA1 256 >> "$(readlink -f ${FILE_CHRONY_KEY})"; fi
+  if [ ! -f "${FILE_CHRONY_KEY}" ]; then chronyc keygen 1 SHA1 256 >> "${FILE_CHRONY_KEY}"; fi
   chmod 640 "${FILE_CHRONY_KEY}"
 
   #Setup chrony log dir
-  if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_LOG})"; fi
-  chown -LR "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LOG}/"
+  if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "${DIR_CHRONY_LOG}"; fi
+  chown -R "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LOG}/"
   chmod 750 "${DIR_CHRONY_LOG}"
   chmod g=rxs "${DIR_CHRONY_LOG}"
 
-  if [ ! -d "${DIR_CHRONY_LIB}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_LIB})"; fi
-  chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LIB}"
+  if [ ! -d "${DIR_CHRONY_LIB}" ]; then mkdir "${DIR_CHRONY_LIB}"; fi
+  chown "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LIB}"
   chmod 755 "${DIR_CHRONY_LIB}"
 
-  if [ ! -d "${DIR_CHRONY_CONFD}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_CONFD})"; fi
+  if [ ! -d "${DIR_CHRONY_CONFD}" ]; then mkdir "${DIR_CHRONY_CONFD}"; fi
   chmod 755 "${DIR_CHRONY_CONFD}"
 
-  if [ ! -d "${DIR_CHRONY_SRC}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_SRC})"; fi
+  if [ ! -d "${DIR_CHRONY_SRC}" ]; then mkdir "${DIR_CHRONY_SRC}"; fi
 
   chmod 755 "${DIR_CHRONY_SRC}"
   
-  if [ ! -d "${DIR_SAMBA_CACHE}" ]; then mkdir "$(readlink -f ${DIR_SAMBA_CACHE})"; fi
+  if [ ! -d "${DIR_SAMBA_CACHE}" ]; then mkdir "${DIR_SAMBA_CACHE}"; fi
   chmod 755 "${DIR_SAMBA_CACHE}"
   
-  if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "$(readlink -f ${DIR_CHRONY_RUN})"; fi
-  chown -L "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_RUN}"
+  if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "${DIR_CHRONY_RUN}"; fi
+  chown "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_RUN}"
   chmod 750 "${DIR_CHRONY_RUN}"
 
   #Configure /etc/supervisor/conf.d/supervisord.conf
-  sed ${SED_PARAM} "s:{{ SAMBA_START_PARAM }}:${SAMBA_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  sed ${SED_PARAM} "s:{{ BIND9_START_PARAM }}:${BIND9_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  sed ${SED_PARAM} "s:{{ CHRONY_START_PARAM }}:${CHRONY_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed "s:{{ SAMBA_START_PARAM }}:${SAMBA_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed "s:{{ BIND9_START_PARAM }}:${BIND9_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed "s:{{ CHRONY_START_PARAM }}:${CHRONY_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
   # Configure Bind9 files
-  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed ${SED_PARAM} "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
+  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
-  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ] && ! grep -q "validate-except" "${FILE_BIND9_CONF_OPTIONS}"; then sed ${SED_PARAM} "/^[[:space:]]*}/i\  validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
-  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed ${SED_PARAM} "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
-  if grep -q "{{ DIR_BIND9_CACHE }}" "${FILE_BIND9_CONF_OPTIONS}"; then sed ${SED_PARAM} "s:{{ DIR_BIND9_CACHE }}:${DIR_BIND9_CACHE}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
+  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ] && ! grep -q "validate-except" "${FILE_BIND9_CONF_OPTIONS}"; then sed "/^[[:space:]]*}/i\  validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
+  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
+  if grep -q "{{ DIR_BIND9_CACHE }}" "${FILE_BIND9_CONF_OPTIONS}"; then sed "s:{{ DIR_BIND9_CACHE }}:${DIR_BIND9_CACHE}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
 
   # Configure chrony files
-  if grep -q "{{ DIR_CHRONY_CONFD }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ DIR_CHRONY_CONFD }}:${DIR_CHRONY_CONFD}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_LIB }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ DIR_CHRONY_LIB }}:${DIR_CHRONY_LIB}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_PID }}" "${FILE_CHRONY}"; then sed ${SED_PARAM} "s:{{ FILE_CHRONY_PID }}:${FILE_CHRONY_PID}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_CONFD }}" "${FILE_CHRONY}"; then sed "s:{{ DIR_CHRONY_CONFD }}:${DIR_CHRONY_CONFD}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_LIB }}" "${FILE_CHRONY}"; then sed "s:{{ DIR_CHRONY_LIB }}:${DIR_CHRONY_LIB}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_PID }}" "${FILE_CHRONY}"; then sed "s:{{ FILE_CHRONY_PID }}:${FILE_CHRONY_PID}:" -i "${FILE_CHRONY}"; fi
 
   DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
   for DC in $DCs
@@ -402,9 +394,9 @@ appSetup () {
   set -- "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool" \
          "--option=enable asu support = no"
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#NAMERESOLVEORDER
-  #set -- "$@" "--option=name resolve order = wins host bcast"
+  set -- "$@" "--option=name resolve order = wins host bcast"
   # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
-  #set -- "$@" "--option=password hash userPassword schemes = CryptSHA256 CryptSHA512"
+  set -- "$@" "--option=password hash userPassword schemes = CryptSHA256 CryptSHA512"
   # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes also for idmap
   set -- "$@" "--option=template shell = /bin/false" "--option=template homedir = /dev/null"
   set -- "$@" "--option=eventlog list = Samba"
@@ -491,8 +483,8 @@ appSetup () {
       done; (exit $s)
 
       # Netlogon & sysvol readonly on secondary DC
-      if [ ! -d "${DIR_SAMBA_NETLOGON}" ]; then mkdir "$(readlink -f ${DIR_SAMBA_NETLOGON})"; fi
-      if [ ! -d "${DIR_SAMBA_SYSVOL}" ]; then mkdir "$(readlink -f ${DIR_SAMBA_SYSVOL})"; fi
+      if [ ! -d "${DIR_SAMBA_NETLOGON}" ]; then mkdir "${DIR_SAMBA_NETLOGON}"; fi
+      if [ ! -d "${DIR_SAMBA_SYSVOL}" ]; then mkdir "${DIR_SAMBA_SYSVOL}"; fi
       {
         printf '\n'
         printf '[netlogon]\n'
@@ -609,24 +601,22 @@ appSetup () {
     if [ -f "${FILE_BIND9_CONF_GEN_SAMBA}" ]; then 
 	  cp "${FILE_BIND9_CONF_GEN_SAMBA}" "${FILE_BIND9_CONF_SAMBA}"
 	  chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_SAMBA}"
+	  sed "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_CONF_SAMBA}"
       if ! grep -q "${FILE_BIND9_CONF_SAMBA}" "${FILE_BIND9_CONF}";then
 	    printf "include \"%s\";" "${FILE_BIND9_CONF_SAMBA}" >> "${FILE_BIND9_CONF}"
 	  fi
-	  sed ${SED_PARAM} "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_CONF_SAMBA}"
-	  chown -L root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_SAMBA}"
 	fi
 
-    if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "$(readlink -f ${DIR_CHRONY_SOCK})"; fi
+    if [ ! -d "${DIR_CHRONY_SOCK}" ]; then mkdir -p "${DIR_CHRONY_SOCK}"; fi
     chmod 750 "${DIR_CHRONY_SOCK}"
-    chown -LR root:"${CHRONYUSERGROUP}" "${DIR_CHRONY_SOCK}"
+    chown -R root:"${CHRONYUSERGROUP}" "${DIR_CHRONY_SOCK}"
 
-    # We need readlink -m cause the top dir do not exist yet
     if [ ! -d "${DIR_SAMBA_CSHARE}" ]; then
-	  mkdir "$(readlink -f ${DIR_SAMBA_CSHARE})"
-	  mkdir "$(readlink -f ${DIR_SAMBA_ADMIN})"
-	  mkdir "$(readlink -f ${DIR_SAMBA_ADMIN}/system32)"
-	  mkdir "$(readlink -f ${DIR_SAMBA_EVENTLOG})"
-	  mkdir "$(readlink -f ${DIR_SAMBA_ADMIN}/system32/spool)"
+	  mkdir "${DIR_SAMBA_CSHARE}"
+	  mkdir "${DIR_SAMBA_ADMIN}"
+	  mkdir "${DIR_SAMBA_ADMIN}/system32"
+	  mkdir "${DIR_SAMBA_EVENTLOG}"
+	  mkdir "${DIR_SAMBA_ADMIN}/system32/spool"
     fi
 
     # https://wiki.samba.org/index.php/Setting_up_Automatic_Printer_Driver_Downloads_for_Windows_Clients
@@ -639,7 +629,7 @@ appSetup () {
       SetKeyValueFilePattern 'cups encrypt' 'no'
       SetKeyValueFilePattern 'cups options' '\"raw media=a4\"'
       SetKeyValueFilePattern '#cups server' "${CUPS_SERVER}:${CUPS_PORT}"
-      if [ ! -d "${DIR_SAMBA_PRINTDRIVER}" ]; then mkdir -p "$(readlink -f ${DIR_SAMBA_PRINTDRIVER})"; fi
+      if [ ! -d "${DIR_SAMBA_PRINTDRIVER}" ]; then mkdir -p "${DIR_SAMBA_PRINTDRIVER}"; fi
       {
         printf '\n'
         printf '[printers]\n'
@@ -669,8 +659,6 @@ appSetup () {
     fi
 	touch "${FILE_SETUP_DONE}"
   fi
-  # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
-#  backupConfig
   appFirstStart
 }
 
@@ -728,6 +716,7 @@ appFirstStart () {
     ldbadd -H "${FILE_SAMBA_WINSLDB}" "${FILE_SAMBA_SCHEMA_WINSREPL}"
     fi
   fi
+  backupConfig
   wait
 }
 
