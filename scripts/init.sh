@@ -311,11 +311,11 @@ appSetup () {
 
   # PID and session.key dir for bind9
   # -R leads to only chowning the symlink not the folder behind it
-  if [ ! -d "${DIR_BIND9_CACHE}" ]; then mkdir "${DIR_BIND9_CACHE}"; fi
+  #if [ ! -d "${DIR_BIND9_CACHE}" ]; then mkdir "${DIR_BIND9_CACHE}"; fi
   chown root:"${BINDUSERGROUP}" "${DIR_BIND9_CACHE}"
   chmod 775 "${DIR_BIND9_CACHE}"
 
-  if [ ! -d "${DIR_BIND9_LIB}" ]; then mkdir "${DIR_BIND9_LIB}"; fi
+  #if [ ! -d "${DIR_BIND9_LIB}" ]; then mkdir "${DIR_BIND9_LIB}"; fi
   chown root:"${BINDUSERGROUP}" "${DIR_BIND9_LIB}"
   chmod 775 "${DIR_BIND9_LIB}"
 
@@ -329,20 +329,19 @@ appSetup () {
   chmod 640 "${FILE_CHRONY_KEY}"
 
   #Setup chrony log dir
-  if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "${DIR_CHRONY_LOG}"; fi
+  #if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "${DIR_CHRONY_LOG}"; fi
   chown -R "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LOG}/"
   chmod 750 "${DIR_CHRONY_LOG}"
   chmod g=rxs "${DIR_CHRONY_LOG}"
 
-  if [ ! -d "${DIR_CHRONY_LIB}" ]; then mkdir "${DIR_CHRONY_LIB}"; fi
+  #if [ ! -d "${DIR_CHRONY_LIB}" ]; then mkdir "${DIR_CHRONY_LIB}"; fi
   chown "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LIB}"
   chmod 755 "${DIR_CHRONY_LIB}"
 
-  if [ ! -d "${DIR_CHRONY_CONFD}" ]; then mkdir "${DIR_CHRONY_CONFD}"; fi
+  #if [ ! -d "${DIR_CHRONY_CONFD}" ]; then mkdir "${DIR_CHRONY_CONFD}"; fi
   chmod 755 "${DIR_CHRONY_CONFD}"
 
   if [ ! -d "${DIR_CHRONY_SRC}" ]; then mkdir "${DIR_CHRONY_SRC}"; fi
-
   chmod 755 "${DIR_CHRONY_SRC}"
   
   if [ ! -d "${DIR_SAMBA_CACHE}" ]; then mkdir "${DIR_SAMBA_CACHE}"; fi
