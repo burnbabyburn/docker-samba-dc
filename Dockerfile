@@ -27,7 +27,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt /var/lib/dpkg /var/lib/cache /var/lib/log/ \
 	&& rm -rf /tmp/* /var/tmp/*	\
 	&& rm -rf /etc/bind /etc/chrony /etc/krb5.conf /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor \
-	&& mkdir /etc/bind /etc/chrony /etc/krb5.conf /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor $DIR_DATA
+	&& mkdir /etc/bind /etc/chrony /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor $DIR_DATA
 
 COPY $DIR_LDIF $DIR_LDIF
 COPY /etc /etc

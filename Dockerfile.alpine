@@ -7,7 +7,7 @@ ENV DIR_DATA=/data \
 
 RUN apk --no-cache --update add krb5 bind chrony samba-dc ldb-tools tzdata supervisor py3-setproctitle samba-winbind-clients samba-winbind-krb5-locator \
 	&& rm -rf /etc/bind /etc/chrony /etc/krb5.conf /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor \
-	&& mkdir /etc/bind /etc/chrony /etc/krb5.conf /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor $DIR_DATA
+	&& mkdir /etc/bind /etc/chrony /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor $DIR_DATA
 
 COPY $DIR_LDIF $DIR_LDIF
 COPY /etc /etc
