@@ -396,7 +396,9 @@ appSetup () {
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#NAMERESOLVEORDER
   set -- "$@" "--option=name resolve order = wins host bcast"
   # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
-  set -- "$@" "--option=password hash userPassword schemes = CryptSHA256 CryptSHA512"
+  # https://bugzilla.samba.org/show_bug.cgi?id=14621
+  # not working on alpine while provisioning => disabled
+  #set -- "$@" "--option=password hash userPassword schemes = CryptSHA256 CryptSHA512"
   # Template settings for users without ''unixHomeDir'' and ''loginShell'' attributes also for idmap
   set -- "$@" "--option=template shell = /bin/false" "--option=template homedir = /dev/null"
   set -- "$@" "--option=eventlog list = Samba"
