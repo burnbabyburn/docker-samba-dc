@@ -2,7 +2,7 @@
 # wget -q -O /var/named/named.root http://www.internic.net/zones/named.root
 zone "." {
         type hint;
-        file "/data/etc/bind/db.root";
+        file "/etc/bind/db.root";
 };
 
 // be authoritative for the localhost forward and reverse zones, and for
@@ -10,20 +10,20 @@ zone "." {
 
 zone "localhost" {
         type master;
-        file "/data/etc/bind/db.local";
+        file "/etc/bind/db.local";
 };
 
 zone "127.in-addr.arpa" {
         type master;
-        file "/data/etc/bind/db.127";
+        file "/etc/bind/db.127";
 };
 
 zone "0.in-addr.arpa" {
         type master;
-        file "/data/etc/bind/db.0";
+        file "/etc/bind/db.0";
 };
 
 zone "255.in-addr.arpa" {
         type master;
-        file "/data/etc/bind/db.255";
+        file "/etc/bind/db.255";
 };
