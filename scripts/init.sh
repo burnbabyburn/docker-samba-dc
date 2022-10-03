@@ -339,7 +339,7 @@ appSetup () {
   chown "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LIB}"
   chmod 755 "${DIR_CHRONY_LIB}"
 
-  #if [ ! -d "${DIR_CHRONY_CONFD}" ]; then mkdir "${DIR_CHRONY_CONFD}"; fi
+  if [ ! -d "${DIR_CHRONY_CONFD}" ]; then mkdir "${DIR_CHRONY_CONFD}"; fi
   chmod 755 "${DIR_CHRONY_CONFD}"
 
   if [ ! -d "${DIR_CHRONY_SRC}" ]; then mkdir "${DIR_CHRONY_SRC}"; fi
@@ -387,6 +387,7 @@ appSetup () {
     set -- "--dns-backend=BIND9_DLZ" \
            "--option=server services=-dns"
 	EnableBind9
+	sed -e "s:{{ BIND9_START_PARAM }}:${BIND9_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   else 
     set -- "--dns-backend=internal" 
   fi
