@@ -1,46 +1,25 @@
 FROM alpine
 
-ENV DIR_GPO=/gpo \
+ENV DIR_DATA=/data \
+	DIR_GPO=$DIR_DATA/gpo \
 	DIR_LDIF=/ldif \
-	DIR_SCRIPTS=/scripts \
-    DIR_DATA=/data \
-    DIR_SAMBA_CONF=$DIR_DATA/etc/samba/conf.d
+	DIR_SCRIPTS=/scripts
 
 RUN apk --no-cache --update add krb5 bind chrony samba-dc ldb-tools tzdata supervisor py3-setproctitle samba-winbind-clients samba-winbind-krb5-locator \
-	&& rm -rf /etc/bind /etc/chrony /etc/krb5.conf /etc/samba /etc/supervisord.conf /var/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba \
-	&& mkdir -p $DIR_DATA/etc/bind $DIR_DATA/etc/chrony $DIR_DATA/etc/samba $DIR_DATA/etc/supervisor $DIR_DATA/cache/bind $DIR_DATA/cache/samba $DIR_DATA/lib/bind $DIR_DATA/lib/chrony \
-	            $DIR_DATA/lib/samba $DIR_DATA/log/bind $DIR_DATA/log/chrony $DIR_DATA/log/samba $DIR_DATA/log/supervisor \
-	&& ln -s $DIR_DATA/etc/bind /etc/bind \
-	&& ln -s $DIR_DATA/etc/chrony /etc/chrony \
-	&& ln -s $DIR_DATA/etc/nsswitch.conf /etc/ \
-	&& ln -s $DIR_DATA/etc/krb5.conf /etc/ \
-	&& ln -s $DIR_DATA/etc/samba /etc/samba \
-	&& ln -s $DIR_DATA/etc/supervisor /etc/supervisor \
-	&& ln -s $DIR_DATA/lib/bind /var/lib/bind \
-	&& ln -s $DIR_DATA/lib/chrony /var/lib/chrony \
-	&& ln -s $DIR_DATA/lib/samba /var/lib/samba \
-	&& ln -s $DIR_DATA/log/bind /var/log/bind \
-	&& ln -s $DIR_DATA/log/chrony /var/log/chrony \
-    && ln -s $DIR_DATA/log/samba /var/log/samba \
-	&& ln -s $DIR_DATA/log/supervisor /var/log/supervisor \
-	&& ln -s $DIR_DATA/cache/bind /var/cache/bind \
-	&& ln -s $DIR_DATA/cache/samba /var/cache/samba
+	&& rm -rf /etc/bind /etc/chrony /etc/krb5.conf /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor \
+	&& mkdir /etc/bind /etc/chrony /etc/krb5.conf /etc/nsswitch.conf /etc/samba /etc/supervisor /var/cache/bind /var/cache/samba /var/lib/bind /var/lib/chrony /var/lib/samba /var/log/bind /var/log/chrony /var/log/samba /var/log/supervisor $DIR_DATA
 
-COPY /ldif $DIR_LDIF
-COPY /etc $DIR_DATA/etc
-COPY /scripts $DIR_SCRIPTS
-COPY /conf.d/ $DIR_SAMBA_CONF
-COPY /gpo /$DIR_GPO
-#COPY --from=builder ${src} /tmp/
+COPY $DIR_LDIF $DIR_LDIF
+COPY /etc /etc
+COPY $DIR_SCRIPTS $DIR_SCRIPTS
+COPY $DIR_GPO $DIR_GPO
+#COPY --from=builder ${src} $DIR_GPO
 
-RUN chmod -R +x /scripts/
-
-VOLUME $DIR_DATA
+RUN chmod -R +x $DIR_SCRIPTS
 
 EXPOSE 42 53 53/udp 88 88/udp 135 137-138/udp 139 389 389/udp 445 464 464/udp 636 3268-3269 49152-65535
 
 WORKDIR /
 
 HEALTHCHECK CMD smbcontrol smbd num-children || exit 1
-
 ENTRYPOINT ["sh", "/scripts/init.sh"]

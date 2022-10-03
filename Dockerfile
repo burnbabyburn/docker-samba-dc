@@ -12,7 +12,7 @@ FROM ubuntu:devel
 
 ENV DEBIAN_FRONTEND=noninteractive \
 	DIR_DATA=/data \
-	DIR_GPO=/gpo \
+	DIR_GPO=$DIR_DATA/gpo \
 	DIR_LDIF=/ldif \
 	DIR_SCRIPTS=/scripts
 
@@ -33,7 +33,7 @@ COPY $DIR_LDIF $DIR_LDIF
 COPY /etc /etc
 COPY $DIR_SCRIPTS $DIR_SCRIPTS
 COPY $DIR_GPO $DIR_GPO
-#COPY --from=builder ${src} /tmp/
+#COPY --from=builder ${src} $DIR_GPO
 
 RUN chmod -R +x $DIR_SCRIPTS
 

@@ -214,11 +214,12 @@ config() {
   if [ $(grep "^ID=" "/etc/os-release" | cut -d '=' -f2) = "alpine" ]; then
     BINDUSERGROUP="named"
     CHRONYUSERGROUP="chrony"
-    export LDB_MODULES_PATH="/usr/lib/samba/ldb/"
+    #export LDB_MODULES_PATH="/usr/lib/samba/ldb/"
   else
     BINDUSERGROUP="bind"
     CHRONYUSERGROUP="_chrony"
   fi
+  export LDB_MODULES_PATH="$(samba -b | grep MODULESDIR | cut -d ':' -f2 | tr -d '[:blank:]')/ldb"
 
   # If used on azure image chrony breaks (github actions)
   # Fatal error : Could not open /run/chrony/chronyd.pid : Permission denied
