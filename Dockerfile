@@ -12,7 +12,7 @@ FROM ubuntu:devel
 
 ENV DEBIAN_FRONTEND=noninteractive \
 	DIR_DATA=/data \
-	DIR_GPO=$DIR_DATA/gpo \
+	DIR_GPO=/gpo \
 	DIR_LDIF=/ldif \
 	DIR_SCRIPTS=/scripts
 

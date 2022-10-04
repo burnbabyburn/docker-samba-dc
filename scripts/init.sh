@@ -117,7 +117,6 @@ config() {
   # Bind9/Named directories
   DIR_BIND9=/etc/bind
   DIR_BIND9_CACHE=/var/cache/bind
-  DIR_BIND9_LIB=/var/lib/bind
   DIR_BIND9_LOG=/var/log/bind
   DIR_BIND9_RUN=/run/named
   # Bind9 files
@@ -166,8 +165,9 @@ config() {
   FILE_SETUP_DONE="${DIR_DATA}/setup.done"
 
   # Supervisor files
-  FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
-  FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
+  DIR_SUPERVISOR=/etc/supervisor
+  FILE_SUPERVISORD_CONF="${DIR_SUPERVISOR}/supervisord.conf"
+  FILE_SUPERVISORD_CUSTOM_CONF="${DIR_SUPERVISOR}/conf.d/supervisord.conf"
 
   # if hostname contains FQDN cut the rest
   if printf "%s" "${HOSTNAME}" | grep -q "\."; then HOSTNAME=$(printf "%s" "${HOSTNAME}" | cut -d "." -f1); fi
@@ -227,8 +227,7 @@ config() {
   # Wrong owner of /run/chrony (UID != 102) - the azure image complains but with a chowned dir chrony just crashes
   #if ! uname -a | grep -q "azure"; then
   # PID and chronyd.sock dir for chrony
-  if uname -a | grep -q "azure"; then 
-    #export LDB_MODULES_PATH="/usr/lib/samba/ldb/"
+  if uname -a | grep -q "azure"; then
     CHRONYUSERGROUP=root
   fi
 
@@ -237,7 +236,7 @@ config() {
   SAMBA_START_PARAM="--no-process-group --configfile ${FILE_SAMBA_CONF}"
   CHRONY_START_PARAM="-n -u ${CHRONYUSERGROUP} -f ${FILE_CHRONY}"
   BIND9_START_PARAM="-f -u ${BINDUSERGROUP} -c ${FILE_BIND9_CONF}"
-
+  
   #chrony as root in docker action
   if cat /sys/module/ipv6/parameters/disable;then
     sed -e "s/listen-on-v6 { any; };/listen-on-v6 { none; };/" -i "${FILE_BIND9_CONF_OPTIONS}"
@@ -281,6 +280,7 @@ appSetup () {
   sed -e "s:{{ LDOMAIN }}:${LDOMAIN}:" -i "${FILE_KRB5}"
   chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF}" "${FILE_KRB5}"
   
+  # Bind9 config
   # We removed the initial /etc/bind dir so we need to generate a new rndc.key
   rndc-confgen -a
   chown "${BINDUSERGROUP}":"${BINDUSERGROUP}" "${FILE_BIND9_RNDC_KEY}"
@@ -289,8 +289,7 @@ appSetup () {
   chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_LOG}"
   chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_OPTIONS}"
   chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_DEF_ZONE}"
-
-  # Setup bind9 log dir and logfiles
+  # Bind9 log dir and logfiles
   touch "${FILE_BIND9_LOG_AUTH_SERVERS}"
   touch "${FILE_BIND9_LOG_CLIENT_SECURITY}"
   touch "${FILE_BIND9_LOG_DDNS}"
@@ -312,25 +311,21 @@ appSetup () {
   chmod g=rxs "${DIR_BIND9}"
 
   # PID and session.key dir for bind9
-  # -R leads to only chowning the symlink not the folder behind it
   #if [ ! -d "${DIR_BIND9_CACHE}" ]; then mkdir "${DIR_BIND9_CACHE}"; fi
   chown root:"${BINDUSERGROUP}" "${DIR_BIND9_CACHE}"
   chmod 775 "${DIR_BIND9_CACHE}"
-
-  #if [ ! -d "${DIR_BIND9_LIB}" ]; then mkdir "${DIR_BIND9_LIB}"; fi
-  chown root:"${BINDUSERGROUP}" "${DIR_BIND9_LIB}"
-  chmod 775 "${DIR_BIND9_LIB}"
 
   if [ ! -d "${DIR_BIND9_RUN}" ]; then mkdir "${DIR_BIND9_RUN}"; fi
   chown root:"${BINDUSERGROUP}" "${DIR_BIND9_RUN}"
   chmod 770 "${DIR_BIND9_RUN}"
 
+  #Chrony config
   chmod 644 "${FILE_CHRONY}"
 
   if [ ! -f "${FILE_CHRONY_KEY}" ]; then chronyc keygen 1 SHA1 256 >> "${FILE_CHRONY_KEY}"; fi
   chmod 640 "${FILE_CHRONY_KEY}"
 
-  #Setup chrony log dir
+  #Chrony log dir
   #if [ ! -d "${DIR_CHRONY_LOG}" ]; then mkdir "${DIR_CHRONY_LOG}"; fi
   chown -R "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_LOG}/"
   chmod 750 "${DIR_CHRONY_LOG}"
@@ -346,12 +341,12 @@ appSetup () {
   if [ ! -d "${DIR_CHRONY_SRC}" ]; then mkdir "${DIR_CHRONY_SRC}"; fi
   chmod 755 "${DIR_CHRONY_SRC}"
   
-  if [ ! -d "${DIR_SAMBA_CACHE}" ]; then mkdir "${DIR_SAMBA_CACHE}"; fi
-  chmod 755 "${DIR_SAMBA_CACHE}"
-  
   if [ ! -d "${DIR_CHRONY_RUN}" ]; then mkdir "${DIR_CHRONY_RUN}"; fi
   chown "${CHRONYUSERGROUP}":"${CHRONYUSERGROUP}" "${DIR_CHRONY_RUN}"
   chmod 750 "${DIR_CHRONY_RUN}"
+  
+  if [ ! -d "${DIR_SAMBA_CACHE}" ]; then mkdir "${DIR_SAMBA_CACHE}"; fi
+  chmod 755 "${DIR_SAMBA_CACHE}"
 
   #Configure /etc/supervisor/conf.d/supervisord.conf
   sed -e "s:{{ SAMBA_START_PARAM }}:${SAMBA_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
@@ -384,7 +379,7 @@ appSetup () {
 
   # Configure Options "Array" for samba setup
   # server services =-dns was not working
-  set --
+
   if [ "${ENABLE_BIND9}" = true ]; then
     set -- "$@" "--dns-backend=BIND9_DLZ" 
 	set -- "$@" "--option=server services=-dns"

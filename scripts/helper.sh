@@ -85,22 +85,25 @@ SetKeyValueFilePattern() {
 
 # https://stackoverflow.com/questions/41451159/how-to-execute-a-script-when-i-terminate-a-docker-container
 backupConfig () {
-#  cp -dR --preserve=all "${DIR_BIND9}" "${DIR_EXTERNAL}"
-  cp -f "${FILE_CHRONY}" "${FILE_CHRONY_EXTERNAL}"
-#  cp -f "${FILE_CHRONY_TIMESRC}" "${FILE_EXTERNAL_CHRONY_TIMESRC}"
-#  cp -f "${FILE_KRB5}" "${FILE_EXTERNAL_KRB5_CONF}"
-#  cp -f "${FILE_NSSWITCH}" "${FILE_EXTERNAL_NSSWITCH}"
-#  cp -f "${FILE_SAMBA_CONF}" "${FILE_EXTERNAL_SAMBA_CONF}"
-#  cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_EXTERNAL_SUPERVISORD_CONF}"
+  if [ ! -d "${DIR_DATA}/etc" ]; then mkdir "${DIR_DATA}/etc"; fi
+  cp -af "${DIR_BIND9}" "${DIR_DATA}${DIR_BIND9}"
+  cp -af "${DIR_CHRONY}" "${DIR_DATA}${DIR_CHRONY}"
+  cp -af "${DIR_SAMBA_ETC}" "${DIR_DATA}${DIR_SAMBA_ETC}"
+  cp -af "${DIR_SUPERVISOR}" "${DIR_DATA}${DIR_SUPERVISOR}"
+  cp -af "${FILE_KRB5}" "${DIR_DATA}${FILE_KRB5}"
+  cp -af "${FILE_NSSWITCH}" "${DIR_DATA}${FILE_NSSWITCH}"
+  if [ ! -d "${DIR_DATA}/var/lib" ]; then mkdir -p "${DIR_DATA}/var/lib"; fi
+  cp -af "${DIR_SAMBA_DATA_PREFIX}" "${DIR_DATA}${DIR_SAMBA_DATA_PREFIX}"
 }
 restoreConfig () {
-#  cp -dR --preserve=all "${DIR_EXTERNAL_BIND9}" "${DIR_BIND9}"
-  cp -f "${FILE_CHRONY_EXTERNAL}" "${FILE_CHRONY}"
-#  cp -f "${FILE_EXTERNAL_CHRONY_TIMESRC}" "${FILE_CHRONY_TIMESRC}"
-#  cp -f "${FILE_EXTERNAL_KRB5_CONF}" "${FILE_KRB5}"
-#  cp -f "${FILE_EXTERNAL_NSSWITCH}" "${FILE_NSSWITCH}"
-#  cp -f "${FILE_EXTERNAL_SAMBA_CONF}" "${FILE_SAMBA_CONF}"
-#  cp -f "${FILE_EXTERNAL_SUPERVISORD_CONF}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  cp -af "${DIR_DATA}${DIR_BIND9}" /etc
+  cp -af "${DIR_DATA}${DIR_CHRONY}" /etc
+  cp -af "${DIR_DATA}${DIR_SAMBA_ETC}" /etc
+  cp -af "${DIR_DATA}${DIR_SUPERVISOR}" /etc
+  cp -af "${DIR_DATA}${FILE_KRB5}" /etc
+  cp -af "${DIR_DATA}${FILE_NSSWITCH}" /etc
+
+  cp -af "${DIR_DATA}${DIR_SAMBA_DATA_PREFIX}" /var/lib
 }
 
 # If Hostname is in CIDR notaion, create a reverse DNS zone and a subnet in $JOIN_SITE (default-First-Site-Name)
