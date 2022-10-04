@@ -84,7 +84,9 @@ jobs:
           file: Dockerfile.alpine
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: docker-ubuntu-samba-dc:alpine
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/docker-ubuntu-samba-dc:alpine
+            ghcr.io/${{ secrets.DOCKERHUB_USERNAME }}/docker-ubuntu-samba-dc:alpine
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
