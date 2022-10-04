@@ -12,6 +12,7 @@ trap 'backupConfig' INT QUIT HUP ABRT TERM
 # SH seems to require the function beeing present in the script trapping. In BASH using a function from a sourced script was fine.
 # THE SLASHES OR WHERE THEY NOT ARE, ARE IMPORTANT
 backupConfig () {
+  rm -rf "${DIR_DATA}/etc" "${DIR_DATA}/var/lib"
   if [ ! -d "${DIR_DATA}/etc" ]; then mkdir "${DIR_DATA}/etc"; fi
   cp -afv "${DIR_BIND9}/" "${DIR_DATA}/etc/"
   cp -afv "${DIR_CHRONY}/" "${DIR_DATA}/etc/"
