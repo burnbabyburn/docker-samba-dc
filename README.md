@@ -1,13 +1,16 @@
 # FORKED
 ![Githubg Workflow Image CI](https://img.shields.io/github/workflow/status/burnbabyburn/docker-ubuntu-samba-dc/Docker%20Image%20CI)
 * No OpenVPN testing
-* Build test via docker actions
+* Build and tested via docker actions. On every commit the docker-compose.yml and docker-compose-alpine.yml are run
 * Mount custom Samba [global] parameters to files in /etc/samba/smb.conf.d
+* Why using chrony instead of ntpd => [its faster and more suited for the usecase](https://www.thegeekdiary.com/centos-rhel-7-chrony-vs-ntp-differences-between-ntpd-and-chronyd/)
+* Why using bind/named instead of SAMBA_INTERNAL DNS? => it enables more complex setups. So don't use it if you just forward to an upstream DNS!
 * Branches:
   * Bind9	-	Bind9 with ntpd. Branched from My
   * chrony	-	chrony without Bind9. Branched from my
-  * test	-	chrony and bind9 Script runs fine on alpine and ubuntu Dockerfile and compose provided
+  * test	-	chrony+bind9+SH building tags alpine and test
   * My => stable branch without anything of the above.
+* Autobuild via Github actions
 
 # Samba Active Directory Domain Controller for Docker
 

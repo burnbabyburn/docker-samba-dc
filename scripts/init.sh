@@ -1,8 +1,9 @@
 #!/bin/sh
 
 DEBUG_ENABLE=${DEBUG_ENABLE:-false}
-if [ "${DEBUG_ENABLE}" = true ]; then set -x; fi
-#  if [ "$DEBUG_ENABLE" = "true" ]; then set -x; else set -e; fi
+#if [ "${DEBUG_ENABLE}" = true ]; then set -x; fi
+if [ "$DEBUG_ENABLE" = "true" ]; then set -x; else set -e; fi
+
 #Trap SIGTERM
 trap 'backupConfig' INT QUIT HUP ABRT TERM
 
