@@ -3,6 +3,11 @@
 * No OpenVPN testing
 * Build test via docker actions
 * Mount custom Samba [global] parameters to files in /etc/samba/smb.conf.d
+* Branches:
+  * Bind9	-	Bind9 with ntpd. Branched from My
+  * chrony	-	chrony without Bind9. Branched from my
+  * test	-	chrony and bind9 Script runs fine on alpine and ubuntu Dockerfile and compose provided
+  * My => stable branch without anything of the above.
 
 # Samba Active Directory Domain Controller for Docker
 
