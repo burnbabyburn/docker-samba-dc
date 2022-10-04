@@ -80,6 +80,40 @@ config() {
   # File and directory locations
   # Note: DIR_DATA, DIR_GPO, DIR_SAMBA_CONF, DIR_LDIF and DIR_SCRIPTS need to be changed in the Dockerfile
 
+  # Samba directories
+  DIR_SAMBA_CACHE=/var/cache/samba
+  DIR_SAMBA_CSHARE=/var/lib/samba/share_c
+  DIR_SAMBA_DATA_PREFIX=/var/lib/samba
+  DIR_SAMBA_ETC=/etc/samba
+  DIR_SAMBA_LOG=/var/log/samba
+  DIR_SAMBA_ADMIN="${DIR_SAMBA_CSHARE}/windows"
+  DIR_SAMBA_EVENTLOG="${DIR_SAMBA_ADMIN}/system32/config"
+  DIR_SAMBA_NETLOGON="${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts"
+  DIR_SAMBA_PRINTDRIVER="${DIR_SAMBA_ADMIN}/system32/spool/drivers"
+  DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private"
+  DIR_SAMBA_SYSVOL="${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}"
+  # Samba files
+  FILE_SAMBA_CONF="${DIR_SAMBA_ETC}/smb.conf"
+  FILE_SAMBA_LOG="${DIR_SAMBA_LOG}/smb.log"
+  FILE_SAMBA_PKI_CA="${DIR_SAMBA_PRIVATE}/tls/ca.pem"
+  FILE_SAMBA_PKI_CERT="${DIR_SAMBA_PRIVATE}/tls/cert.pem"
+  FILE_SAMBA_PKI_CRL="${DIR_SAMBA_PRIVATE}/tls/crl.pem"
+  FILE_SAMBA_PKI_DH="${DIR_SAMBA_PRIVATE}/tls/dh.key"
+  FILE_SAMBA_PKI_INT="${DIR_SAMBA_PRIVATE}/tls/intermediate.pem"
+  FILE_SAMBA_PKI_KEY="${DIR_SAMBA_PRIVATE}/tls/key.pem"
+  FILE_SAMBA_SAMLDB="${DIR_SAMBA_PRIVATE}/sam.ldb"
+  FILE_SAMBA_SCHEMA_LAPS1="${DIR_LDIF}/laps-1.ldif"
+  FILE_SAMBA_SCHEMA_LAPS2="${DIR_LDIF}/laps-2.ldif"
+  FILE_SAMBA_SCHEMA_RFC="${DIR_LDIF}/RFC_Domain_User_Group.ldif"
+  FILE_SAMBA_SCHEMA_SSH1="${DIR_LDIF}/ssh-1.ldif"
+  FILE_SAMBA_SCHEMA_SSH2="${DIR_LDIF}/ssh-2.ldif"
+  FILE_SAMBA_SCHEMA_SSH3="${DIR_LDIF}/ssh-3.ldif"
+  FILE_SAMBA_SCHEMA_SUDO1="${DIR_LDIF}/sudo-1.ldif"
+  FILE_SAMBA_SCHEMA_SUDO2="${DIR_LDIF}/sudo-2.ldif"
+  FILE_SAMBA_SCHEMA_WINSREPL="${DIR_LDIF}/wins.ldif"
+  FILE_SAMBA_USER_MAP="${DIR_SAMBA_ETC}/user.map"
+  FILE_SAMBA_WINSLDB="${DIR_SAMBA_PRIVATE}/wins_config.ldb"
+
   # Bind9/Named directories
   DIR_BIND9=/etc/bind
   DIR_BIND9_CACHE=/var/cache/bind
@@ -120,40 +154,6 @@ config() {
   FILE_CHRONY_DRIFT="${DIR_CHRONY_LIB}/chrony.drift"
   FILE_CHRONY_KEY="${DIR_CHRONY}/chrony.keys"
   FILE_CHRONY_PID="${DIR_CHRONY_RUN}/chronyd.pid"
-
-  # Samba directories
-  DIR_SAMBA_CACHE=/var/cache/samba
-  DIR_SAMBA_CSHARE=/var/lib/samba/share_c
-  DIR_SAMBA_DATA_PREFIX=/var/lib/samba
-  DIR_SAMBA_ETC=/etc/samba
-  DIR_SAMBA_LOG=/var/log/samba
-  DIR_SAMBA_ADMIN="${DIR_SAMBA_CSHARE}/windows"
-  DIR_SAMBA_EVENTLOG="${DIR_SAMBA_ADMIN}/system32/config"
-  DIR_SAMBA_NETLOGON="${DIR_SAMBA_DATA_PREFIX}/sysvol/scripts"
-  DIR_SAMBA_PRINTDRIVER="${DIR_SAMBA_ADMIN}/system32/spool/drivers"
-  DIR_SAMBA_PRIVATE="${DIR_SAMBA_DATA_PREFIX}/private"
-  DIR_SAMBA_SYSVOL="${DIR_SAMBA_DATA_PREFIX}/sysvol/${LDOMAIN}"
-  # Samba files
-  FILE_SAMBA_CONF="${DIR_SAMBA_ETC}/smb.conf"
-  FILE_SAMBA_LOG="${DIR_SAMBA_LOG}/smb.log"
-  FILE_SAMBA_PKI_CA="${DIR_SAMBA_PRIVATE}/tls/ca.pem"
-  FILE_SAMBA_PKI_CERT="${DIR_SAMBA_PRIVATE}/tls/cert.pem"
-  FILE_SAMBA_PKI_CRL="${DIR_SAMBA_PRIVATE}/tls/crl.pem"
-  FILE_SAMBA_PKI_DH="${DIR_SAMBA_PRIVATE}/tls/dh.key"
-  FILE_SAMBA_PKI_INT="${DIR_SAMBA_PRIVATE}/tls/intermediate.pem"
-  FILE_SAMBA_PKI_KEY="${DIR_SAMBA_PRIVATE}/tls/key.pem"
-  FILE_SAMBA_SAMLDB="${DIR_SAMBA_PRIVATE}/sam.ldb"
-  FILE_SAMBA_SCHEMA_LAPS1="${DIR_LDIF}/laps-1.ldif"
-  FILE_SAMBA_SCHEMA_LAPS2="${DIR_LDIF}/laps-2.ldif"
-  FILE_SAMBA_SCHEMA_RFC="${DIR_LDIF}/RFC_Domain_User_Group.ldif"
-  FILE_SAMBA_SCHEMA_SSH1="${DIR_LDIF}/ssh-1.ldif"
-  FILE_SAMBA_SCHEMA_SSH2="${DIR_LDIF}/ssh-2.ldif"
-  FILE_SAMBA_SCHEMA_SSH3="${DIR_LDIF}/ssh-3.ldif"
-  FILE_SAMBA_SCHEMA_SUDO1="${DIR_LDIF}/sudo-1.ldif"
-  FILE_SAMBA_SCHEMA_SUDO2="${DIR_LDIF}/sudo-2.ldif"
-  FILE_SAMBA_SCHEMA_WINSREPL="${DIR_LDIF}/wins.ldif"
-  FILE_SAMBA_USER_MAP="${DIR_SAMBA_ETC}/user.map"
-  FILE_SAMBA_WINSLDB="${DIR_SAMBA_PRIVATE}/wins_config.ldb"
 
   # misc config files
   FILE_KRB5=/etc/krb5.conf
