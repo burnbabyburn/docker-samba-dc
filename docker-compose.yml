@@ -17,12 +17,9 @@ volumes:
 services:
   samba:
     build: .
-#    build:
-#      context: .
-#      dockerfile: Dockerfile.alpine
     container_name: samba-dc01
     volumes:
-      - 'samba01:/data'
+      - './samba01:/data'
     environment:
       - TZ=Europe/Berlin
       - DOMAIN=SAM.DOM
@@ -84,8 +81,8 @@ services:
   samba-join:
     build: .
     container_name: samba-dc02
-#    volumes:
-#      - 'samba02:/data'
+    volumes:
+      - './samba02:/data'
     environment:
       - TZ=Europe/Berlin
       - DOMAIN=SAM.DOM
