@@ -4,25 +4,26 @@ DEBUG_ENABLE=${DEBUG_ENABLE:-false}
 #if [ "${DEBUG_ENABLE}" = true ]; then set -x; fi
 if [ "$DEBUG_ENABLE" = "true" ]; then set -x; else set -e; fi
 
-#Trap SIGTERM
+# Trap SIGTERM
+# https://vsupalov.com/docker-compose-stop-slow/
 trap 'backupConfig' INT QUIT HUP ABRT TERM
 
 # https://stackoverflow.com/questions/41451159/how-to-execute-a-script-when-i-terminate-a-docker-container
 # SH seems to require the function beeing present in the script trapping. In BASH using a function from a sourced script was fine.
 backupConfig () {
   if [ ! -d "${DIR_DATA}/etc" ]; then mkdir "${DIR_DATA}/etc"; fi
-  cp -afv "${DIR_BIND9}" "${DIR_DATA}${DIR_BIND9}"
-  cp -afv "${DIR_CHRONY}" "${DIR_DATA}${DIR_CHRONY}"
-  cp -afv "${DIR_SAMBA_ETC}" "${DIR_DATA}${DIR_SAMBA_ETC}"
-  cp -afv "${DIR_SUPERVISOR}" "${DIR_DATA}${DIR_SUPERVISOR}"
-  cp -afv "${FILE_KRB5}" "${DIR_DATA}${FILE_KRB5}"
-  cp -afv "${FILE_NSSWITCH}" "${DIR_DATA}${FILE_NSSWITCH}"
+  cp -afv "${DIR_BIND9}/" "${DIR_DATA}/etc/"
+  cp -afv "${DIR_CHRONY}/" "${DIR_DATA}/etc/"
+  cp -afv "${DIR_SAMBA_ETC}/" "${DIR_DATA}/etc/"
+  cp -afv "${DIR_SUPERVISOR}/" "${DIR_DATA}/etc/"
+  cp -afv "${FILE_KRB5}/" "${DIR_DATA}/etc/"
+  cp -afv "${FILE_NSSWITCH}/" "${DIR_DATA}/etc/"
   if [ ! -d "${DIR_DATA}/var/lib" ]; then mkdir -p "${DIR_DATA}/var/lib"; fi
-  cp -afv "${DIR_SAMBA_DATA_PREFIX}" "${DIR_DATA}${DIR_SAMBA_DATA_PREFIX}"
+  cp -afv "${DIR_SAMBA_DATA_PREFIX}/" "${DIR_DATA}${DIR_SAMBA_DATA_PREFIX}/"
 }
 restoreConfig () {
-  cp -avf "${DIR_DATA}/etc" "/"
-  cp -avf "${DIR_DATA}/var" "/"
+  cp -afv "${DIR_DATA}/etc" "/"
+  cp -afv "${DIR_DATA}/var" "/"
 }
 
 #Todo:

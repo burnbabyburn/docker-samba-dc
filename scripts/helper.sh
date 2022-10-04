@@ -165,7 +165,7 @@ EnableChangeKRBTGTSupervisord () {
     echo "stdout_logfile_maxbytes=0"
     echo "stdout_logfile_backups=0"
     echo "redirect_stderr=true"
-    echo "priority=99"
+    echo "priority=150"
   } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
 }
 
@@ -193,7 +193,7 @@ EnableEventlogSupervisord () {
     echo "stdout_logfile_maxbytes=0"
     echo "stdout_logfile_backups=0"
     echo "redirect_stderr=true"
-    echo "priority=1"
+    echo "priority=200"
   } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
 }
 
@@ -207,6 +207,6 @@ EnableBind9 () {
     echo "stdout_logfile_maxbytes=0"
     echo "stdout_logfile_backups=0"
     echo "redirect_stderr=true"
-    echo "priority=10"
+    echo "priority=20"
   } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
 }
