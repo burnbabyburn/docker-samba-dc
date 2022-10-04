@@ -279,6 +279,7 @@ appSetup () {
   sed -e "s:{{ HOSTNAME }}:${HOSTNAME}:" -i "${FILE_KRB5}"
   sed -e "s:{{ UDOMAIN }}:${UDOMAIN}:" -i "${FILE_KRB5}"
   sed -e "s:{{ LDOMAIN }}:${LDOMAIN}:" -i "${FILE_KRB5}"
+  chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF}" "${FILE_KRB5}"
   
   # We removed the initial /etc/bind dir so we need to generate a new rndc.key
   rndc-confgen -a
