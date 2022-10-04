@@ -77,7 +77,6 @@ jobs:
             ${{ steps.meta.outputs.tags }}
             ${{ secrets.DOCKERHUB_USERNAME }}/docker-samba-dc:ubuntu
             ghcr.io/${{ secrets.DOCKERHUB_USERNAME }}/docker-samba-dc:ubuntu
-          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       -
