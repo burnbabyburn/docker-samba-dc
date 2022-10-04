@@ -276,9 +276,9 @@ appSetup () {
 
   ## Setup filesystem and config files
   # KRB5.conf
-  sed "s:{{ HOSTNAME }}:${HOSTNAME}:" -i "${FILE_KRB5}"
-  sed "s:{{ UDOMAIN }}:${UDOMAIN}:" -i "${FILE_KRB5}"
-  sed "s:{{ LDOMAIN }}:${LDOMAIN}:" -i "${FILE_KRB5}"
+  sed -e "s:{{ HOSTNAME }}:${HOSTNAME}:" -i "${FILE_KRB5}"
+  sed -e "s:{{ UDOMAIN }}:${UDOMAIN}:" -i "${FILE_KRB5}"
+  sed -e "s:{{ LDOMAIN }}:${LDOMAIN}:" -i "${FILE_KRB5}"
   
   # We removed the initial /etc/bind dir so we need to generate a new rndc.key
   rndc-confgen -a
@@ -353,26 +353,25 @@ appSetup () {
   chmod 750 "${DIR_CHRONY_RUN}"
 
   #Configure /etc/supervisor/conf.d/supervisord.conf
-  sed "s:{{ SAMBA_START_PARAM }}:${SAMBA_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  sed "s:{{ BIND9_START_PARAM }}:${BIND9_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
-  sed "s:{{ CHRONY_START_PARAM }}:${CHRONY_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -e "s:{{ SAMBA_START_PARAM }}:${SAMBA_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  sed -e "s:{{ CHRONY_START_PARAM }}:${CHRONY_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
 
   # Configure Bind9 files
-  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
+  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
   # https://superuser.com/questions/1727237/bind9-insecurity-proof-failed-resolving
-  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ] && ! grep -q "validate-except" "${FILE_BIND9_CONF_OPTIONS}"; then sed "/^[[:space:]]*}/i\  validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
-  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
-  if grep -q "{{ DIR_BIND9_CACHE }}" "${FILE_BIND9_CONF_OPTIONS}"; then sed "s:{{ DIR_BIND9_CACHE }}:${DIR_BIND9_CACHE}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
+  if [ "${BIND9_VALIDATE_EXCEPT}" != "NONE" ] && ! grep -q "validate-except" "${FILE_BIND9_CONF_OPTIONS}"; then sed -e "/^[[:space:]]*}/i\  validate-except { ${BIND9_VALIDATE_EXCEPT} };" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
+  if grep -q "{ ENABLE_DNSFORWARDER }" "${FILE_BIND9_CONF_OPTIONS}"; then sed -e "s:ENABLE_DNSFORWARDER:${ENABLE_DNSFORWARDER}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
+  if grep -q "{{ DIR_BIND9_CACHE }}" "${FILE_BIND9_CONF_OPTIONS}"; then sed -e "s:{{ DIR_BIND9_CACHE }}:${DIR_BIND9_CACHE}:" -i "${FILE_BIND9_CONF_OPTIONS}"; fi
 
   # Configure chrony files
-  if grep -q "{{ DIR_CHRONY_CONFD }}" "${FILE_CHRONY}"; then sed "s:{{ DIR_CHRONY_CONFD }}:${DIR_CHRONY_CONFD}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_LIB }}" "${FILE_CHRONY}"; then sed "s:{{ DIR_CHRONY_LIB }}:${DIR_CHRONY_LIB}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" -i "${FILE_CHRONY}"; fi
-  if grep -q "{{ FILE_CHRONY_PID }}" "${FILE_CHRONY}"; then sed "s:{{ FILE_CHRONY_PID }}:${FILE_CHRONY_PID}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_CONFD }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_CONFD }}:${DIR_CHRONY_CONFD}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_LIB }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LIB }}:${DIR_CHRONY_LIB}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_LOG }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_LOG }}:${DIR_CHRONY_LOG}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_SOCK }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SOCK }}:${DIR_CHRONY_SOCK}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ DIR_CHRONY_SRC }}" "${FILE_CHRONY}"; then sed -e "s:{{ DIR_CHRONY_SRC }}:${DIR_CHRONY_SRC}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_DRIFT }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_DRIFT }}:${FILE_CHRONY_DRIFT}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_KEY }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_KEY }}:${FILE_CHRONY_KEY}:" -i "${FILE_CHRONY}"; fi
+  if grep -q "{{ FILE_CHRONY_PID }}" "${FILE_CHRONY}"; then sed -e "s:{{ FILE_CHRONY_PID }}:${FILE_CHRONY_PID}:" -i "${FILE_CHRONY}"; fi
 
   DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
   for DC in $DCs
@@ -385,8 +384,8 @@ appSetup () {
   # Configure Options "Array" for samba setup
   # server services =-dns was not working
   if [ "${ENABLE_BIND9}" = true ]; then
-    set -- "$@" "--dns-backend=BIND9_DLZ" \
-           "--option=server services=-dns"
+    set -- "$@" "--dns-backend=BIND9_DLZ" 
+	set -- "$@" "--option=server services=-dns"
 	EnableBind9
 	sed -e "s:{{ BIND9_START_PARAM }}:${BIND9_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   else 
@@ -436,7 +435,7 @@ appSetup () {
     set -- "$@" "--option=log level = ${DEBUG_LEVEL}"
     set -- "$@" "--option=logging = file"
 	# Chrony logs
-    sed '/log[[:space:]]/s/^#//g' -i "$FILE_CHRONY"
+    sed -e '/log[[:space:]]/s/^#//g' -i "$FILE_CHRONY"
 	# Bind9 logs
     if ! grep -q "${FILE_BIND9_CONF_LOG}" "${FILE_BIND9_CONF}";then
 	  printf "include \"%s\";\n" "${FILE_BIND9_CONF_LOG}" >> "${FILE_BIND9_CONF}"
@@ -605,7 +604,7 @@ appSetup () {
     if [ -f "${FILE_BIND9_CONF_GEN_SAMBA}" ]; then 
 	  cp "${FILE_BIND9_CONF_GEN_SAMBA}" "${FILE_BIND9_CONF_SAMBA}"
 	  chown root:"${BINDUSERGROUP}" "${FILE_BIND9_CONF_SAMBA}"
-	  sed "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_CONF_SAMBA}"
+	  sed -e "s:\.so:& ${SAMBA_DEBUG_OPTION}:" -i "${FILE_BIND9_CONF_SAMBA}"
       if ! grep -q "${FILE_BIND9_CONF_SAMBA}" "${FILE_BIND9_CONF}";then
 	    printf "include \"%s\";\n" "${FILE_BIND9_CONF_SAMBA}" >> "${FILE_BIND9_CONF}"
 	  fi
