@@ -392,7 +392,7 @@ appSetup () {
     set -- "$@" "--dns-backend=internal" 
   fi
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#ENABLEASUSUPPORT
-  set -- "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool" \
+  set -- "$@" "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool" \
          "--option=enable asu support = no"
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#NAMERESOLVEORDER
   set -- "$@" "--option=name resolve order = wins host bcast"
