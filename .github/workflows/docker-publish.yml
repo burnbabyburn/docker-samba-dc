@@ -25,10 +25,10 @@ jobs:
         with:
           images: |
             ghcr.io/${{ github.repository }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/docker-ubuntu-samba-dc
+            ${{ secrets.DOCKERHUB_USERNAME }}/docker-samba-dc
           labels: |
             maintainer=Burnbabyburn
-            org.opencontainers.image.title=docker-ubuntu-samba-dc
+            org.opencontainers.image.title=docker-samba-dc
             org.opencontainers.image.description=Samba Active Directory Domain Controller for Docker built from scratch using internal DNS and NTP.
           tags: |
             type=ref,event=tag
@@ -62,7 +62,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ secrets.DOCKERHUB_USERNAME }}/docker-ubuntu-samba-dc
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/docker-samba-dc
       -
         name: Available platforms
         run: echo ${{ steps.buildx.outputs.platforms }}
@@ -85,8 +85,8 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/docker-ubuntu-samba-dc:alpine
-            ghcr.io/${{ secrets.DOCKERHUB_USERNAME }}/docker-ubuntu-samba-dc:alpine
+            ${{ secrets.DOCKERHUB_USERNAME }}/docker-samba-dc:alpine
+            ghcr.io/${{ secrets.DOCKERHUB_USERNAME }}/docker-samba-dc:alpine
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
