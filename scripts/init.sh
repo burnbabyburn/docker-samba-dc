@@ -383,6 +383,7 @@ appSetup () {
 
   # Configure Options "Array" for samba setup
   # server services =-dns was not working
+  set --
   if [ "${ENABLE_BIND9}" = true ]; then
     set -- "$@" "--dns-backend=BIND9_DLZ" 
 	set -- "$@" "--option=server services=-dns"
