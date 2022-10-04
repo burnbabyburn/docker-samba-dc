@@ -139,4 +139,4 @@ jobs:
       - name: Check ALPINE DC02 Host record of ALPINE DC02
         run: docker exec --tty samba-alpine-dc02 /usr/bin/dig +short dockersamba02.alpinesam.dom
       - name: Get all ALPINE Domain Controllers
-        run: docker exec --tty samba-alpine-dc02 export LDB_MODULES_PATH="/usr/lib/samba/ldb" && /usr/bin/ldbsearch -H /var/lib/samba/private/sam.ldb -b"OU=Domain Controllers,DC=alpinesam,DC=dom" "objectClass=computer" cn
+        run: docker exec --tty samba-alpine-dc02 LDB_MODULES_PATH="/usr/lib/samba/ldb" && /usr/bin/ldbsearch -H /var/lib/samba/private/sam.ldb -b"OU=Domain Controllers,DC=alpinesam,DC=dom" "objectClass=computer" cn
