@@ -383,9 +383,10 @@ appSetup () {
   done
 
   # Configure Options "Array" for samba setup
+  # server services =-dns was not working
   if [ "${ENABLE_BIND9}" = true ]; then
     set -- "--dns-backend=BIND9_DLZ" \
-           "--option=server services=-dns"
+           "--option=server services=s3fs, rpc, nbt, wrepl, ldap, cldap, kdc, drepl, winbindd, ntp_signd, kcc, dnsupdate"
 	EnableBind9
 	sed -e "s:{{ BIND9_START_PARAM }}:${BIND9_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   else 
