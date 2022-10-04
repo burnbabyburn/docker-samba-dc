@@ -16,8 +16,8 @@ backupConfig () {
   cp -afv "${DIR_CHRONY}/" "${DIR_DATA}/etc/"
   cp -afv "${DIR_SAMBA_ETC}/" "${DIR_DATA}/etc/"
   cp -afv "${DIR_SUPERVISOR}/" "${DIR_DATA}/etc/"
-  cp -afv "${FILE_KRB5}/" "${DIR_DATA}/etc/"
-  cp -afv "${FILE_NSSWITCH}/" "${DIR_DATA}/etc/"
+  cp -afv "${FILE_KRB5}" "${DIR_DATA}/etc/"
+  cp -afv "${FILE_NSSWITCH}" "${DIR_DATA}/etc/"
   if [ ! -d "${DIR_DATA}/var/lib" ]; then mkdir -p "${DIR_DATA}/var/lib"; fi
   cp -afv "${DIR_SAMBA_DATA_PREFIX}/" "${DIR_DATA}${DIR_SAMBA_DATA_PREFIX}/"
 }
