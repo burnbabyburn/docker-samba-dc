@@ -10,6 +10,7 @@ trap 'backupConfig' INT QUIT HUP ABRT TERM
 
 # https://stackoverflow.com/questions/41451159/how-to-execute-a-script-when-i-terminate-a-docker-container
 # SH seems to require the function beeing present in the script trapping. In BASH using a function from a sourced script was fine.
+# THE SLASHES OR WHERE THEY NOT ARE, ARE IMPORTANT
 backupConfig () {
   if [ ! -d "${DIR_DATA}/etc" ]; then mkdir "${DIR_DATA}/etc"; fi
   cp -afv "${DIR_BIND9}/" "${DIR_DATA}/etc/"
@@ -22,7 +23,7 @@ backupConfig () {
   cp -afv "${DIR_SAMBA_DATA_PREFIX}/" "${DIR_DATA}${DIR_SAMBA_DATA_PREFIX}/"
 }
 restoreConfig () {
-  cp -afv "${DIR_DATA}/etc" "/"
+  cp -afv "${DIR_DATA}/etc/" "/"
   cp -afv "${DIR_DATA}/var" "/"
 }
 
