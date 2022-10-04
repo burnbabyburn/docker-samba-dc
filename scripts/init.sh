@@ -389,7 +389,7 @@ appSetup () {
 	EnableBind9
 	sed -e "s:{{ BIND9_START_PARAM }}:${BIND9_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   else 
-    set -- "$@" "--dns-backend=internal" 
+    set -- "$@" "--dns-backend=SAMBA_INTERNAL" 
   fi
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#ENABLEASUSUPPORT
   set -- "$@" "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool" \
