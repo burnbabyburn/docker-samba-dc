@@ -385,12 +385,12 @@ appSetup () {
   # Configure Options "Array" for samba setup
   # server services =-dns was not working
   if [ "${ENABLE_BIND9}" = true ]; then
-    set -- "--dns-backend=BIND9_DLZ" \
-           "--option=server services=s3fs, rpc, nbt, wrepl, ldap, cldap, kdc, drepl, winbindd, ntp_signd, kcc, dnsupdate"
+    set -- "$@" "--dns-backend=BIND9_DLZ" \
+           "--option=server services=-dns"
 	EnableBind9
 	sed -e "s:{{ BIND9_START_PARAM }}:${BIND9_START_PARAM}:" -i "${FILE_SUPERVISORD_CUSTOM_CONF}"
   else 
-    set -- "--dns-backend=internal" 
+    set -- "$@" "--dns-backend=internal" 
   fi
   # https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#ENABLEASUSUPPORT
   set -- "--option=dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool" \
