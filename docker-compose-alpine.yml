@@ -53,7 +53,7 @@ services:
       samba-net2:
         ipv4_address: 172.102.1.100
     dns_search:
-      - SAM.DOM
+      - ALPINESAMSAM.DOM
     dns:
       - 127.0.0.1
     hostname: dockersamba01
@@ -81,7 +81,7 @@ services:
 #      - ENABLE_CUPS=false
       - ENABLE_DNSFORWARDER=172.102.1.100
       - ENABLE_DYNAMIC_PORTRANGE=49152-49170
-      - ENABLE_INSECURELDAP=false
+      - ENABLE_INSECURELDAP=true
       - ENABLE_LOGS=true
       - ENABLE_MSCHAPV2=true
       - TLS_ENABLE=false
@@ -93,7 +93,7 @@ services:
       samba-net2:
         ipv4_address: 172.102.2.200
     dns_search:
-      - SAM.DOM
+      - ALPINESAMSAM.DOM
     dns:
       - 127.0.0.1
       - 172.102.1.100
